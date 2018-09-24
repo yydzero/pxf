@@ -1,4 +1,4 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -8,9 +8,9 @@ package org.apache.hawq.pxf.plugins.s3;
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -21,10 +21,10 @@ package org.apache.hawq.pxf.plugins.s3;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hawq.pxf.api.OneRow;
-import org.apache.hawq.pxf.api.ReadAccessor;
-import org.apache.hawq.pxf.api.utilities.InputData;
-import org.apache.hawq.pxf.api.utilities.Plugin;
+import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.ReadAccessor;
+import org.greenplum.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.Plugin;
 
 /**
  * ReadAccessor which handles delimited TEXT data, passing each line as its own

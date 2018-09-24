@@ -1,15 +1,15 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hawq.pxf.api.OneRow;
-import org.apache.hawq.pxf.api.WriteAccessor;
-import org.apache.hawq.pxf.api.utilities.InputData;
-import org.apache.hawq.pxf.api.utilities.Plugin;
-import org.apache.hawq.pxf.plugins.s3.utils.AvroUtil;
+import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.WriteAccessor;
+import org.greenplum.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.Plugin;
+import org.greenplum.pxf.plugins.s3.utils.AvroUtil;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;

@@ -1,10 +1,10 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
-import org.apache.hawq.pxf.api.OneField;
-import org.apache.hawq.pxf.api.OneRow;
-import org.apache.hawq.pxf.api.ReadResolver;
-import org.apache.hawq.pxf.api.utilities.InputData;
-import org.apache.hawq.pxf.api.utilities.Plugin;
+import org.greenplum.pxf.api.OneField;
+import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.ReadResolver;
+import org.greenplum.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.Plugin;
 
 import java.util.List;
 

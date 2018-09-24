@@ -1,11 +1,11 @@
-package org.apache.hawq.pxf.plugins.s3.utils;
+package org.greenplum.pxf.plugins.s3.utils;
 
 import org.apache.avro.Schema;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hawq.pxf.api.io.DataType;
-import org.apache.hawq.pxf.api.utilities.ColumnDescriptor;
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.io.DataType;
+import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.api.utilities.InputData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +41,7 @@ public class AvroUtil {
 		LOG.info("Avro schema string: " + schemaStr);
 		return new Schema.Parser().parse(schemaStr);
 	}
-	
+
 	/**
 	 * @param s the input string
 	 * @return the input string, surrounded by double quotes
@@ -49,7 +49,7 @@ public class AvroUtil {
 	public static String addQuotes(String s) {
 		return "\"" + s + "\"";
 	}
-	
+
 	/**
 	 *
 	 * @param gpType the DataType, from the database, to be resolved into an Avro type

@@ -1,10 +1,10 @@
-package org.apache.hawq.pxf.plugins.s3.utils;
+package org.greenplum.pxf.plugins.s3.utils;
 
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
-import org.apache.hawq.pxf.api.io.DataType;
-import org.apache.hawq.pxf.api.utilities.ColumnDescriptor;
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.io.DataType;
+import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.api.utilities.InputData;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -32,14 +32,14 @@ public class AvroUtilTest {
 				   .endRecord();
 		assertEquals(schemaFromInputData, schemaFromAPI);
 	}
-	
+
 	@Test
 	public void testAddQuotes() {
 		String withoutQuotes = "this has no quotes yet";
 		String withQuotes = "\"this has no quotes yet\"";
 		assertEquals(withQuotes, AvroUtil.addQuotes(withoutQuotes));
 	}
-	
+
 	@Test
 	public void testAsAvroType() {
 		assertEquals("\"boolean\"", AvroUtil.asAvroType(DataType.BOOLEAN));

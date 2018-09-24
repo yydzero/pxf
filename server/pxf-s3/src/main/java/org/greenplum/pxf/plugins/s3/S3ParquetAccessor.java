@@ -1,15 +1,15 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hawq.pxf.api.OneField;
-import org.apache.hawq.pxf.api.OneRow;
-import org.apache.hawq.pxf.api.ReadAccessor;
-import org.apache.hawq.pxf.api.utilities.InputData;
-import org.apache.hawq.pxf.plugins.hdfs.ParquetFileAccessor;
-import org.apache.hawq.pxf.plugins.hdfs.ParquetResolver;
+import org.greenplum.pxf.api.OneField;
+import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.ReadAccessor;
+import org.greenplum.pxf.api.utilities.InputData;
+import org.greenplum.pxf.plugins.hdfs.ParquetFileAccessor;
+import org.greenplum.pxf.plugins.hdfs.ParquetResolver;
 import org.apache.parquet.format.converter.ParquetMetadataConverter;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;

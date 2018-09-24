@@ -519,7 +519,7 @@ project('pxf-s3') {
 
     ospackage {
         packageName = versionedPackageName("${project.name}")
-        summary = 'HAWQ Extension Framework (PXF), S3 plugin'
+        summary = 'Pivotal Extension Framework (PXF), S3 plugin'
         description = 'Querying external data stored in S3'
         packager = ' '
         packageGroup = 'Development/Libraries'

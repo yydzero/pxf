@@ -1,4 +1,4 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -8,9 +8,9 @@ package org.apache.hawq.pxf.plugins.s3;
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -21,16 +21,16 @@ package org.apache.hawq.pxf.plugins.s3;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hawq.pxf.api.Fragment;
-import org.apache.hawq.pxf.api.Fragmenter;
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.Fragment;
+import org.greenplum.pxf.api.Fragmenter;
+import org.greenplum.pxf.api.utilities.InputData;
 
 import java.net.InetAddress;
 import java.util.List;
 
 /**
  * Fragmenter for S3
- * 
+ *
  * Based on the input, a bucket name plus a prefix, expands that to a list of
  * matching paths, which is returned by getFragments()
  */
@@ -44,7 +44,7 @@ public class S3Fragmenter extends Fragmenter {
 		LOG.info("dataSource: " + inputData.getDataSource());
 		pxfS3 = PxfS3.fromInputData(inputData);
 	}
-	
+
 	/**
 	 * This is for tests
 	 * @param inputData

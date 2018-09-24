@@ -1,4 +1,4 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 import org.apache.avro.LogicalType;
 import org.apache.avro.Schema;
@@ -6,13 +6,13 @@ import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericData;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hawq.pxf.api.OneField;
-import org.apache.hawq.pxf.api.OneRow;
-import org.apache.hawq.pxf.api.WriteResolver;
-import org.apache.hawq.pxf.api.io.DataType;
-import org.apache.hawq.pxf.api.utilities.InputData;
-import org.apache.hawq.pxf.api.utilities.Plugin;
-import org.apache.hawq.pxf.plugins.s3.utils.AvroUtil;
+import org.greenplum.pxf.api.OneField;
+import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.WriteResolver;
+import org.greenplum.pxf.api.io.DataType;
+import org.greenplum.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.Plugin;
+import org.greenplum.pxf.plugins.s3.utils.AvroUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,11 +62,11 @@ public class S3ParquetWriteResolver extends Plugin implements WriteResolver {
 						ltName = lt.getName();
 					}
 					/* Here, the value on the right is lt.getName():
-					 * 
+					 *
 					 *   DATE: (Type.INT, LogicalType = date)
 					 *   TIME: (Type.INT, LogicalType = time-millis)
 					 *   TIMESTAMP: (Type.LONG, LogicalType = timestamp-millis)
-					 *   
+					 *
 					 * Validated that these do get read back from Parquet with the specfied
 					 * types (int or long).
 					 */

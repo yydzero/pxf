@@ -1,4 +1,4 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -10,7 +10,7 @@ import com.amazonaws.services.s3.model.S3ObjectInputStream;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.InputData;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -42,7 +42,7 @@ public class PxfS3 {
 	public String toString() {
 		return "PxfS3[bucketName=" + bucketName + ", objectName=" + objectName + "]";
 	}
-	
+
 	/**
 	 * This exists to support tests
 	 */
@@ -64,7 +64,7 @@ public class PxfS3 {
 		s3 = AmazonS3ClientBuilder.standard().withRegion(s3Region)
 				.withCredentials(new AWSStaticCredentialsProvider(creds)).build();
 	}
-	
+
 	// Used within the *write* context
 	public String getS3aURI(InputData inputData) {
 		// /pxf-s3-devel/test-write/1524148597-0000000430_1

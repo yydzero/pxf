@@ -1,6 +1,6 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.InputData;
 
 import java.util.HashMap;
 

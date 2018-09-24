@@ -1,8 +1,8 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
-import org.apache.hawq.pxf.api.Fragment;
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.Fragment;
+import org.greenplum.pxf.api.utilities.InputData;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,7 +43,7 @@ public class S3FragmenterTest {
 	/**
 	 * In the absence of an equals() method in Fragment, verify equality only of the
 	 * fields in use here
-	 * 
+	 *
 	 * @param a
 	 *            left hand side
 	 * @param b

@@ -1,6 +1,6 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.InputData;
 import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
@@ -9,14 +9,14 @@ import java.net.URLEncoder;
 import static org.junit.Assert.assertEquals;
 
 public class PxfS3Test {
-	
+
 	static final String TEST_S3_ACCESS_KEY = "DAZFVISAXWVBOBDBHQZX";
 	static final String TEST_S3_SECRET_KEY = "IhipDEysJnknxCBeX/9LGRg35l55owj/wf7KZYh9";
 	static final String TEST_S3_REGION = "us-east-1";
 
 	/**
 	 * Supports <b>READ</b> operations
-	 * 
+	 *
 	 * @throws UnsupportedEncodingException
 	 */
 	@Test
@@ -30,10 +30,10 @@ public class PxfS3Test {
 			+ "@" + "pxf-s3-devel" + "/" + "sample-from-spark/part-00000-f5d896f5-e61e-4991-935e-95707ff4d6eb-c000.snappy.parquet";
 		assertEquals(expectedS3aURI, s3aURI);
 	}
-	
+
 	/**
 	 * Supports <b>WRITE</b> operations
-	 * 
+	 *
 	 * @throws UnsupportedEncodingException
 	 */
 	@Test

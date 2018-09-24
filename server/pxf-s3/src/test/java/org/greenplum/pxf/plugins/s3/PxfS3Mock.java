@@ -1,4 +1,4 @@
-package org.apache.hawq.pxf.plugins.s3;
+package org.greenplum.pxf.plugins.s3;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.AnonymousAWSCredentials;
@@ -6,7 +6,7 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import io.findify.s3mock.S3Mock;
-import org.apache.hawq.pxf.api.utilities.InputData;
+import org.greenplum.pxf.api.utilities.InputData;
 
 import java.io.IOException;
 
@@ -37,9 +37,9 @@ public class PxfS3Mock extends PxfS3 {
 	}
 
 	public static PxfS3 fromInputData(InputData inputData) {
-		String s3AccessKey = inputData.getUserProperty(PxfS3.S3_ACCESS_KEY);
-		String s3SecretKey = inputData.getUserProperty(PxfS3.S3_SECRET_KEY);
-		String s3Region = inputData.getUserProperty(PxfS3.S3_REGION);
+		String s3AccessKey = inputData.getUserProperty(S3_ACCESS_KEY);
+		String s3SecretKey = inputData.getUserProperty(S3_SECRET_KEY);
+		String s3Region = inputData.getUserProperty(S3_REGION);
 		PxfS3 rv = new PxfS3Mock(s3AccessKey, s3SecretKey, s3Region);
 		rv.setBucketName(inputData);
 		return rv;
@@ -54,7 +54,7 @@ public class PxfS3Mock extends PxfS3 {
 
 	/**
 	 * Example of how to use this class
-	 * 
+	 *
 	 * NOTE: the try/catch/finally is important since, if an exception is thrown,
 	 * this will keep the port open, preventing future runs (within the same JVM;
 	 * e.g. the IDE).
