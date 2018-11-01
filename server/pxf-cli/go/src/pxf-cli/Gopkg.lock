@@ -10,7 +10,6 @@
   version = "v3.5.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:34f793ebe579a9534755e739f0d34c2ff12cba6cf8c075ef451275712b770ba5"
   name = "github.com/greenplum-db/gp-common-go-libs"
   packages = [
@@ -50,6 +49,14 @@
   pruneopts = "UT"
   revision = "89f1e6ac7276b61d885db5e5aed6fcbedd1c7e31"
   version = "v3.2.0"
+
+[[projects]]
+  digest = "1:a2cff208d4759f6ba1b1cd228587b0a1869f95f22542ec9cd17fff64430113c7"
+  name = "github.com/jessevdk/go-flags"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c6ca198ec95c841fdb89fc0de7496fed11ab854e"
+  version = "v1.4.0"
 
 [[projects]]
   digest = "1:6c41d4f998a03b6604227ccad36edaed6126c397e5d78709ef4814a1145a6757"
@@ -216,6 +223,7 @@
   input-imports = [
     "github.com/greenplum-db/gp-common-go-libs/dbconn",
     "github.com/greenplum-db/gp-common-go-libs/gplog",
+    "github.com/jessevdk/go-flags",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/ginkgo",
     "github.com/onsi/gomega",

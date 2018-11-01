@@ -412,10 +412,10 @@ function doStatus()
 	checkWebapp 1 || return 1
 }
 
-function doCluster()
+function doGoCli()
 {
-	shift # drop the 'cluster' arg
-	"$parent_script_dir/bin/pxf-cluster" "$@"
+	# invoke the CLI written in Go
+	"$parent_script_dir/bin/pxf-cli" "$@"
 }
 
 command=$1
@@ -441,11 +441,8 @@ case "${command}" in
 	"status" )
 		doStatus
 		;;
-	"cluster" )
-		doCluster "$@"
-		;;
 	* )
-		printUsage
+		doGoCli "$@"
 		exit 2
 		;;
 esac

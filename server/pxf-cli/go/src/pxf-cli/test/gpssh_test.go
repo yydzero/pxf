@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"os/exec"
-	"pxf-cluster/gpssh"
+	"pxf-cli/gpssh"
 )
 
 var _ = Describe("generating a gpssh command", func() {

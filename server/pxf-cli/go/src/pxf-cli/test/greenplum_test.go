@@ -3,7 +3,7 @@ package test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"pxf-cluster/greenplum"
+	"pxf-cli/greenplum"
 )
 
 var _ = Describe("greenplum", func() {

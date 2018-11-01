@@ -37,6 +37,10 @@ required = ["golang.org/x/tools/cmd/goimports", "github.com/onsi/ginkgo/ginkgo"]
   name = "github.com/greenplum-db/gp-common-go-libs"
   revision = "459655a5c915e633b3a15987ae469ab64b3405a4"
 
+[[constraint]]
+  name = "github.com/jessevdk/go-flags"
+  version = "v1.4.0"
+
 [[override]]
   name = "gopkg.in/fsnotify.v1"
   source = "https://github.com/fsnotify/fsnotify.git"

@@ -1,13 +1,19 @@
-# `pxf cluster` CLI
+# `pxf` CLI
+
+This directory houses the Go portion of the PXF CLI.
+
+The PXF CLI currently consists of a legacy bash script that wraps a Go program.
+Future CLI features will be written in Go, but for now the CLI functionality is
+divided between the two halves.
 
 ## Getting Started
 
 1. Ensure you are set up for PXF development by following the README.md at the
    root of this repository.
 
-1. Go to the pxf-cluster folder and install dependencies
+1. Go to the pxf-cli folder and install dependencies
    ```
-   cd pxf/cli/go/src/pxf-cluster
+   cd pxf/cli/go/src/pxf-cli
    make depend
    ```
 
