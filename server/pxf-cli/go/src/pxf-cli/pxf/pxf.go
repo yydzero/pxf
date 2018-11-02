@@ -1,9 +1,8 @@
 package pxf
 
 import (
-	"errors"
 	"fmt"
-	"os"
+	"pxf-cli/env"
 )
 
 type CliInputs struct {
@@ -12,17 +11,15 @@ type CliInputs struct {
 }
 
 func MakeValidClusterCommandInputs(subcmd string) (*CliInputs, error) {
-	gphome, isGphomeSet := os.LookupEnv("GPHOME")
-	if !isGphomeSet {
-		return nil, errors.New("GPHOME is not set")
+	gphome, err := env.Require("GPHOME")
+	if err != nil {
+		return nil, err
 	}
-	if gphome == "" {
-		return nil, errors.New("GPHOME is blank")
-	}
+
 	switch subcmd {
 	case "init", "start", "stop", "restart", "status":
 		return &CliInputs{
-			Gphome:  os.Getenv("GPHOME"),
+			Gphome:  gphome,
 			Command: subcmd,
 		}, nil
 	}

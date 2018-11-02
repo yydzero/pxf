@@ -6,7 +6,7 @@ type Help struct {
 }
 
 func (c *Help) Execute(args []string) error {
-	fmt.Println(`Usage: pxf [cluster] {start|stop|init|restart|status}
-     | pxf {help|version}`)
+	fmt.Println(`Usage: pxf {start|stop|init|restart|status|help|version}
+     | pxf cluster {start|stop|init}`)
 	return nil
 }
