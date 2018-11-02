@@ -28,18 +28,18 @@ func (c *Cluster) Execute(args []string) error {
 }
 
 func (c *start) Execute(args []string) error {
-	return doSubcommand("start")
+	return doOnAllSegments("start")
 }
 
 func (c *stop) Execute(args []string) error {
-	return doSubcommand("stop")
+	return doOnAllSegments("stop")
 }
 
 func (c *initialize) Execute(args []string) error {
-	return doSubcommand("init")
+	return doOnAllSegments("init")
 }
 
-func doSubcommand(subcmd string) error {
+func doOnAllSegments(subcmd string) error {
 	gplog.InitializeLogging("pxf_cli", "")
 
 	inputs, err := pxf.MakeValidClusterCommandInputs(subcmd)
