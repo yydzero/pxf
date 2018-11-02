@@ -5,12 +5,12 @@ import (
 	"pxf-cli/env"
 )
 
-type CliInputs struct {
+type ClusterCommandInputs struct {
 	Gphome  string
 	Command string
 }
 
-func MakeValidClusterCommandInputs(subcmd string) (*CliInputs, error) {
+func MakeValidClusterCommandInputs(subcmd string) (*ClusterCommandInputs, error) {
 	gphome, err := env.Require("GPHOME")
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func MakeValidClusterCommandInputs(subcmd string) (*CliInputs, error) {
 
 	switch subcmd {
 	case "init", "start", "stop", "restart", "status":
-		return &CliInputs{
+		return &ClusterCommandInputs{
 			Gphome:  gphome,
 			Command: subcmd,
 		}, nil
@@ -27,6 +27,6 @@ func MakeValidClusterCommandInputs(subcmd string) (*CliInputs, error) {
 	panic(fmt.Sprintf("invalid command passed to MakeValidClusterCommandInputs: %s", subcmd))
 }
 
-func RemoteCommandToRunOnSegments(inputs *CliInputs) []string {
+func RemoteCommandToRunOnSegments(inputs *ClusterCommandInputs) []string {
 	return []string{inputs.Gphome + "/pxf/bin/pxf", inputs.Command}
 }

@@ -28,7 +28,7 @@ var _ = Describe("MakeValidClusterCommandInputs", func() {
 	It("Is successful when GPHOME is set and args are valid", func() {
 		inputs, err := pxf.MakeValidClusterCommandInputs("init")
 		Expect(err).To(BeNil())
-		Expect(inputs).To(Equal(&pxf.CliInputs{
+		Expect(inputs).To(Equal(&pxf.ClusterCommandInputs{
 			Gphome:  "/test/gphome",
 			Command: "init",
 		}))
@@ -51,7 +51,7 @@ var _ = Describe("MakeValidClusterCommandInputs", func() {
 	It("Allows the start command", func() {
 		inputs, err := pxf.MakeValidClusterCommandInputs("start")
 		Expect(err).To(BeNil())
-		Expect(inputs).To(Equal(&pxf.CliInputs{
+		Expect(inputs).To(Equal(&pxf.ClusterCommandInputs{
 			Gphome:  "/test/gphome",
 			Command: "start",
 		}))
@@ -60,7 +60,7 @@ var _ = Describe("MakeValidClusterCommandInputs", func() {
 	It("Allows the stop command", func() {
 		inputs, err := pxf.MakeValidClusterCommandInputs("stop")
 		Expect(err).To(BeNil())
-		Expect(inputs).To(Equal(&pxf.CliInputs{
+		Expect(inputs).To(Equal(&pxf.ClusterCommandInputs{
 			Gphome:  "/test/gphome",
 			Command: "stop",
 		}))
@@ -76,7 +76,7 @@ var _ = Describe("MakeValidClusterCommandInputs", func() {
 
 var _ = Describe("RemoteCommandToRunOnSegments", func() {
 	It("constructs a list of shell args from the input", func() {
-		inputs := &pxf.CliInputs{
+		inputs := &pxf.ClusterCommandInputs{
 			Gphome:  "/test/gphome",
 			Command: "init",
 		}

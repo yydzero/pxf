@@ -14,7 +14,7 @@ type commands struct {
 
 func main() {
 	var c commands;
-	_, err := flags.Parse(&c) // invokes the subcommand corresponding to the args
+	_, err := flags.Parse(&c) // invokes the command corresponding to the args
 	if err != nil {
 		os.Exit(1)
 	}
