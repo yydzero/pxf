@@ -13,7 +13,7 @@ type commands struct {
 }
 
 func main() {
-	var c commands;
+	var c commands
 	_, err := flags.Parse(&c) // invokes the command corresponding to the args
 	if err != nil {
 		os.Exit(1)
