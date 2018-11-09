@@ -28,7 +28,7 @@ JVM_OPTS=""
 PXF_LOGDIR="$CATALINA_BASE/logs"
 PXF_USER_IMPERSONATION=""
 
-PXF_OPTS="-Dpxf.log.dir=$PXF_LOGDIR -Dpxf.service.user.impersonation.enabled=$PXF_USER_IMPERSONATION -Dpxf.service.kerberos.keytab=$PXF_KEYTAB -Dpxf.service.kerberos.principal=$PXF_PRINCIPAL"
+PXF_OPTS="-Dpxf.log.dir=$PXF_LOGDIR -Dpxf.conf=$PXF_CONF -Dpxf.service.user.impersonation.enabled=$PXF_USER_IMPERSONATION -Dpxf.service.kerberos.keytab=$PXF_KEYTAB -Dpxf.service.kerberos.principal=$PXF_PRINCIPAL"
 JAVA_OPTS="$JVM_OPTS $AGENT_PATHS $JAVA_AGENTS $JAVA_LIBRARY_PATH $PXF_OPTS"
 
 CATALINA_PID="$CATALINA_BASE/logs/catalina.pid"

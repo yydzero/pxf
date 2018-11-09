@@ -312,6 +312,9 @@ project('pxf-ignite') {
 }
 
 project('pxf-api') {
+    dependencies {
+        compile "org.apache.hadoop:hadoop-common:$hadoopVersion"
+    }
 }
 
 wrapper {

@@ -245,6 +245,7 @@ function configureWebapp()
     sed "${SED_OPTS[@]}" "s|-Dpxf.log.dir=[^[:space:]^\"]*|-Dpxf.log.dir=${PXF_LOGDIR} |g" ${catalinaEnv}
     sed "${SED_OPTS[@]}" "s|-Dpxf.service.kerberos.keytab=[^[:space:]^\"]*|-Dpxf.service.kerberos.keytab=${PXF_KEYTAB} |g" ${catalinaEnv}
     sed "${SED_OPTS[@]}" "s|-Dpxf.service.kerberos.principal=[^[:space:]^\"]*|-Dpxf.service.kerberos.principal=${PXF_PRINCIPAL} |g" ${catalinaEnv}
+    sed "${SED_OPTS[@]}" "s|-Dpxf.conf=[^[:space:]^\"]*|-Dpxf.conf=${PXF_CONF} |g" ${catalinaEnv}
     sed "${SED_OPTS[@]}" "s|^[[:blank:]]*PXF_USER_IMPERSONATION=.*$|PXF_USER_IMPERSONATION=\"${PXF_USER_IMPERSONATION}\"|g" ${catalinaEnv}
     sed "${SED_OPTS[@]}" "s|^[[:blank:]]*CATALINA_PID=.*$|CATALINA_PID=${PXF_RUNDIR}/catalina.pid|g" ${catalinaEnv}
     sed "${SED_OPTS[@]}" "s|^[[:blank:]]*CATALINA_OUT=.*$|CATALINA_OUT=${PXF_LOGDIR}/catalina.out|g" ${catalinaEnv}
