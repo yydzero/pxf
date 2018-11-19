@@ -180,7 +180,8 @@ project('pxf-api') {
         compile "commons-configuration:commons-configuration:1.6"
         compile "commons-codec:commons-codec:1.4"
         compile "com.sun.jersey:jersey-core:1.9"
-        compile "org.apache.hadoop:hadoop-common:$hadoopVersion"
+        //compile "org.apache.hadoop:hadoop-common:$hadoopVersion"
+        compile "org.apache.hadoop:hadoop-common:2.8.5"
 
         bundleJars "org.codehaus.jackson:jackson-core-asl:1.9.13"
         bundleJars "asm:asm:3.2"
