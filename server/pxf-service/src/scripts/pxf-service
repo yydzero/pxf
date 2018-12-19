@@ -364,13 +364,14 @@ doHelp() {
 	cat <<-EOF
 
 	${bold}List of commands${normal}:
-	  init      initialize the local PXF server instance
-	  start     start the local PXF server instance
-	  stop      stop the local PXF server instance
-	  restart   restart the local PXF server instance (not supported for cluster)
-	  status    show the status of the local PXF server instance (not supported for cluster)
-	  version   show the version of PXF server
-	  cluster   perform <command> on each segment host in the cluster
+	  init       initialize the local PXF server instance
+	  start      start the local PXF server instance
+	  stop       stop the local PXF server instance
+	  restart    restart the local PXF server instance (not supported for cluster)
+	  status     show the status of the local PXF server instance (not supported for cluster)
+	  version    show the version of PXF server
+	  cluster    perform <command> on each segment host in the cluster
+	  credential manage security credentials
 
 	${bold}Options${normal}:
 	  -h, --help    show command help
@@ -444,6 +445,20 @@ function doCluster()
 	GPHOME=${GPHOME:-"${PXF_HOME}/.."} "$parent_script_dir/bin/pxf-cli" "$@"
 }
 
+function doCredential()
+{
+    if [[ $1 != "-s" ]]; then
+        echo "ERROR: server option is missing."
+        echo "USAGE:"
+        echo "pxf credential -s <server-name> create <alias> <value>"
+        echo "pxf credential -s <server-name> list"
+        echo "pxf credential -s <server-name> delete <alias>"
+    else
+        shift
+    	${JAVA_HOME}/bin/java -Dpxf.conf=${PXF_CONF} -cp ${PXF_HOME}/lib/*:${PXF_HOME}/lib/shared/* org.greenplum.pxf.api.security.CredentialShell "$@"
+    fi
+}
+
 pxf_script_command=$1
 
 silent=false
@@ -481,6 +496,11 @@ case "${pxf_script_command}" in
 	'cluster' )
 		doCluster "$@"
 		;;
+	'credential' )
+	    shift
+		doCredential $@
+		;;
+
 	* )
 		printUsage
 		exit 2
