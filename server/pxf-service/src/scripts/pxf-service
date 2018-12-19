@@ -424,6 +424,7 @@ function doCredential()
         echo "pxf credential -s <server-name> list"
         echo "pxf credential -s <server-name> delete <alias>"
     else
+        get_environment
         shift
     	${JAVA_HOME}/bin/java -Dpxf.conf=${PXF_CONF} -cp ${PXF_HOME}/lib/*:${PXF_HOME}/lib/shared/* org.greenplum.pxf.api.security.CredentialShell "$@"
     fi

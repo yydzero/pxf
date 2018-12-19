@@ -8,7 +8,7 @@ import static org.junit.Assert.assertEquals;
 public class CredentialsTest {
 
     @Test
-    public void readStoredCrdential() throws Exception {
+    public void readStoredCredential() throws Exception {
 
         // determine local resource file absolute path
         String credsFile = this.getClass().getClassLoader().getResource("creds.jceks").toURI().toString();

@@ -28,6 +28,10 @@ public class BaseConfigurationFactory implements ConfigurationFactory {
         this(SERVERS_CONFIG_DIR, new BaseCredentials());
     }
 
+    BaseConfigurationFactory(File serversConfigDirectory) {
+        this(serversConfigDirectory, new BaseCredentials());
+    }
+
     BaseConfigurationFactory(File serversConfigDirectory, Credentials credentials) {
         this.serversConfigDirectory = serversConfigDirectory;
         this.credentials = credentials;
@@ -96,9 +100,9 @@ public class BaseConfigurationFactory implements ConfigurationFactory {
         } else {
             String provider = credentials.getServerCredentialsProviderName(directory, server);
             LOG.debug("Adding to configuration credentials provider {}", provider);
-            String providers = configuration.get(CREDENTIAL_PROVIDER_PATH);
-            providers = StringUtils.isBlank(providers) ? provider : providers + "," + provider;
-            configuration.set(CREDENTIAL_PROVIDER_PATH, providers);
+            String existingProviders = configuration.get(CREDENTIAL_PROVIDER_PATH);
+            existingProviders = StringUtils.isBlank(existingProviders) ? provider : existingProviders + "," + provider;
+            configuration.set(CREDENTIAL_PROVIDER_PATH, existingProviders);
         }
     }
 

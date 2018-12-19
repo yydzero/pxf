@@ -12,8 +12,6 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.apache.hadoop.security.alias.CredentialProviderFactory.CREDENTIAL_PROVIDER_PATH;
-import static org.greenplum.pxf.api.security.Credentials.LOCALJCEKS_FILE_PREFIX;
-import static org.greenplum.pxf.api.security.Credentials.SERVER_JCEKS_FILENAME;
 
 /**
  * Class responsible for managing credentials in local JCEKS keystores for PXF servers
@@ -73,9 +71,8 @@ public class CredentialShell {
                 System.out.printf("%s has been successfully created.%n", alias);
                 break;
             case "list":
-                alias = parseArg(args, 2, "alias", true);
                 System.out.printf("Listing aliases for server: %s%n", server);
-                listCredentials(server, alias).forEach(System.out::println);
+                listCredentials(server).forEach(System.out::println);
                 System.out.println();
                 break;
             case "delete":
@@ -99,7 +96,7 @@ public class CredentialShell {
         }
     }
 
-    private List<String> listCredentials(String server, String alias) {
+    private List<String> listCredentials(String server) {
         CredentialProvider provider = getCredentialProvider(server);
         List<String> aliases;
         try {
@@ -124,7 +121,9 @@ public class CredentialShell {
     private CredentialProvider getCredentialProvider(String server) {
         // start with the brand new configuration and add the target server-level provider to the path
         Configuration configuration = new Configuration();
-        configuration.set(CREDENTIAL_PROVIDER_PATH, credentials.getServerCredentialsProviderName(ConfigurationFactory.SERVERS_CONFIG_DIR, server));
+        File serverDirectory = getServerDirectory(ConfigurationFactory.SERVERS_CONFIG_DIR, server);
+
+        configuration.set(CREDENTIAL_PROVIDER_PATH, credentials.getServerCredentialsProviderName(serverDirectory, server));
 
         List<CredentialProvider> providers;
         try {
@@ -138,6 +137,17 @@ public class CredentialShell {
         }
 
         return providers.get(0);
+    }
+
+    private File getServerDirectory(File parentDir, String server) {
+        // ensure the server directory corresponding to the server name exists
+        File serverConfigDir = new File(parentDir, server);
+        if (!serverConfigDir.exists()) {
+            throw new RuntimeException(String.format("server directory %s does not exist, create it first", serverConfigDir));
+        } else if (!serverConfigDir.isDirectory()) {
+            throw new RuntimeException(String.format("server directory %s is not a directory", serverConfigDir));
+        }
+        return serverConfigDir;
     }
 
 
@@ -156,7 +166,7 @@ public class CredentialShell {
     private void showUsage() {
         System.out.println("USAGE:");
         System.out.println("pxf credential -s <server-name> create <alias> <value>");
-        System.out.println("pxf credential -s <server-name> list [<alias>]");
+        System.out.println("pxf credential -s <server-name> list");
         System.out.println("pxf credential -s <server-name> delete <alias>");
         System.out.println("Example: pxf credential -s myserver create access_key 1A2B3C4D5E");
     }

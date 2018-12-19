@@ -12,21 +12,14 @@ public class BaseCredentials implements Credentials {
 
     @Override
     public String getServerCredentialsFilename(String server) {
-        server = StringUtils.isBlank(server) ? "" : server.toLowerCase() + "-";
-        return server + SERVER_JCEKS_FILENAME;
+        server = StringUtils.isBlank(server) ? "" : server.toLowerCase();
+        return server + SERVER_JCEKS_SUFFIX;
     }
 
     @Override
-    public String getServerCredentialsProviderName(File serversConfigDir, String server) {
-        // ensure the server directory corresponding to the server name exists
-        File serverConfigDir = new File(serversConfigDir, server);
-        if (! serverConfigDir.exists()) {
-            throw new RuntimeException(String.format("server directory %s does not exist, create it first", serverConfigDir));
-        } else if (! serverConfigDir.isDirectory()) {
-            throw new RuntimeException(String.format("server directory %s is not a directory", serverConfigDir));
-        }
-
-        String providerName = LOCALJCEKS_FILE_PREFIX + new File(serverConfigDir, getServerCredentialsFilename(server)).getAbsolutePath();
+    public String getServerCredentialsProviderName(File serverConfigDir, String server) {
+        String providerName = LOCALJCEKS_FILE_PREFIX +
+                new File(serverConfigDir, getServerCredentialsFilename(server)).getAbsolutePath();
         LOG.debug("Returning server credentials provider = {} for server {}", providerName, server);
 
         return providerName;
