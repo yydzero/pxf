@@ -7,7 +7,6 @@ export PXF_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
 
 _main() {
 	export TERM=xterm
-	export BUILD_NUMBER="${TARGET_OS}"
 	export PXF_HOME="${GPHOME}/pxf"
 	export PATH="$PATH:$(cd ~; pwd)/go/bin"
 	make -C pxf_src test install
