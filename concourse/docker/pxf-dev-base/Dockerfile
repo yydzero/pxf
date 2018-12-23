@@ -4,9 +4,12 @@ FROM pivotaldata/${BASE_IMAGE}
 
 # install Go utilities
 RUN cd /tmp && \
-    wget -q https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go1.11.1.linux-amd64.tar.gz && \
-    rm -f go1.11.1.linux-amd64.tar.gz && \
+    GO_VERSION=$(wget -qO- https://golang.org/dl/ | grep -E -o 'go1\.[0-9]+\.[0-9]+' | \
+                 tr -d "go" | sort -V | uniq | tail -1) && \
+    echo "Using GO version ${GO_VERSION}" && \
+    wget -q https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm -f go${GO_VERSION}.linux-amd64.tar.gz && \
     cd - && \
     GOPATH=/opt/go /usr/local/go/bin/go get github.com/golang/dep/cmd/dep && \
     GOPATH=/opt/go /usr/local/go/bin/go get github.com/onsi/ginkgo/ginkgo && \
