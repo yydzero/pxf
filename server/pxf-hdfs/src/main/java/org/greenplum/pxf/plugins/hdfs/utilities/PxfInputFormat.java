@@ -29,8 +29,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
-import java.io.IOException;
-
 /**
  * PxfInputFormat is not intended to read a specific format, hence it implements
  * a dummy getRecordReader Instead, its purpose is to apply
@@ -41,9 +39,7 @@ import java.io.IOException;
 public class PxfInputFormat extends FileInputFormat {
 
     @Override
-    public RecordReader getRecordReader(InputSplit split,
-                                        JobConf conf,
-                                        Reporter reporter) throws IOException {
+    public RecordReader getRecordReader(InputSplit split, JobConf conf, Reporter reporter) {
         throw new UnsupportedOperationException("PxfInputFormat should not be used for reading data, but only for obtaining the splits of a file");
     }
 

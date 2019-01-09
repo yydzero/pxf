@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase.utilities;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -29,15 +28,15 @@ import java.util.Arrays;
  * {@link ColumnDescriptor} for HBase columns.
  */
 public class HBaseColumnDescriptor extends ColumnDescriptor {
-    byte[] columnFamily;
-    byte[] qualifier;
+    private byte[] columnFamily;
+    private byte[] qualifier;
 
     /**
      * Constructs a column descriptor using the given copy's column name.
      *
      * @param copy column descriptor to be copied
      */
-    public HBaseColumnDescriptor(ColumnDescriptor copy) {
+    HBaseColumnDescriptor(ColumnDescriptor copy) {
         this(copy, copy.columnName().getBytes());
     }
 
@@ -55,7 +54,7 @@ public class HBaseColumnDescriptor extends ColumnDescriptor {
      * @param copy column descriptor
      * @param newColumnName HBase column name - can be different than the given column descriptor name.
      */
-    public HBaseColumnDescriptor(ColumnDescriptor copy, byte[] newColumnName) {
+    HBaseColumnDescriptor(ColumnDescriptor copy, byte[] newColumnName) {
         super(copy);
 
         if (isKeyColumn()) {
@@ -69,8 +68,7 @@ public class HBaseColumnDescriptor extends ColumnDescriptor {
     }
 
     /**
-     * Returns the family column name.
-     * (E.g. "cf1:q2" will return "cf1")
+     * Returns the family column name. (E.g. "cf1:q2" will return "cf1")
      *
      * @return family column name
      */
@@ -96,7 +94,6 @@ public class HBaseColumnDescriptor extends ColumnDescriptor {
         }
 
         throw new IllegalArgumentException("Illegal HBase column name " +
-                Bytes.toString(columnName) +
-                ", missing :");
+                Bytes.toString(columnName) + ", missing :");
     }
 }

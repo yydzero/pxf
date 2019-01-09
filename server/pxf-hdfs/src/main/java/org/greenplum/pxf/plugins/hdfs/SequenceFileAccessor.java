@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,7 +40,6 @@ import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.EnumSet;
 
 /**
@@ -56,9 +54,6 @@ public class SequenceFileAccessor extends HdfsSplittableDataAccessor {
     private SequenceFile.Writer writer;
     private LongWritable defaultKey; // used when recordkey is not defined
 
-    /**
-     * Constructs a SequenceFileAccessor.
-     */
     public SequenceFileAccessor() {
         this(BaseConfigurationFactory.getInstance());
     }
@@ -68,9 +63,6 @@ public class SequenceFileAccessor extends HdfsSplittableDataAccessor {
         this.configurationFactory = configurationFactory;
     }
 
-    /**
-     * Overrides virtual method to create specialized record reader
-     */
     @Override
     protected Object getReader(JobConf jobConf, InputSplit split) throws IOException {
         return new SequenceFileRecordReader<>(jobConf, (FileSplit) split);
@@ -226,11 +218,11 @@ public class SequenceFileAccessor extends HdfsSplittableDataAccessor {
         }
     }
 
-    public CompressionType getCompressionType() {
+    CompressionType getCompressionType() {
         return compressionType;
     }
 
-    public CompressionCodec getCodec() {
+    CompressionCodec getCodec() {
         return codec;
     }
 }

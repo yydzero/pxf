@@ -88,9 +88,7 @@ public enum DataType {
      */
     public static DataType get(int OID) {
         DataType type = lookup.get(OID);
-        return type == null
-                ? UNSUPPORTED_TYPE
-                : type;
+        return type == null ? UNSUPPORTED_TYPE : type;
     }
 
     public static boolean isArrayType(int OID) {

@@ -182,7 +182,7 @@ public class Metadata {
     }
 
     public Metadata(Item itemName) {
-        this(itemName, new ArrayList<Metadata.Field>());
+        this(itemName, new ArrayList<>());
     }
 
     public Item getItem() {
@@ -200,7 +200,7 @@ public class Metadata {
      */
     public void addField(Metadata.Field field) {
         if (fields == null) {
-            fields = new ArrayList<Metadata.Field>();
+            fields = new ArrayList<>();
         }
         fields.add(field);
     }

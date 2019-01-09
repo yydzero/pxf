@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileSplit;
@@ -48,8 +47,8 @@ import java.net.URI;
  * reading does not support splitting: a protocol-buffer file, regular file, ...
  */
 public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Accessor {
-    protected InputStream inp;
 
+    InputStream inp;
     private FileSplit fileSplit;
 
     @Override
@@ -71,8 +70,8 @@ public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Acces
             return false;
         }
 
-        // input data stream
-        FileSystem fs = FileSystem.get(URI.create(context.getDataSource()), configuration); // FileSystem.get actually returns an FSDataInputStream
+        // FileSystem.get actually returns an FSDataInputStream
+        FileSystem fs = FileSystem.get(URI.create(context.getDataSource()), configuration);
         inp = fs.open(new Path(context.getDataSource()));
 
         return (inp != null);
@@ -117,8 +116,6 @@ public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Acces
     @Override
     public boolean isThreadSafe() {
         return HdfsUtilities.isThreadSafe(
-                configuration,
-                context.getDataSource(),
-                context.getOption("COMPRESSION_CODEC"));
+                configuration, context.getDataSource(), context.getOption("COMPRESSION_CODEC"));
     }
 }

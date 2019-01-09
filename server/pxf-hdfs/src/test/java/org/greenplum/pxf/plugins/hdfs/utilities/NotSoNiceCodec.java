@@ -19,10 +19,8 @@ package org.greenplum.pxf.plugins.hdfs.utilities;
  * under the License.
  */
 
-
 import org.apache.hadoop.io.compress.*;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -33,14 +31,12 @@ import java.io.OutputStream;
 public class NotSoNiceCodec implements CompressionCodec {
 
     @Override
-    public CompressionOutputStream createOutputStream(OutputStream out)
-            throws IOException {
+    public CompressionOutputStream createOutputStream(OutputStream out) {
         return null;
     }
 
     @Override
-    public CompressionOutputStream createOutputStream(OutputStream out,
-                                                      Compressor compressor) throws IOException {
+    public CompressionOutputStream createOutputStream(OutputStream out, Compressor compressor) {
         return null;
     }
 
@@ -55,14 +51,12 @@ public class NotSoNiceCodec implements CompressionCodec {
     }
 
     @Override
-    public CompressionInputStream createInputStream(InputStream in)
-            throws IOException {
+    public CompressionInputStream createInputStream(InputStream in) {
         return null;
     }
 
     @Override
-    public CompressionInputStream createInputStream(InputStream in,
-                                                    Decompressor decompressor) throws IOException {
+    public CompressionInputStream createInputStream(InputStream in, Decompressor decompressor) {
         return null;
     }
 

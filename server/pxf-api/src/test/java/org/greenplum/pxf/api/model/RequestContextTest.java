@@ -9,7 +9,6 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
-
 public class RequestContextTest {
 
     @Rule

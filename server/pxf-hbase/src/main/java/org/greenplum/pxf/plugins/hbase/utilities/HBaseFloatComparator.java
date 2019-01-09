@@ -52,6 +52,7 @@ public class HBaseFloatComparator extends ByteArrayComparable{
         return val.compareTo(valueAsFloat);
     }
 
+    @SuppressWarnings("unused")
     public static ByteArrayComparable parseFrom(final byte[] pbBytes) throws DeserializationException {
         ComparatorProtos.ByteArrayComparable proto;
         try {

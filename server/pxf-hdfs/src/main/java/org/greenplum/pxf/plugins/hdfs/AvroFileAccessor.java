@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.generic.GenericDatumReader;
@@ -85,7 +84,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
 
     @Override
     protected Object getReader(JobConf jobConf, InputSplit split) throws IOException {
-        return new AvroRecordReader<Object>(jobConf, (FileSplit) split);
+        return new AvroRecordReader<>(jobConf, (FileSplit) split);
     }
 
     /**
@@ -98,7 +97,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public OneRow readNextObject() throws IOException {
-        /** Resetting datum to null, to avoid stale bytes to be padded from the previous row's datum */
+        /* Resetting datum to null, to avoid stale bytes to be padded from the previous row's datum */
         avroWrapper.datum(null);
         if (reader.next(avroWrapper, NullWritable.get())) { // There is one more record in the current split.
             return new OneRow(null, avroWrapper.datum());
@@ -118,10 +117,9 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      * Opens the resource for write.
      *
      * @return true if the resource is successfully opened
-     * @throws Exception if opening the resource failed
      */
     @Override
-    public boolean openForWrite() throws Exception {
+    public boolean openForWrite() {
         throw new UnsupportedOperationException();
     }
 
@@ -130,20 +128,17 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      *
      * @param onerow the object to be written
      * @return true if the write succeeded
-     * @throws Exception writing to the resource failed
      */
     @Override
-    public boolean writeNextObject(OneRow onerow) throws Exception {
+    public boolean writeNextObject(OneRow onerow) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Closes the resource for write.
-     *
-     * @throws Exception if closing the resource failed
      */
     @Override
-    public void closeForWrite() throws Exception {
+    public void closeForWrite() {
         throw new UnsupportedOperationException();
     }
 
@@ -157,7 +152,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      * @return the Avro schema
      * @throws IOException if I/O error occurred while accessing Avro schema file
      */
-    Schema getAvroSchema(Configuration conf, String dataSource)
+    private Schema getAvroSchema(Configuration conf, String dataSource)
             throws IOException {
         FsInput inStream = new FsInput(new Path(dataSource), conf);
         DatumReader<GenericRecord> dummyReader = new GenericDatumReader<>();

@@ -42,15 +42,13 @@ import static org.mockito.Mockito.*;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({HBaseAccessor.class, HBaseConfiguration.class, ConnectionFactory.class})
 public class HBaseAccessorTest {
-    static final String tableName = "fishy_HBase_table";
+    private static final String tableName = "fishy_HBase_table";
 
-    RequestContext requestContext;
-    HBaseTupleDescription tupleDescription;
-    Table table;
-    Scan scanDetails;
-    Configuration hbaseConfiguration;
-    Connection hbaseConnection;
-    HBaseAccessor accessor;
+    private RequestContext requestContext;
+    private HBaseTupleDescription tupleDescription;
+    private Table table;
+    private Scan scanDetails;
+    private HBaseAccessor accessor;
 
     /*
 	 * After each test is done, close the accessor
@@ -92,7 +90,6 @@ public class HBaseAccessorTest {
 	 */
     @Test
     @Ignore
-    @SuppressWarnings("unchecked")
     public void tableHasNoMetadata() throws Exception {
         prepareConstruction();
         prepareTableOpen();
@@ -134,12 +131,12 @@ public class HBaseAccessorTest {
         // Make sure we mock static functions in HBaseConfiguration
         PowerMockito.mockStatic(HBaseConfiguration.class);
 
-        hbaseConfiguration = mock(Configuration.class);
+        Configuration hbaseConfiguration = mock(Configuration.class);
         when(HBaseConfiguration.create()).thenReturn(hbaseConfiguration);
 
         // Make sure we mock static functions in ConnectionFactory
         PowerMockito.mockStatic(ConnectionFactory.class);
-        hbaseConnection = mock(Connection.class);
+        Connection hbaseConnection = mock(Connection.class);
         when(ConnectionFactory.createConnection(hbaseConfiguration)).thenReturn(hbaseConnection);
         table = mock(Table.class);
         when(hbaseConnection.getTable(TableName.valueOf(tableName))).thenReturn(table);

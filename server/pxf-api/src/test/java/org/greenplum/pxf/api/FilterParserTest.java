@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.FilterParser.FilterBuilder;
 import org.greenplum.pxf.api.FilterParser.Operation;
 import org.greenplum.pxf.api.FilterParser.LogicalOperation;
@@ -42,12 +41,12 @@ import static org.mockito.Mockito.when;
 @PrepareForTest({FilterBuilder.class})
 public class FilterParserTest {
 
-    FilterBuilder filterBuilder;
-    FilterParser filterParser;
-    String filter, exception;
+    private FilterBuilder filterBuilder;
+    private FilterParser filterParser;
+    private String filter, exception;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         filterBuilder = mock(FilterBuilder.class);
         filterParser = new FilterParser(filterBuilder);
     }
@@ -336,17 +335,9 @@ public class FilterParserTest {
         Object secondOp = "second operation HDOP_GT";
         Object lastOp = "filter with 2 operations connected by AND";
 
-        when(filterBuilder.build(eq(Operation.HDOP_EQ),
-                any(),
-                any())).thenReturn(firstOp);
-
-        when(filterBuilder.build(eq(Operation.HDOP_GT),
-                any(),
-                any())).thenReturn(secondOp);
-
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND),
-                eq(firstOp),
-                eq(secondOp))).thenReturn(lastOp);
+        when(filterBuilder.build(eq(Operation.HDOP_EQ), any(), any())).thenReturn(firstOp);
+        when(filterBuilder.build(eq(Operation.HDOP_GT), any(), any())).thenReturn(secondOp);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND), eq(firstOp), eq(secondOp))).thenReturn(lastOp);
 
         Object result = filterParser.parse(filter.getBytes());
 
@@ -361,17 +352,9 @@ public class FilterParserTest {
         Object secondOp = "second operation HDOP_GT";
         Object lastOp = "filter with 2 operations connected by AND";
 
-        when(filterBuilder.build(eq(Operation.HDOP_EQ),
-                any(),
-                any())).thenReturn(firstOp);
-
-        when(filterBuilder.build(eq(Operation.HDOP_GT),
-                any(),
-                any())).thenReturn(secondOp);
-
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND),
-                any(),
-                any())).thenReturn(lastOp);
+        when(filterBuilder.build(eq(Operation.HDOP_EQ), any(), any())).thenReturn(firstOp);
+        when(filterBuilder.build(eq(Operation.HDOP_GT), any(), any())).thenReturn(secondOp);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND), any(), any())).thenReturn(lastOp);
 
         Object result = filterParser.parse(filter.getBytes());
 
@@ -386,17 +369,9 @@ public class FilterParserTest {
         Object secondOp = "second operation HDOP_GT";
         Object lastOp = "filter with 1 OR operator";
 
-        when(filterBuilder.build(eq(Operation.HDOP_EQ),
-                any(),
-                any())).thenReturn(firstOp);
-
-        when(filterBuilder.build(eq(Operation.HDOP_GT),
-                any(),
-                any())).thenReturn(secondOp);
-
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_OR),
-                any(),
-                any())).thenReturn(lastOp);
+        when(filterBuilder.build(eq(Operation.HDOP_EQ), any(), any())).thenReturn(firstOp);
+        when(filterBuilder.build(eq(Operation.HDOP_GT), any(), any())).thenReturn(secondOp);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_OR), any(), any())).thenReturn(lastOp);
 
         Object result = filterParser.parse(filter.getBytes());
         assertEquals(lastOp, result);
@@ -409,12 +384,8 @@ public class FilterParserTest {
         Object firstOp = "first operation HDOP_EQ";
         Object op = "filter with NOT operator";
 
-        when(filterBuilder.build(eq(Operation.HDOP_EQ),
-                any(),
-                any())).thenReturn(firstOp);
-
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_NOT),
-                any())).thenReturn(op);
+        when(filterBuilder.build(eq(Operation.HDOP_EQ), any(), any())).thenReturn(firstOp);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_NOT), any())).thenReturn(op);
 
         Object result = filterParser.parse(filter.getBytes());
         assertEquals(op, result);
@@ -428,9 +399,7 @@ public class FilterParserTest {
         thrown.expectMessage("unknown op ending at 2");
 
         filter = "l7";
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND),
-                any(),
-                any())).thenReturn(null);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND), any(), any())).thenReturn(null);
 
         Object result = filterParser.parse(filter.getBytes());
     }
@@ -438,26 +407,16 @@ public class FilterParserTest {
     @Test
     public void parseLogicalOperatorNotExpression() throws Exception {
         filter = "a1c25s5dfirsto5a2c20s1d2o2l0l2";
+
         Object firstOp = "first operation HDOP_EQ";
         Object secondOp = "second operation HDOP_GT";
         Object thirdOp = "filter with 2 operations connected by AND";
         Object lastOp = "filter with 1 NOT operation";
 
-        when(filterBuilder.build(eq(Operation.HDOP_EQ),
-                any(),
-                any())).thenReturn(firstOp);
-
-
-        when(filterBuilder.build(eq(Operation.HDOP_GT),
-                any(),
-                any())).thenReturn(secondOp);
-
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND),
-                any(),
-                any())).thenReturn(thirdOp);
-
-        when(filterBuilder.build(eq(LogicalOperation.HDOP_NOT),
-                any())).thenReturn(lastOp);
+        when(filterBuilder.build(eq(Operation.HDOP_EQ), any(), any())).thenReturn(firstOp);
+        when(filterBuilder.build(eq(Operation.HDOP_GT), any(), any())).thenReturn(secondOp);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_AND), any(), any())).thenReturn(thirdOp);
+        when(filterBuilder.build(eq(LogicalOperation.HDOP_NOT), any())).thenReturn(lastOp);
 
         Object result = filterParser.parse(filter.getBytes());
         assertEquals(lastOp, result);
@@ -478,20 +437,14 @@ public class FilterParserTest {
     }
 
     private void runParseOneOperation(String description, String filter, Operation op) throws Exception {
-        when(filterBuilder.build(eq(op),
-                any(),
-                any())).thenReturn(description);
-
+        when(filterBuilder.build(eq(op), any(), any())).thenReturn(description);
         Object result = filterParser.parse(filter.getBytes());
-
         assertEquals(description, result);
     }
 
     private void runParseOneUnaryOperation(String description, String filter, Operation op) throws Exception {
         when(filterBuilder.build(eq(op), any())).thenReturn(description);
-
         Object result = filterParser.parse(filter.getBytes());
-
         assertEquals(description, result);
     }
 

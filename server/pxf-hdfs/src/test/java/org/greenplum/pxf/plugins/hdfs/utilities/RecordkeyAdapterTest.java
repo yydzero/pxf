@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs.utilities;
  * under the License.
  */
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
@@ -39,8 +38,9 @@ import static org.mockito.Mockito.mock;
 @SuppressStaticInitializationFor("RecordkeyAdapter")
 @PrepareForTest({RecordkeyAdapter.class, LogFactory.class})
 public class RecordkeyAdapterTest {
-    Log LOG;
-    RecordkeyAdapter recordkeyAdapter;
+
+    private Log LOG;
+    private RecordkeyAdapter recordkeyAdapter;
 
     /**
      * Test convertKeyValue for Integer type
@@ -97,7 +97,7 @@ public class RecordkeyAdapterTest {
      */
     @Test
     public void convertKeyValueLong() {
-        long key = 12345678901234567l;
+        long key = 12345678901234567L;
         initRecordkeyAdapter();
         runConvertKeyValue(key, new LongWritable(key));
     }

@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.*;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.RequestContext;
@@ -64,7 +63,7 @@ public class HBaseResolver extends BasePlugin implements Resolver {
     @Override
     public List<OneField> getFields(OneRow onerow) throws Exception {
         Result result = (Result) onerow.getData();
-        LinkedList<OneField> fields = new LinkedList<OneField>();
+        LinkedList<OneField> fields = new LinkedList<>();
 
         for (int i = 0; i < tupleDescription.columns(); ++i) {
             HBaseColumnDescriptor column = tupleDescription.getColumn(i);
@@ -91,10 +90,9 @@ public class HBaseResolver extends BasePlugin implements Resolver {
      *
      * @param record list of {@link OneField}
      * @return the constructed {@link OneRow}
-     * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
+    public OneRow setFields(List<OneField> record) {
         throw new UnsupportedOperationException();
     }
 
@@ -163,7 +161,7 @@ public class HBaseResolver extends BasePlugin implements Resolver {
      * @param column HBase column to be retrieved
      * @return HBase column value
      */
-    byte[] getColumnValue(Result result, HBaseColumnDescriptor column) {
+    private byte[] getColumnValue(Result result, HBaseColumnDescriptor column) {
         // if column does not contain a value, return null
         if (!result.containsColumn(column.columnFamilyBytes(),
                 column.qualifierBytes())) {

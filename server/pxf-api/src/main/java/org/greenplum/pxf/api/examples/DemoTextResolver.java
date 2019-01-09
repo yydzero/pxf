@@ -41,8 +41,8 @@ public class DemoTextResolver extends DemoResolver {
      * @return the first column contains the entire text data
      */
     @Override
-    public List<OneField> getFields(OneRow row) throws Exception {
-        List<OneField> output = new LinkedList<OneField>();
+    public List<OneField> getFields(OneRow row) {
+        List<OneField> output = new LinkedList<>();
         Object data = row.getData();
         output.add(new OneField(DataType.VARCHAR.getOID(), data));
         return output;

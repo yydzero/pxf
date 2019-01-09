@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.examples.DemoAccessor;
 import org.greenplum.pxf.api.examples.DemoResolver;
 import org.greenplum.pxf.api.examples.DemoTextResolver;
@@ -36,7 +35,9 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.greenplum.pxf.api.io.DataType.VARCHAR;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({DemoAccessor.class}) // Enables mocking 'new' calls
@@ -47,13 +48,13 @@ public class DemoResolverTest {
 
     @Mock
     RequestContext requestContext;
-    DemoResolver customResolver;
-    DemoTextResolver textResolver;
-    OneRow row;
-    OneField field;
+    private DemoResolver customResolver;
+    private DemoTextResolver textResolver;
+    private OneRow row;
+    private OneField field;
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         customResolver = new DemoResolver();
         textResolver = new DemoTextResolver();
 
@@ -65,7 +66,7 @@ public class DemoResolverTest {
     }
 
     @Test
-    public void testGetCustomData() throws Exception {
+    public void testGetCustomData() {
 
         List<OneField> output = customResolver.getFields(row);
         assertEquals("value1", output.get(0).toString());
@@ -73,7 +74,7 @@ public class DemoResolverTest {
     }
 
     @Test
-    public void testGetTextData() throws Exception {
+    public void testGetTextData() {
 
         List<OneField> output = textResolver.getFields(row);
         assertEquals(DATA, output.get(0).toString());
@@ -103,7 +104,7 @@ public class DemoResolverTest {
     @Test(expected = Exception.class)
     public void testSetTextDataEmptyInput() throws Exception {
 
-        textResolver.setFields(Collections.<OneField>emptyList());
+        textResolver.setFields(Collections.emptyList());
     }
 
     @Test(expected = Exception.class)

@@ -66,13 +66,13 @@ public class FilterParser {
     private byte[] filterByteArr;
     private Stack<Object> operandsStack;
     private FilterBuilder filterBuilder;
-    public static final char COL_OP = 'a';
-    public static final char SCALAR_CONST_OP = 'c';
-    public static final char LIST_CONST_OP = 'm';
-    public static final char CONST_LEN = 's';
-    public static final char CONST_DATA = 'd';
-    public static final char COMP_OP = 'o';
-    public static final char LOG_OP = 'l';
+    private static final char COL_OP = 'a';
+    private static final char SCALAR_CONST_OP = 'c';
+    private static final char LIST_CONST_OP = 'm';
+    private static final char CONST_LEN = 's';
+    private static final char CONST_DATA = 'd';
+    private static final char COMP_OP = 'o';
+    private static final char LOG_OP = 'l';
 
     public static final String DEFAULT_CHARSET = "UTF-8";
 
@@ -116,7 +116,7 @@ public class FilterParser {
          * @return the built filter
          * @throws Exception if building the filter failed
          */
-        public Object build(Operation operation, Object left, Object right) throws Exception;
+        Object build(Operation operation, Object left, Object right) throws Exception;
 
         /**
          * Builds the filter for an operation with one operand
@@ -126,7 +126,7 @@ public class FilterParser {
          * @return the built filter
          * @throws Exception if building the filter failed
          */
-        public Object build(Operation operation, Object operand) throws Exception;
+        Object build(Operation operation, Object operand) throws Exception;
 
         /**
          * Builds the filter for a logical operation and two operands
@@ -137,7 +137,7 @@ public class FilterParser {
          * @return the built filter
          * @throws Exception if building the filter failed
          */
-        public Object build(LogicalOperation operation, Object left, Object right) throws Exception;
+        Object build(LogicalOperation operation, Object left, Object right) throws Exception;
 
         /**
          * Builds the filter for a logical operation and one operand
@@ -147,14 +147,14 @@ public class FilterParser {
          * @return the built filter
          * @throws Exception if building the filter failed
          */
-        public Object build(LogicalOperation operation, Object filter) throws Exception;
+        Object build(LogicalOperation operation, Object filter) throws Exception;
     }
 
     /** Represents a column index. */
     public class ColumnIndex {
         private int index;
 
-        public ColumnIndex(int idx) {
+        ColumnIndex(int idx) {
             index = idx;
         }
 
@@ -167,7 +167,7 @@ public class FilterParser {
     public class Constant {
         private Object constant;
 
-        public Constant(Object obj) {
+        Constant(Object obj) {
             constant = obj;
         }
 
@@ -192,7 +192,7 @@ public class FilterParser {
      * @param eval the filter builder
      */
     public FilterParser(FilterBuilder eval) {
-        operandsStack = new Stack<Object>();
+        operandsStack = new Stack<>();
         filterBuilder = eval;
     }
 
@@ -316,7 +316,7 @@ public class FilterParser {
      * @return the converted int value
      * @throws FilterStringSyntaxException if the long value is not inside an int scope
      */
-    int safeToInt(Long value) throws FilterStringSyntaxException {
+    private int safeToInt(Long value) throws FilterStringSyntaxException {
         if (value > Integer.MAX_VALUE || value < Integer.MIN_VALUE) {
             throw new FilterStringSyntaxException("value " + value + " larger than intmax ending at " + index);
         }
@@ -436,7 +436,7 @@ public class FilterParser {
         }
 
         DataType dataType = DataType.get(parseConstDataType());
-        List<Object> data = new ArrayList<Object>();
+        List<Object> data = new ArrayList<>();
         if (dataType == DataType.UNSUPPORTED_TYPE) {
             throw new FilterStringSyntaxException("invalid DataType OID at " + (index - 1));
         }

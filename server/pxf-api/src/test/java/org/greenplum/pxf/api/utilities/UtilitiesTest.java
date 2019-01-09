@@ -55,36 +55,36 @@ public class UtilitiesTest {
     class StatsAccessorImpl implements StatsAccessor {
 
         @Override
-        public boolean openForRead() throws Exception {
+        public boolean openForRead() {
             return false;
         }
 
         @Override
-        public OneRow readNextObject() throws Exception {
+        public OneRow readNextObject() {
             return null;
         }
 
         @Override
-        public void closeForRead() throws Exception {
+        public void closeForRead() {
         }
 
         @Override
-        public boolean openForWrite() throws Exception {
+        public boolean openForWrite() {
             return false;
         }
 
         @Override
-        public boolean writeNextObject(OneRow onerow) throws Exception {
+        public boolean writeNextObject(OneRow onerow) {
             return false;
         }
 
         @Override
-        public void closeForWrite() throws Exception {
+        public void closeForWrite() {
 
         }
 
         @Override
-        public void retrieveStats() throws Exception {
+        public void retrieveStats() {
         }
 
         @Override
@@ -105,31 +105,31 @@ public class UtilitiesTest {
     class NonStatsAccessorImpl implements Accessor {
 
         @Override
-        public boolean openForRead() throws Exception {
+        public boolean openForRead() {
             return false;
         }
 
         @Override
-        public OneRow readNextObject() throws Exception {
+        public OneRow readNextObject() {
             return null;
         }
 
         @Override
-        public void closeForRead() throws Exception {
+        public void closeForRead() {
         }
 
         @Override
-        public boolean openForWrite() throws Exception {
+        public boolean openForWrite() {
             return false;
         }
 
         @Override
-        public boolean writeNextObject(OneRow onerow) throws Exception {
+        public boolean writeNextObject(OneRow onerow) {
             return false;
         }
 
         @Override
-        public void closeForWrite() throws Exception {
+        public void closeForWrite() {
         }
 
         @Override
@@ -153,12 +153,12 @@ public class UtilitiesTest {
     class ReadResolverImpl implements Resolver {
 
         @Override
-        public List<OneField> getFields(OneRow row) throws Exception {
+        public List<OneField> getFields(OneRow row) {
             return null;
         }
 
         @Override
-        public OneRow setFields(List<OneField> record) throws Exception {
+        public OneRow setFields(List<OneField> record) {
             return null;
         }
 
@@ -192,7 +192,7 @@ public class UtilitiesTest {
     }
 
     @Test
-    public void byteArrayToOctalStringNull() throws Exception {
+    public void byteArrayToOctalStringNull() {
         StringBuilder sb = null;
         byte[] bytes = "nofink".getBytes();
 
@@ -209,7 +209,7 @@ public class UtilitiesTest {
     }
 
     @Test
-    public void byteArrayToOctalString() throws Exception {
+    public void byteArrayToOctalString() {
         String orig = "Have Narisha";
         String octal = "Rash Rash Rash!";
         String expected = orig + "\\\\122\\\\141\\\\163\\\\150\\\\040"
@@ -247,7 +247,7 @@ public class UtilitiesTest {
     }
 
     @Test
-    public void maskNonPrintable() throws Exception {
+    public void maskNonPrintable() {
         String input = "";
         String result = Utilities.maskNonPrintables(input);
         assertEquals("", result);

@@ -20,6 +20,8 @@ package org.greenplum.pxf.api.utilities;
  */
 
 
+import java.util.Arrays;
+
 /**
  * ColumnDescriptor describes one column in gpdb database.
  * Currently it means a name, a type id (GPDB OID), a type name and column index.
@@ -126,7 +128,7 @@ public class ColumnDescriptor {
 				+ ", dbColumnName=" + dbColumnName
 				+ ", dbColumnTypeName=" + dbColumnTypeName
 				+ ", dbColumnIndex=" + dbColumnIndex
-				+ ", dbColumnTypeModifiers=" + dbColumnTypeModifiers
+				+ ", dbColumnTypeModifiers=" + Arrays.toString(dbColumnTypeModifiers)
                 + ", isProjected=" + isProjected + "]";
 	}
 }

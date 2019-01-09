@@ -43,8 +43,8 @@ public class DemoResolver extends BasePlugin implements Resolver {
      * @return list of fields or columns
      */
     @Override
-    public List<OneField> getFields(OneRow row) throws Exception {
-        List<OneField> output = new LinkedList<OneField>();
+    public List<OneField> getFields(OneRow row) {
+        List<OneField> output = new LinkedList<>();
         Object data = row.getData();
 
         /* break up the row into fields */

@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.Accessor;
 import org.greenplum.pxf.api.model.RequestContext;
@@ -70,8 +69,8 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
      * i.e. a start key and an end key
      */
     private class SplitBoundary {
-        protected byte[] startKey;
-        protected byte[] endKey;
+        byte[] startKey;
+        byte[] endKey;
 
         SplitBoundary(byte[] first, byte[] second) {
             startKey = first;
@@ -131,10 +130,9 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
      * Opens the resource for write.
      *
      * @return true if the resource is successfully opened
-     * @throws Exception if opening the resource failed
      */
     @Override
-    public boolean openForWrite() throws Exception {
+    public boolean openForWrite() {
         throw new UnsupportedOperationException();
     }
 
@@ -143,20 +141,17 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
      *
      * @param onerow the object to be written
      * @return true if the write succeeded
-     * @throws Exception writing to the resource failed
      */
     @Override
-    public boolean writeNextObject(OneRow onerow) throws Exception {
+    public boolean writeNextObject(OneRow onerow) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Closes the resource for write.
-     *
-     * @throws Exception if closing the resource failed
      */
     @Override
-    public void closeForWrite() throws Exception {
+    public void closeForWrite() {
         throw new UnsupportedOperationException();
     }
 
@@ -169,7 +164,7 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
 
         // while currentScanner can't return a new result
         if ((result = currentScanner.next()) == null) {
-            currentScanner.close(); // close it
+            currentScanner.close();
             return null; // no more rows on the split
         }
 
@@ -189,9 +184,8 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
      * this accessor instance is assigned to scan.
      * The table split is constructed from the fragment metadata
      * passed in {@link RequestContext#getFragmentMetadata()}.
-     * <p>
+     *
      * The function verifies the split is within user supplied range.
-     * <p>
      * It is assumed, |startKeys| == |endKeys|
      * This assumption is made through HBase's code as well.
      */
@@ -224,23 +218,17 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
     	// startKey <= scanStartKey
         if (Bytes.compareTo(startKey, scanStartKey) <= 0) {
         	// endKey == table's end or endKey >= scanStartKey
-            if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-                    Bytes.compareTo(endKey, scanStartKey) >= 0) {
-                return true;
-            }
+            return Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
+                    Bytes.compareTo(endKey, scanStartKey) >= 0;
         } else { // startKey > scanStartKey
         	// scanEndKey == table's end or startKey <= scanEndKey
-            if (Bytes.equals(scanEndKey, HConstants.EMPTY_END_ROW) ||
-                    Bytes.compareTo(startKey, scanEndKey) <= 0) {
-                return true;
-            }
+            return Bytes.equals(scanEndKey, HConstants.EMPTY_END_ROW) ||
+                    Bytes.compareTo(startKey, scanEndKey) <= 0;
         }
-        return false;
     }
 
     /**
-     * Creates the Scan object used to describe the query
-     * requested from HBase.
+     * Creates the Scan object used to describe the query requested from HBase.
      * As the row key column always gets returned, no need to ask for it.
      */
     private void createScanner() throws Exception {
@@ -263,7 +251,6 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
 
         scanDetails.setStartRow(split.startKey());
         scanDetails.setStopRow(split.endKey());
-
         currentScanner = table.getScanner(scanDetails);
         return true;
     }
@@ -275,8 +262,8 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
     private void addColumns() {
         for (int i = 0; i < tupleDescription.columns(); ++i) {
             HBaseColumnDescriptor column = tupleDescription.getColumn(i);
-            if (!column.isKeyColumn()) // Row keys return anyway
-            {
+            // Row keys return anyway
+            if (!column.isKeyColumn()) {
                 scanDetails.addColumn(column.columnFamilyBytes(), column.qualifierBytes());
             }
         }
@@ -284,9 +271,8 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
 
     /**
      * Uses {@link HBaseFilterBuilder} to translate a filter string into a
-     * HBase {@link Filter} object. The result is added as a filter to the
-     * Scan object.
-     * <p>
+     * HBase {@link Filter} object. The result is added as a filter to the Scan object.
+     *
      * Uses row key ranges to limit split count.
      */
     private void addFilters() throws Exception {

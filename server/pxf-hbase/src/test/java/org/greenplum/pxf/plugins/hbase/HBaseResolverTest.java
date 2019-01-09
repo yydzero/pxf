@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.BadRecordException;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hbase.utilities.HBaseTupleDescription;
@@ -37,8 +36,8 @@ import static org.mockito.Mockito.mock;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({HBaseResolver.class})
 public class HBaseResolverTest {
-    RequestContext requestContext;
-    HBaseTupleDescription tupleDesc;
+    private RequestContext requestContext;
+    private HBaseTupleDescription tupleDesc;
 
     @Test
     /*

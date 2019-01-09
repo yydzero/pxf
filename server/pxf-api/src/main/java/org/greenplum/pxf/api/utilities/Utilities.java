@@ -69,7 +69,7 @@ public class Utilities {
      * Validation for directory names that can be created
      * for the server configuration directory.
      *
-     * @param name
+     * @param name name
      * @return true if valid, false otherwise
      */
     public static boolean isValidDirectoryName(String name) {
@@ -226,16 +226,12 @@ public class Utilities {
                 StringBuilder sb = new StringBuilder();
                 sb.append("parsed file split: path ");
                 sb.append(requestContext.getDataSource());
-                sb.append(", start ");
-                sb.append(start);
-                sb.append(", end ");
-                sb.append(end);
-                sb.append(", hosts ");
-                sb.append(ArrayUtils.toString(hosts));
+                sb.append(", start ").append(start);
+                sb.append(", end ").append(end);
+                sb.append(", hosts ").append(ArrayUtils.toString(hosts));
                 LOG.debug(sb.toString());
             }
-            FragmentMetadata fragmentMetadata = new FragmentMetadata(start, end, hosts);
-            return fragmentMetadata;
+            return new FragmentMetadata(start, end, hosts);
         } catch (Exception e) {
             LOG.error("Unable to parse fragment metadata");
             throw e;

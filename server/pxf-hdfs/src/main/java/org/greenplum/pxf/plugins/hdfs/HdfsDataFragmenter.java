@@ -19,14 +19,11 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
-import org.greenplum.pxf.api.model.BaseFragmenter;
-import org.greenplum.pxf.api.model.Fragment;
-import org.greenplum.pxf.api.model.FragmentStats;
+import org.greenplum.pxf.api.model.*;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.PxfInputFormat;
@@ -37,7 +34,7 @@ import java.util.List;
 
 /**
  * Fragmenter class for HDFS data resources.
- * <p>
+ *
  * Given an HDFS data source (a file, directory, or wild card pattern) divide
  * the data into fragments and return a list of them along with a list of
  * host:port locations for each.
@@ -45,16 +42,15 @@ import java.util.List;
 public class HdfsDataFragmenter extends BaseFragmenter {
 
     protected JobConf jobConf;
-    protected HcfsType hcfsType;
+    HcfsType hcfsType;
 
     @Override
-    public void initialize(RequestContext context) {
-        super.initialize(context);
+    public void initialize(RequestContext requestContext) {
+        super.initialize(requestContext);
+        jobConf = new JobConf(configuration, this.getClass());
 
         // Check if the underlying configuration is for HDFS
-        hcfsType = HcfsType.getHcfsType(configuration, context);
-
-        jobConf = new JobConf(configuration, this.getClass());
+        hcfsType = HcfsType.getHcfsType(configuration, requestContext);
     }
 
     /**
@@ -73,10 +69,7 @@ public class HdfsDataFragmenter extends BaseFragmenter {
             String filepath = fsp.getPath().toString();
             String[] hosts = fsp.getLocations();
 
-            /*
-             * metadata information includes: file split's start, length and
-             * hosts (locations).
-             */
+            // metadata information includes: file split's start, length and hosts (locations)
             byte[] fragmentMetadata = HdfsUtilities.prepareFragmentMetadata(fsp);
             Fragment fragment = new Fragment(filepath, hosts, fragmentMetadata);
             fragments.add(fragment);
@@ -94,7 +87,7 @@ public class HdfsDataFragmenter extends BaseFragmenter {
             return new FragmentStats(0, 0, 0);
         }
         long totalSize = 0;
-        for (InputSplit split : splits) {
+        for (InputSplit split: splits) {
             totalSize += split.getLength();
         }
         InputSplit firstSplit = splits.get(0);
@@ -105,12 +98,9 @@ public class HdfsDataFragmenter extends BaseFragmenter {
         PxfInputFormat fformat = new PxfInputFormat();
         PxfInputFormat.setInputPaths(jobConf, path);
         InputSplit[] splits = fformat.getSplits(jobConf, 1);
-        ArrayList<InputSplit> result = new ArrayList<InputSplit>();
+        ArrayList<InputSplit> result = new ArrayList<>();
 
-        /*
-         * HD-2547: If the file is empty, an empty split is returned: no
-         * locations and no length.
-         */
+        // HD-2547: If the file is empty, an empty split is returned: no locations and no length
         if (splits != null) {
             for (InputSplit split : splits) {
                 if (split.getLength() > 0) {

@@ -18,7 +18,7 @@ public class BaseConfigurationFactory implements ConfigurationFactory {
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
     private final File serversConfigDirectory;
 
-    public BaseConfigurationFactory() {
+    private BaseConfigurationFactory() {
         this(SERVERS_CONFIG_DIR);
     }
 

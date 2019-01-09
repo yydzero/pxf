@@ -19,22 +19,19 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hdfs.DFSInputStream;
-
+import org.apache.hadoop.io.Writable;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
-import org.mockito.stubbing.*;
-import org.mockito.invocation.*;
+import org.mockito.stubbing.Answer;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import static org.mockito.Matchers.any;
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tester for the ChunkReader class
@@ -43,21 +40,15 @@ import static org.mockito.Mockito.*;
 @PrepareForTest({ChunkReader.class})
 public class ChunkReaderTest {
 
-	ChunkReader reader;
+	private ChunkReader reader;
 	/* Mocking the stream class that accesses the actual data */
-	DFSInputStream mockStream;
+	private DFSInputStream mockStream;
 
-    /*
-     * setup function called before each test.
-	 */
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
 		mockStream = mock(DFSInputStream.class);
     }
 
-    /*
-	 * Simulate the empty file case
-	 */
     @Test
     public void readEmptyFile() throws Exception {
 		reader = new ChunkReader(mockStream);
@@ -68,21 +59,15 @@ public class ChunkReaderTest {
 		assertEquals(0, reader.readLine(out, maxBytesToConsume));
     }
 
-	/*
-	 * Read one line
-	 */
     @Test
     public void readOneLine() throws Exception {
 		reader = new ChunkReader(mockStream);
-		when( mockStream.read( (byte [])Mockito.anyObject()) ).thenAnswer(new Answer<java.lang.Number>() {
-			@Override
-			public java.lang.Number answer(InvocationOnMock invocation) throws Throwable {
-				byte[] buf = (byte[]) invocation.getArguments()[0];
+		when( mockStream.read( (byte [])Mockito.anyObject()) ).thenAnswer((Answer<Number>) invocation -> {
+			byte[] buf = (byte[]) invocation.getArguments()[0];
 
-				byte [] source = "OneLine\nTwoLine\n".getBytes();
-				System.arraycopy(source, 0, buf, 0, source.length);
-				return new java.lang.Byte(buf[0]);
-			}
+			byte [] source = "OneLine\nTwoLine\n".getBytes();
+			System.arraycopy(source, 0, buf, 0, source.length);
+			return buf[0];
 		});
 
 		ChunkWritable out = new ChunkWritable();
@@ -97,21 +82,15 @@ public class ChunkReaderTest {
 		assertEquals("TwoLine\n", new String(out.box) );
     }
 
-	/*
-	 * Read one line
-	 */
     @Test
     public void readChunk() throws Exception {
 		reader = new ChunkReader(mockStream);
-		when( mockStream.read( (byte [])Mockito.anyObject()) ).thenAnswer(new Answer<java.lang.Number>() {
-			@Override
-			public java.lang.Number answer(InvocationOnMock invocation) throws Throwable {
-				byte[] buf = (byte[]) invocation.getArguments()[0];
+		when( mockStream.read( (byte [])Mockito.anyObject()) ).thenAnswer((Answer<Number>) invocation -> {
+			byte[] buf = (byte[]) invocation.getArguments()[0];
 
-				byte [] source = "OneLine\nTwoLine\n".getBytes();
-				System.arraycopy(source, 0, buf, 0, source.length);
-				return new java.lang.Integer(source.length);
-			}
+			byte [] source = "OneLine\nTwoLine\n".getBytes();
+			System.arraycopy(source, 0, buf, 0, source.length);
+			return source.length;
 		});
 
 		ChunkWritable out = new ChunkWritable();

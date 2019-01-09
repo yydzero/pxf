@@ -20,18 +20,18 @@ package org.greenplum.pxf.plugins.hdfs;
  */
 
 
-import java.io.DataOutput;
-import java.io.DataInput;
-import java.lang.UnsupportedOperationException;
-
 import org.apache.hadoop.io.Writable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
 
 /**
  * Just an output buffer for the ChunkRecordReader. It must extend Writable
  * otherwise it will not fit into the next() interface method
  */
 public class ChunkWritable implements Writable {
-	public byte [] box;
+
+	byte [] box;
 
 	/**
      * Serializes the fields of this object to <code>out</code>.

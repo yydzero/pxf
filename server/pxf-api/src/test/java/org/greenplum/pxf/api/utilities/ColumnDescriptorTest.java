@@ -19,19 +19,16 @@ package org.greenplum.pxf.api.utilities;
  * under the License.
  */
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import org.junit.Test;
 
-public class ColumnDescriptorTest {
+import static org.junit.Assert.*;
 
+public class ColumnDescriptorTest {
 
     @Test
     public void testConstructor() {
 
         ColumnDescriptor cd = new ColumnDescriptor("c1", 42, 0, "someDataType", new Integer[]{42, 46});
-
         ColumnDescriptor clonned = new ColumnDescriptor(cd);
 
         assertEquals(clonned.columnName(), cd.columnName());
@@ -42,7 +39,7 @@ public class ColumnDescriptorTest {
         assertEquals(clonned.isKeyColumn(), cd.isKeyColumn());
 
         //Cloned instance should have reference to different array
-        assertFalse(clonned.columnTypeModifiers() == cd.columnTypeModifiers());
+        assertNotSame(clonned.columnTypeModifiers(), cd.columnTypeModifiers());
 
         cd = new ColumnDescriptor(null, 0, 0, null, null);
     }

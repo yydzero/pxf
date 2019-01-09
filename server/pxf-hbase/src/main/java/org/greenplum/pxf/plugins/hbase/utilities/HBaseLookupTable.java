@@ -62,7 +62,6 @@ public class HBaseLookupTable implements Closeable {
     private static final Log LOG = LogFactory.getLog(HBaseLookupTable.class);
 
     private Connection connection;
-    private Configuration hbaseConfiguration;
     private Admin admin;
     private Map<byte[], byte[]> rawTableMapping;
     private Table lookupTable;
@@ -75,8 +74,7 @@ public class HBaseLookupTable implements Closeable {
      * @throws IOException when initializing HBaseAdmin fails
      */
     public HBaseLookupTable(Configuration conf) throws Exception {
-        hbaseConfiguration = conf;
-        connection = ConnectionFactory.createConnection(hbaseConfiguration);
+        connection = ConnectionFactory.createConnection(conf);
         admin = connection.getAdmin();
         ClusterStatus cs = admin.getClusterStatus();
         LOG.debug("HBase cluster has " + cs.getServersSize()
@@ -100,7 +98,6 @@ public class HBaseLookupTable implements Closeable {
         }
 
         loadTableMappings(tableName);
-
         if (tableHasNoMappings()) {
             return null;
         }
@@ -126,8 +123,7 @@ public class HBaseLookupTable implements Closeable {
     }
 
     /**
-     * Returns true if {@link #LOOKUPTABLENAME} has {@value #LOOKUPCOLUMNFAMILY}
-     * family.
+     * Returns true if {@link #LOOKUPTABLENAME} has {@link #LOOKUPCOLUMNFAMILY} family.
      *
      * @return whether lookup has expected column family name
      */
@@ -160,7 +156,7 @@ public class HBaseLookupTable implements Closeable {
      * GPDB column values in lower case.
      */
     private Map<String, byte[]> lowerCaseMappings() {
-        Map<String, byte[]> lowCaseKeys = new HashMap<String, byte[]>();
+        Map<String, byte[]> lowCaseKeys = new HashMap<>();
         for (Map.Entry<byte[], byte[]> entry : rawTableMapping.entrySet()) {
             lowCaseKeys.put(lowerCase(entry.getKey()), entry.getValue());
         }
@@ -187,13 +183,10 @@ public class HBaseLookupTable implements Closeable {
         Get lookupRow = new Get(Bytes.toBytes(tableName));
         lookupRow.setMaxVersions(1);
         lookupRow.addFamily(LOOKUPCOLUMNFAMILY);
-        Result row;
-
-        row = lookupTable.get(lookupRow);
+        Result row = lookupTable.get(lookupRow);
         rawTableMapping = row.getFamilyMap(LOOKUPCOLUMNFAMILY);
         LOG.debug("lookup table mapping for " + tableName + " has "
-                + (rawTableMapping == null ? 0 : rawTableMapping.size())
-                + " entries");
+                + (rawTableMapping == null ? 0 : rawTableMapping.size()) + " entries");
     }
 
     private void closeLookupTable() throws IOException {

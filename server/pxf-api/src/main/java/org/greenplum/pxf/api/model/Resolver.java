@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.model;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 

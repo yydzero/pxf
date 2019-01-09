@@ -52,6 +52,7 @@ public class HBaseDoubleComparator extends ByteArrayComparable{
         return val.compareTo(valueAsDouble);
     }
 
+    @SuppressWarnings("unused")
     public static ByteArrayComparable parseFrom(final byte[] pbBytes) throws DeserializationException {
         ComparatorProtos.ByteArrayComparable proto;
         try {

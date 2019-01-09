@@ -33,10 +33,9 @@ public class DemoAccessor extends BasePlugin implements Accessor {
 
     private int rowNumber;
     private int fragmentNumber;
-    private static int NUM_ROWS = 2;
 
     @Override
-    public boolean openForRead() throws Exception {
+    public boolean openForRead() {
         /* no-op, because this plugin doesn't read a file. */
         return true;
     }
@@ -48,7 +47,7 @@ public class DemoAccessor extends BasePlugin implements Accessor {
      * @return one row which corresponds to one record
      */
     @Override
-    public OneRow readNextObject() throws Exception {
+    public OneRow readNextObject() {
         /* return next row , <key=fragmentNo.rowNo, val=rowNo,text,fragmentNo>*/
         /* check for EOF */
         if (fragmentNumber > 0)
@@ -58,14 +57,15 @@ public class DemoAccessor extends BasePlugin implements Accessor {
         int colCount = context.getColumns();
 
         /* generate row with (colCount) columns */
-        StringBuilder colValue = new StringBuilder(fragmentMetadata + " row" + (rowNumber+1));
-        for(int colIndex=1; colIndex<colCount; colIndex++) {
-            colValue.append(",").append("value" + colIndex);
+        StringBuilder colValue = new StringBuilder(fragmentMetadata + " row" + (rowNumber + 1));
+        for (int colIndex = 1; colIndex < colCount; colIndex++) {
+            colValue.append(",").append("value").append(colIndex);
         }
         OneRow row = new OneRow(fragment + "." + rowNumber, colValue.toString());
 
         /* advance */
         rowNumber += 1;
+        int NUM_ROWS = 2;
         if (rowNumber == NUM_ROWS) {
             rowNumber = 0;
             fragmentNumber += 1;
@@ -77,10 +77,9 @@ public class DemoAccessor extends BasePlugin implements Accessor {
 
     /**
      * close the reader. no action here
-     *
      */
     @Override
-    public void closeForRead() throws Exception {
+    public void closeForRead() {
         /* Demo close doesn't do anything */
     }
 

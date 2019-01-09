@@ -29,7 +29,7 @@ public class FragmentMetadata {
     private long end;
     private String[] hosts;
 
-    public FragmentMetadata(long start, long end, String[] hosts) {
+    FragmentMetadata(long start, long end, String[] hosts) {
         this.start = start;
         this.end = end;
         this.hosts = hosts;

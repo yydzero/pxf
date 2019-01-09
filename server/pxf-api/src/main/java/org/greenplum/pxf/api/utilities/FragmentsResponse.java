@@ -50,7 +50,7 @@ public class FragmentsResponse implements StreamingOutput {
      *
      * @param fragments fragment list
      */
-    public FragmentsResponse(List<Fragment> fragments) {
+    FragmentsResponse(List<Fragment> fragments) {
         this.fragments = fragments;
     }
 

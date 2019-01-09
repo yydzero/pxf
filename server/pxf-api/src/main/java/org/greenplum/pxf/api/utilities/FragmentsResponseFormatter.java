@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Utility class for converting Fragments into a {@link FragmentsResponse} that
@@ -96,7 +97,7 @@ public class FragmentsResponseFormatter {
     private static void convertHostsToIPs(List<Fragment> fragments)
             throws UnknownHostException {
         /* host converted to IP map. Used to limit network calls. */
-        HashMap<String, String> hostToIpMap = new HashMap<String, String>();
+        Map<String, String> hostToIpMap = new HashMap<>();
 
         for (Fragment fragment : fragments) {
             String[] hosts = fragment.getReplicas();

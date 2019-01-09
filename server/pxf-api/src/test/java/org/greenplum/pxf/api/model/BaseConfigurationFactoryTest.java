@@ -27,13 +27,12 @@ public class BaseConfigurationFactoryTest {
     private BaseConfigurationFactory factory;
     private Map<String, String> additionalProperties;
     private File mockServersDirectory;
-    private File serversDirectory;
 
     @Before
     public void setup() throws URISyntaxException {
         mockServersDirectory = mock(File.class);
         additionalProperties = new HashMap<>();
-        serversDirectory = new File(this.getClass().getClassLoader().getResource("servers").toURI());
+        File serversDirectory = new File(this.getClass().getClassLoader().getResource("servers").toURI());
         factory = new BaseConfigurationFactory(serversDirectory);
     }
 

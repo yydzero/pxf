@@ -10,14 +10,13 @@ import org.junit.rules.ExpectedException;
 import static org.junit.Assert.assertEquals;
 
 public class HcfsTypeTest {
-    private final String S3_PROTOCOL = "s3";
     @Rule
     public ExpectedException thrown = ExpectedException.none();
     private RequestContext context;
     private Configuration configuration;
 
     @Before
-    public void setUp() throws Exception {
+    public void setUp() {
         context = new RequestContext();
         context.setDataSource("/foo/bar.txt");
         configuration = new Configuration();
@@ -26,7 +25,8 @@ public class HcfsTypeTest {
     @Test
     public void testProtocolTakesPrecedenceOverFileDefaultFs() {
         // Test that we can specify protocol when configuration defaults are loaded
-        context.setProtocol(S3_PROTOCOL);
+        String s3_PROTOCOL = "s3";
+        context.setProtocol(s3_PROTOCOL);
 
         HcfsType type = HcfsType.getHcfsType(configuration, context);
         assertEquals(HcfsType.S3, type);

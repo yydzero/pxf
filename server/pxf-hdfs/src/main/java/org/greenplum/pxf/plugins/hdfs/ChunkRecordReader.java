@@ -19,11 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
-import static org.apache.hadoop.mapreduce.lib.input.LineRecordReader.MAX_LINE_LENGTH;
-
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,6 +38,10 @@ import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.RecordReader;
 
+import java.io.IOException;
+
+import static org.apache.hadoop.mapreduce.lib.input.LineRecordReader.MAX_LINE_LENGTH;
+
 /**
  * ChunkRecordReader is designed for fast reading of a file split. The idea is
  * to bring chunks of data instead of single records. The chunks contain many
@@ -55,7 +54,6 @@ public class ChunkRecordReader implements
         RecordReader<LongWritable, ChunkWritable> {
     private static final Log LOG = LogFactory.getLog(ChunkRecordReader.class.getName());
 
-    private CompressionCodecFactory compressionCodecs = null;
     private long start;
     private long pos;
     private long end;
@@ -95,14 +93,14 @@ public class ChunkRecordReader implements
      * @throws IOException if an I/O error occurs when accessing the file or
      *             creating input stream to read from it
      */
-    public ChunkRecordReader(Configuration job, FileSplit split)
+    ChunkRecordReader(Configuration job, FileSplit split)
             throws IOException {
         maxLineLength = job.getInt(MAX_LINE_LENGTH, Integer.MAX_VALUE);
         validateLength(maxLineLength);
         start = split.getStart();
         end = start + split.getLength();
         final Path file = split.getPath();
-        compressionCodecs = new CompressionCodecFactory(job);
+        CompressionCodecFactory compressionCodecs = new CompressionCodecFactory(job);
         codec = compressionCodecs.getCodec(file);
 
         // openForWrite the file and seek to the start of the split
@@ -193,7 +191,7 @@ public class ChunkRecordReader implements
         float factor = 1.5f;
         int limit = (int) (factor * CHUNK_SIZE);
         long curPos = getFilePosition();
-        int newSize = 0;
+        int newSize;
 
         while (curPos <= end) {
             key.set(pos);
@@ -251,7 +249,7 @@ public class ChunkRecordReader implements
      * @return pos - start byte of the unread tail of the file
      */
     @Override
-    public synchronized long getPos() throws IOException {
+    public synchronized long getPos() {
         return pos;
     }
 
@@ -295,4 +293,4 @@ public class ChunkRecordReader implements
         }
         return retVal;
     }
-} // class ChunkRecordReader
+}

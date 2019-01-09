@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.model;
  * under the License.
  */
 
-
 import org.apache.commons.lang.StringUtils;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.EnumAggregationType;
@@ -30,7 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 
 /**
  * Common configuration available to all PXF plugins. Represents input data

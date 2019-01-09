@@ -26,14 +26,12 @@ import org.codehaus.jackson.JsonGenerator;
 import org.codehaus.jackson.map.JsonSerializer;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 import org.codehaus.jackson.map.SerializerProvider;
-import org.codehaus.jackson.JsonProcessingException;
 
 class EnumGpdbTypeSerializer extends JsonSerializer<EnumGpdbType> {
 
     @Override
     public void serialize(EnumGpdbType value, JsonGenerator generator,
-                          SerializerProvider provider) throws IOException,
-              JsonProcessingException {
+                          SerializerProvider provider) throws IOException {
       generator.writeString(value.getTypeName());
     }
   }

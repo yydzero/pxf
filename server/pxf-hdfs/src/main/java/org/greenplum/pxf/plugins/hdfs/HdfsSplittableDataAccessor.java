@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
@@ -43,12 +42,12 @@ import java.util.ListIterator;
  * Accessors that require such base functionality should extend this class.
  */
 public abstract class HdfsSplittableDataAccessor extends BasePlugin implements Accessor {
+
     protected RecordReader<Object, Object> reader;
     protected InputFormat<?, ?> inputFormat;
     protected JobConf jobConf;
     protected Object key, data;
-    protected HcfsType hcfsType;
-
+    HcfsType hcfsType;
     private ListIterator<InputSplit> iter;
 
     /**
@@ -110,7 +109,7 @@ public abstract class HdfsSplittableDataAccessor extends BasePlugin implements A
      * @throws IOException if record reader could not be created
      */
     @SuppressWarnings(value = "unchecked")
-    protected boolean getNextSplit() throws IOException {
+    boolean getNextSplit() throws IOException {
         if (!iter.hasNext()) {
             return false;
         }
@@ -146,8 +145,7 @@ public abstract class HdfsSplittableDataAccessor extends BasePlugin implements A
         /*
          * if neither condition was met, it means we already read all the
          * records in all the splits, and in this call record variable was not
-         * set, so we return null and thus we are signaling end of records
-         * sequence
+         * set, so we return null and thus we are signaling end of records sequence
          */
         return new OneRow(key, data);
     }
@@ -165,8 +163,6 @@ public abstract class HdfsSplittableDataAccessor extends BasePlugin implements A
     @Override
     public boolean isThreadSafe() {
         return HdfsUtilities.isThreadSafe(
-                configuration,
-                context.getDataSource(),
-                context.getOption("COMPRESSION_CODEC"));
+                configuration, context.getDataSource(), context.getOption("COMPRESSION_CODEC"));
     }
 }

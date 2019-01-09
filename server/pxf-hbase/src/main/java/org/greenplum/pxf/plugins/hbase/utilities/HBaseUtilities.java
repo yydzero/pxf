@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase.utilities;
  * under the License.
  */
 
-
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;

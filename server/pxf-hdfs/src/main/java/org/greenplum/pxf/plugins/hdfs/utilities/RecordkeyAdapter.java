@@ -19,13 +19,13 @@ package org.greenplum.pxf.plugins.hdfs.utilities;
  * under the License.
  */
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.*;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.*;
 
 import java.util.List;
 
@@ -47,13 +47,13 @@ public class RecordkeyAdapter {
      * the records.
      */
     private interface ValExtractor {
-        public Object get(Object key);
+        Object get(Object key);
     }
 
     private ValExtractor extractor = null;
 
     private interface ValConverter {
-        public Writable get(Object key);
+        Writable get(Object key);
     }
 
     private ValConverter converter = null;
@@ -143,69 +143,25 @@ public class RecordkeyAdapter {
      */
     private ValExtractor InitializeExtractor(Object key) {
         if (key instanceof IntWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((IntWritable) key).get();
-                }
-            };
+            return key1 -> ((IntWritable) key1).get();
         } else if (key instanceof ByteWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((ByteWritable) key).get();
-                }
-            };
+            return key12 -> ((ByteWritable) key12).get();
         } else if (key instanceof BooleanWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((BooleanWritable) key).get();
-                }
-            };
+            return key13 -> ((BooleanWritable) key13).get();
         } else if (key instanceof DoubleWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((DoubleWritable) key).get();
-                }
-            };
+            return key14 -> ((DoubleWritable) key14).get();
         } else if (key instanceof FloatWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((FloatWritable) key).get();
-                }
-            };
+            return key15 -> ((FloatWritable) key15).get();
         } else if (key instanceof LongWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((LongWritable) key).get();
-                }
-            };
+            return key16 -> ((LongWritable) key16).get();
         } else if (key instanceof Text) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return (key).toString();
-                }
-            };
+            return key17 -> (key17).toString();
         } else if (key instanceof VIntWritable) {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    return ((VIntWritable) key).get();
-                }
-            };
+            return key18 -> ((VIntWritable) key18).get();
         } else {
-            return new ValExtractor() {
-                @Override
-                public Object get(Object key) {
-                    throw new UnsupportedOperationException(
-                            "Unsupported recordkey data type "
-                                    + key.getClass().getName());
-                }
+            return key19 -> {
+                throw new UnsupportedOperationException(
+                        "Unsupported recordkey data type " + key19.getClass().getName());
             };
         }
     }
@@ -232,62 +188,23 @@ public class RecordkeyAdapter {
     private ValConverter initializeConverter(Object key) {
 
         if (key instanceof Integer) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new IntWritable((Integer) key));
-                }
-            };
+            return key1 -> (new IntWritable((Integer) key1));
         } else if (key instanceof Byte) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new ByteWritable((Byte) key));
-                }
-            };
+            return key12 -> (new ByteWritable((Byte) key12));
         } else if (key instanceof Boolean) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new BooleanWritable((Boolean) key));
-                }
-            };
+            return key13 -> (new BooleanWritable((Boolean) key13));
         } else if (key instanceof Double) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new DoubleWritable((Double) key));
-                }
-            };
+            return key14 -> (new DoubleWritable((Double) key14));
         } else if (key instanceof Float) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new FloatWritable((Float) key));
-                }
-            };
+            return key15 -> (new FloatWritable((Float) key15));
         } else if (key instanceof Long) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new LongWritable((Long) key));
-                }
-            };
+            return key16 -> (new LongWritable((Long) key16));
         } else if (key instanceof String) {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    return (new Text((String) key));
-                }
-            };
+            return key17 -> (new Text((String) key17));
         } else {
-            return new ValConverter() {
-                @Override
-                public Writable get(Object key) {
-                    throw new UnsupportedOperationException(
-                            "Unsupported recordkey data type "
-                                    + key.getClass().getName());
-                }
+            return key18 -> {
+                throw new UnsupportedOperationException(
+                        "Unsupported recordkey data type " + key18.getClass().getName());
             };
         }
     }

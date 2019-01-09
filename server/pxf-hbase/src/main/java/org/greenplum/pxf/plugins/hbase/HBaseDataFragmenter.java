@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase;
  * under the License.
  */
 
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -69,7 +68,7 @@ public class HBaseDataFragmenter extends BaseFragmenter {
      * Returns statistics for HBase table. Currently it's not implemented.
      */
     @Override
-    public FragmentStats getFragmentStats() throws Exception {
+    public FragmentStats getFragmentStats() {
         throw new UnsupportedOperationException("ANALYZE for HBase plugin is not supported");
     }
 
@@ -96,9 +95,7 @@ public class HBaseDataFragmenter extends BaseFragmenter {
 
         byte[] userData = prepareUserData();
         addTableFragments(userData);
-
         HBaseUtilities.closeConnection(hbaseAdmin, connection);
-
         return fragments;
     }
 
@@ -117,7 +114,6 @@ public class HBaseDataFragmenter extends BaseFragmenter {
         if (mappings != null) {
             return serializeMap(mappings);
         }
-
         return null;
     }
 
@@ -130,7 +126,6 @@ public class HBaseDataFragmenter extends BaseFragmenter {
      * @throws IOException when serialization fails
      */
     private byte[] prepareFragmentMetadata(HRegionInfo region) throws IOException {
-
         ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
         ObjectOutputStream objectStream = new ObjectOutputStream(byteArrayStream);
         objectStream.writeObject(region.getStartKey());
@@ -146,12 +141,10 @@ public class HBaseDataFragmenter extends BaseFragmenter {
         for (HRegionLocation location : locations) {
             addFragment(location, userData);
         }
-
         regionLocator.close();
     }
 
-    private void addFragment(HRegionLocation location,
-            byte[] userData) throws IOException {
+    private void addFragment(HRegionLocation location, byte[] userData) throws IOException {
         ServerName serverInfo = location.getServerName();
         String[] hosts = new String[] {serverInfo.getHostname()};
         HRegionInfo region = location.getRegionInfo();

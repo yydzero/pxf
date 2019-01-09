@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.examples.DemoAccessor;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.junit.Before;
@@ -40,7 +39,7 @@ public class DemoAccessorTest {
 
     @Mock
     RequestContext requestContext;
-    DemoAccessor accessor;
+    private DemoAccessor accessor;
 
     @Before
     public void setup() {
@@ -49,7 +48,7 @@ public class DemoAccessorTest {
     }
 
     @Test
-    public void testRowsWithSingleColumn() throws Exception {
+    public void testRowsWithSingleColumn() {
 
         when(requestContext.getDataFragment()).thenReturn(0);
         when(requestContext.getFragmentMetadata()).thenReturn("fragment1".getBytes(), "fragment1".getBytes());
@@ -64,7 +63,7 @@ public class DemoAccessorTest {
     }
 
     @Test
-    public void testRowsWithMultipleColumns() throws Exception {
+    public void testRowsWithMultipleColumns() {
 
         when(requestContext.getDataFragment()).thenReturn(0);
         when(requestContext.getFragmentMetadata()).thenReturn("fragment1".getBytes(), "fragment1".getBytes());

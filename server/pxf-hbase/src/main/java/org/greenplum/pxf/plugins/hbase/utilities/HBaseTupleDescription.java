@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase.utilities;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 
@@ -32,9 +31,8 @@ import java.util.Map;
 /**
  * The class extends the tuple description provided by {@link RequestContext}
  * for usage of {@link HBaseColumnDescriptor}.
- * <p>
- * This class also loads lookup table sent (optionally) by the
- * fragmenter.
+ *
+ * This class also loads lookup table sent (optionally) by the fragmenter.
  */
 public class HBaseTupleDescription {
     private Map<String, byte[]> tableMapping;
@@ -71,7 +69,7 @@ public class HBaseTupleDescription {
     }
 
     private void parseHBaseTupleDescription() {
-        tupleDescription = new ArrayList<HBaseColumnDescriptor>();
+        tupleDescription = new ArrayList<>();
         loadUserData();
         createTupleDescription();
     }
@@ -107,7 +105,7 @@ public class HBaseTupleDescription {
     }
 
     /**
-     * Returns the {@link #HBaseColumnDescriptor} for given column.
+     * Returns the {@link HBaseColumnDescriptor} for given column.
      * If the column has a lookup table mapping, the HBase column name is used.
      *
      * @param column GPDB column description

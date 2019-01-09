@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Writable;
@@ -49,6 +48,7 @@ import java.util.List;
  * part of the data schema. See {@link RecordkeyAdapter}.
  */
 public class WritableResolver extends BasePlugin implements Resolver {
+
     private static final int RECORDKEY_UNDEFINED = -1;
     private static final Log LOG = LogFactory.getLog(WritableResolver.class);
     private RecordkeyAdapter recordkeyAdapter = new RecordkeyAdapter();
@@ -85,8 +85,7 @@ public class WritableResolver extends BasePlugin implements Resolver {
         }
         fields = userObject.getClass().getDeclaredFields();
         recordkeyIndex = (context.getRecordkeyColumn() == null)
-                ? RECORDKEY_UNDEFINED
-                : context.getRecordkeyColumn().columnIndex();
+                ? RECORDKEY_UNDEFINED : context.getRecordkeyColumn().columnIndex();
 
         // fields details:
         if (LOG.isDebugEnabled()) {
@@ -117,11 +116,9 @@ public class WritableResolver extends BasePlugin implements Resolver {
             if (currentIdx == recordkeyIndex) {
                 currentIdx += recordkeyAdapter.appendRecordkeyField(record, context, onerow);
             }
-
             if (Modifier.isPrivate(field.getModifiers())) {
                 continue;
             }
-
             currentIdx += populateRecord(record, field);
         }
 
@@ -189,18 +186,13 @@ public class WritableResolver extends BasePlugin implements Resolver {
     @Override
     public OneRow setFields(List<OneField> record) throws Exception {
         Writable key = null;
-
         int colIdx = 0;
         for (Field field : fields) {
-            /*
-             * extract recordkey based on the column descriptor type
-             * and add to OneRow.key
-             */
+            /* extract recordkey based on the column descriptor type and add to OneRow.key */
             if (colIdx == recordkeyIndex) {
                 key = recordkeyAdapter.convertKeyValue(record.get(colIdx).val);
                 colIdx++;
             }
-
             if (Modifier.isPrivate(field.getModifiers())) {
                 continue;
             }
@@ -230,7 +222,6 @@ public class WritableResolver extends BasePlugin implements Resolver {
         if (this.getClass().getClassLoader().getResource("/" + resource) != null) {
             return true;
         }
-
         try {
             Class.forName(resource);
             return true;

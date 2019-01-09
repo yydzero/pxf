@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
@@ -117,9 +116,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
         int currentIndex = 0;
 
         for (Schema.Field field : fields) {
-            /*
-             * Add the record key if exists
-             */
+            /* Add the record key if exists */
             if (currentIndex == recordkeyIndex) {
                 currentIndex += recordkeyAdapter.appendRecordkeyField(record,
                         context, row);
@@ -137,10 +134,9 @@ public class AvroResolver extends BasePlugin implements Resolver {
      *
      * @param record list of {@link OneField}
      * @return the constructed {@link OneRow}
-     * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
+    public OneRow setFields(List<OneField> record) {
         throw new UnsupportedOperationException();
     }
 
@@ -151,7 +147,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      *
      * @return whether the resource is an Avro file
      */
-    boolean isAvroFile() {
+    private boolean isAvroFile() {
         return context.getAccessor().toLowerCase().contains("avro");
     }
 
@@ -171,7 +167,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @return Avro record
      * @throws IOException if creating the Avro record from byte array failed
      */
-    GenericRecord makeAvroRecord(Object obj, GenericRecord reuseRecord)
+    private GenericRecord makeAvroRecord(Object obj, GenericRecord reuseRecord)
             throws IOException {
         if (isAvroFile()) {
             return (GenericRecord) obj;
@@ -192,8 +188,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @param fieldSchema field schema
      * @return the number of populated fields
      */
-    int populateRecord(List<OneField> record, Object fieldValue,
-                       Schema fieldSchema) {
+    private int populateRecord(List<OneField> record, Object fieldValue, Schema fieldSchema) {
 
         Schema.Type fieldType = fieldSchema.getType();
         int ret = 0;
@@ -230,12 +225,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
             case UNION:
                 /*
                  * When an Avro field is actually a union, we resolve the type
-                 * of the union element, and delegate the record update via
-                 * recursion
+                 * of the union element, and delegate the record update via recursion
                  */
                 int unionIndex = GenericData.get().resolveUnion(fieldSchema,
                         fieldValue);
-                /**
+                /*
                  * Retrieve index of the non null data type from the type array
                  * if value is null
                  */
@@ -292,7 +286,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @param recSchema record schema
      * @return number of populated fields
      */
-    int setRecordField(List<OneField> record, Object value, Schema recSchema) {
+    private int setRecordField(List<OneField> record, Object value, Schema recSchema) {
 
         GenericRecord rec = ((GenericData.Record) value);
         Schema fieldKeySchema = Schema.create(Schema.Type.STRING);
@@ -325,7 +319,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @return number of populated fields
      */
     @SuppressWarnings("unchecked")
-    int setMapField(List<OneField> record, Object fieldValue, Schema mapSchema) {
+    private int setMapField(List<OneField> record, Object fieldValue, Schema mapSchema) {
         Schema keySchema = Schema.create(Schema.Type.STRING);
         Schema valueSchema = mapSchema.getValueType();
         Map<String, ?> avroMap = ((Map<String, ?>) fieldValue);
@@ -349,13 +343,12 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @param arraySchema array schema
      * @return number of populated fields
      */
-    int setArrayField(List<OneField> record, Object fieldValue,
-                      Schema arraySchema) {
+    private int setArrayField(List<OneField> record, Object fieldValue, Schema arraySchema) {
         Schema typeSchema = arraySchema.getElementType();
         GenericData.Array<?> array = (GenericData.Array<?>) fieldValue;
         int length = array.size();
-        for (int i = 0; i < length; i++) {
-            populateRecord(record, array.get(i), typeSchema);
+        for (Object o : array) {
+            populateRecord(record, o, typeSchema);
         }
         return length;
     }
@@ -371,8 +364,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @param val              field value
      * @return 1 (number of populated fields)
      */
-    int addOneFieldToRecord(List<OneField> record, DataType gpdbWritableType,
-                            Object val) {
+    private int addOneFieldToRecord(List<OneField> record, DataType gpdbWritableType, Object val) {
         OneField oneField = new OneField();
         oneField.type = gpdbWritableType.getOID();
         switch (gpdbWritableType) {
@@ -380,10 +372,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 if (val instanceof ByteBuffer) {
                     oneField.val = ((ByteBuffer) val).array();
                 } else {
-                    /**
-                     * Entry point when the underlying bytearray is from a Fixed
-                     * data
-                     */
+                    /* Entry point when the underlying bytearray is from a Fixed data */
                     oneField.val = ((GenericData.Fixed) val).bytes();
                 }
                 break;
@@ -402,20 +391,16 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * @return InputStream of schema file
      * @throws DataSchemaException if schema file could not be opened
      */
-    InputStream openExternalSchema() {
+    private InputStream openExternalSchema() {
 
         String schemaName = context.getOption("DATA-SCHEMA");
-
-        /**
-         * Testing that the schema name was supplied by the user - schema is an
-         * optional properly.
-         */
+        /* Testing that the schema name was supplied by the user - schema is an optional properly */
         if (schemaName == null) {
             throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_INDICATED,
                     this.getClass().getName());
         }
 
-        /** Testing that the schema resource exists. */
+        /* Testing that the schema resource exists. */
         if (this.getClass().getClassLoader().getResource(schemaName) == null) {
             throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_ON_CLASSPATH, schemaName);
         }

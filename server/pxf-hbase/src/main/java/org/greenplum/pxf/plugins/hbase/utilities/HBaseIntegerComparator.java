@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hbase.utilities;
  * under the License.
  */
 
-
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
@@ -60,13 +59,13 @@ public class HBaseIntegerComparator extends ByteArrayComparable {
 	 */
 	@Override
 	public int compareTo(byte[] value, int offset, int length) {
-		/**
+		/*
 		 * Fix for HD-2610: query fails when recordkey is integer.
 		 */
 		if (length == 0)
 			return 1; // empty line, can't compare.
 
-		/**
+		/*
 		 * TODO optimize by parsing the bytes directly.
 		 * Maybe we can even determine if it is an int or a string encoded.
 		 */
@@ -91,13 +90,12 @@ public class HBaseIntegerComparator extends ByteArrayComparable {
 	 * Hides ("overrides") a static method in {@link ByteArrayComparable}.
 	 * This method will be called in deserialization.
 	 *
-	 * @param pbBytes
-	 *            A pb serialized instance
-	 * @return An instance of {@link HBaseIntegerComparator} made from
-	 *         <code>bytes</code>
+	 * @param pbBytes A pb serialized instance
+	 * @return An instance of {@link HBaseIntegerComparator} made from <code>bytes</code>
 	 * @throws DeserializationException if deserialization of bytes to Protocol Buffers failed
 	 * @see #toByteArray
 	 */
+	@SuppressWarnings("unused")
 	public static ByteArrayComparable parseFrom(final byte[] pbBytes)
 			throws DeserializationException {
 		ComparatorProtos.ByteArrayComparable proto;
@@ -106,7 +104,6 @@ public class HBaseIntegerComparator extends ByteArrayComparable {
 		} catch (InvalidProtocolBufferException e) {
 			throw new DeserializationException(e);
 		}
-		return new HBaseIntegerComparator(Bytes.toLong(proto.getValue()
-				.toByteArray()));
+		return new HBaseIntegerComparator(Bytes.toLong(proto.getValue().toByteArray()));
 	}
 }

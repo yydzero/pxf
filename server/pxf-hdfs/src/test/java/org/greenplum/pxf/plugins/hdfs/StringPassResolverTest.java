@@ -19,29 +19,24 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+
 public class StringPassResolverTest {
-    RequestContext mockRequestContext;
 
     @Test
-    /*
-     * Test the setFields method: small input
-     */
-    public void testSetFields() throws Exception {
+    /* Test the setFields method: small input */
+    public void testSetFields() {
         StringPassResolver resolver = buildResolver();
 
         byte[] data = new byte[] {
@@ -68,28 +63,20 @@ public class StringPassResolverTest {
     }
 
     @Test
-    /*
-     * Test the setFields method: empty byte array
-     */
-    public void testSetFieldsEmptyByteArray() throws Exception {
+    /* Test the setFields method: empty byte array */
+    public void testSetFieldsEmptyByteArray() {
 
         StringPassResolver resolver = buildResolver();
-
         byte[] empty = new byte[0];
 
-        List<OneField> record = Collections.singletonList(new OneField(DataType.BYTEA.getOID(),
-                                                          empty));
+        List<OneField> record = Collections.singletonList(new OneField(DataType.BYTEA.getOID(), empty));
 
         OneRow oneRow = resolver.setFields(record);
-
         assertNull(oneRow);
     }
 
-    /*
-     * helpers functions
-     */
-    private StringPassResolver buildResolver() throws Exception {
-        mockRequestContext = mock(RequestContext.class);
+    private StringPassResolver buildResolver() {
+        RequestContext mockRequestContext = mock(RequestContext.class);
         StringPassResolver resolver = new StringPassResolver();
         resolver.initialize(mockRequestContext);
         return resolver;
@@ -100,6 +87,6 @@ public class StringPassResolverTest {
         byte[] bytes = (byte[]) oneRow.getData();
         byte[] result = Arrays.copyOfRange(bytes, 0, bytes.length);
         assertEquals(result.length, expected.length);
-        assertTrue(Arrays.equals(result, expected));
+        assertArrayEquals(result, expected);
     }
 }

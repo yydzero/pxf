@@ -19,7 +19,9 @@ package org.greenplum.pxf.plugins.hbase;
  * under the License.
  */
 
-
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.filter.*;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.greenplum.pxf.api.FilterParser;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.plugins.hbase.utilities.HBaseColumnDescriptor;
@@ -27,9 +29,6 @@ import org.greenplum.pxf.plugins.hbase.utilities.HBaseDoubleComparator;
 import org.greenplum.pxf.plugins.hbase.utilities.HBaseFloatComparator;
 import org.greenplum.pxf.plugins.hbase.utilities.HBaseIntegerComparator;
 import org.greenplum.pxf.plugins.hbase.utilities.HBaseTupleDescription;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.filter.*;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -79,7 +78,6 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
         } else {
             return false;
         }
-
     }
 
     /**
@@ -89,6 +87,7 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
      * @return filter object
      * @throws Exception if parsing failed
      */
+    @SuppressWarnings("WeakerAccess")
     public Filter getFilterObject(String filterString) throws Exception {
         if (filterString == null)
             return null;
@@ -115,6 +114,7 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
      *
      * @return start key for scanning HBase table
      */
+    @SuppressWarnings("WeakerAccess")
     public byte[] startKey() {
         return startKey;
     }
@@ -127,6 +127,7 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
      *
      * @return end key for scanning HBase table
      */
+    @SuppressWarnings("WeakerAccess")
     public byte[] endKey() {
         return endKey;
     }
@@ -174,7 +175,7 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
      * Initializes the {@link #operatorsMap} with appropriate values.
      */
     private void initOperatorsMap() {
-        operatorsMap = new EnumMap<FilterParser.Operation, CompareFilter.CompareOp>(FilterParser.Operation.class);
+        operatorsMap = new EnumMap<>(FilterParser.Operation.class);
         operatorsMap.put(FilterParser.Operation.HDOP_LT, CompareFilter.CompareOp.LESS); // "<"
         operatorsMap.put(FilterParser.Operation.HDOP_GT, CompareFilter.CompareOp.GREATER); // ">"
         operatorsMap.put(FilterParser.Operation.HDOP_LE, CompareFilter.CompareOp.LESS_OR_EQUAL); // "<="
@@ -231,7 +232,7 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
                     new NullComparator());
         }
 
-        /**
+        /*
          * If row key is of type TEXT, allow filter in start/stop row key API in
          * HBaseAccessor/Scan object.
          */
@@ -306,7 +307,7 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
      * Currently, 1, 2 can occur, since no parenthesis are used.
      */
     private Filter handleCompoundOperations(FilterParser.LogicalOperation opId, Filter left, Filter right) {
-        return new FilterList(logicalOperatorsMap.get(opId), new Filter[] {left, right});
+        return new FilterList(logicalOperatorsMap.get(opId), left, right);
     }
 
     /**
@@ -331,8 +332,6 @@ public class HBaseFilterBuilder implements FilterParser.FilterBuilder {
         // Adding a zero byte to endkey, makes it inclusive
         // Adding a zero byte to startkey, makes it exclusive
         byte[] zeroByte = new byte[1];
-        zeroByte[0] = 0;
-
         switch (op) {
             case HDOP_LT:
                 endKey = Bytes.toBytes(key);
