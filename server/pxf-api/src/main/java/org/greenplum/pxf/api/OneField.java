@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 /**
  * Defines a one field in a deserialized record.
  */

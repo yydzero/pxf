@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.utilities;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
 

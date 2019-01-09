@@ -89,8 +89,7 @@ public class Utilities {
      * Creates an object using the class name. The class name has to be a class
      * located in the webapp's CLASSPATH.
      *
-     * @param confClass the class of the metaData used to initialize the
-     *            instance
+     * @param confClass the class of the metaData used to initialize the instance
      * @param className a class name to be initialized.
      * @param metaData input data used to initialize the class
      * @return Initialized instance of given className
@@ -98,8 +97,7 @@ public class Utilities {
      *             classpath, didn't have expected constructor or failed to be
      *             instantiated
      */
-    public static Object createAnyInstance(Class<?> confClass,
-                                           String className, RequestContext metaData)
+    public static Object createAnyInstance(Class<?> confClass, String className, RequestContext metaData)
             throws Exception {
 
         Class<?> cls;
@@ -111,9 +109,7 @@ public class Utilities {
              */
             if (className.startsWith("com.pivotal.pxf")) {
                 throw new Exception(
-                        "Class "
-                                + className
-                                + " does not appear in classpath. "
+                        "Class " + className + " does not appear in classpath. "
                                 + "Plugins provided by PXF must start with \"org.greenplum.pxf\"",
                         e.getCause());
             } else {
@@ -133,8 +129,7 @@ public class Utilities {
      * @param className a class name to be initialized
      * @return initialized instance of given className
      * @throws Exception throws exception if classname was not found in
-     *             classpath, didn't have expected constructor or failed to be
-     *             instantiated
+     *             classpath, didn't have expected constructor or failed to be instantiated
      */
     public static Object createAnyInstance(String className) throws Exception {
         Class<?> cls = Class.forName(className);
@@ -164,8 +159,7 @@ public class Utilities {
     }
 
     /**
-     * Transforms a byte array into a string of octal codes in the form
-     * \\xyz\\xyz
+     * Transforms a byte array into a string of octal codes in the form \\xyz\\xyz
      *
      * We double escape each char because it is required in postgres bytea for
      * some bytes. In the minimum all non-printables, backslash, null and single
@@ -287,6 +281,7 @@ public class Utilities {
      *                   Retrieved from the client request.
      * @return an absolute data path
      */
+    @SuppressWarnings("unused")
     public static String absoluteDataPath(String dataSource) {
         return (dataSource.charAt(0) == '/') ? dataSource : "/" + dataSource;
     }

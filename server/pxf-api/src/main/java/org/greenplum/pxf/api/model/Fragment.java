@@ -61,9 +61,7 @@ public class Fragment {
      * @param hosts the replicas
      * @param metadata the meta data (Starting point + length, region location, etc.).
      */
-    public Fragment(String sourceName,
-                    String[] hosts,
-                    byte[] metadata) {
+    public Fragment(String sourceName, String[] hosts, byte[] metadata) {
         this.sourceName = sourceName;
         this.replicas = hosts;
         this.metadata = metadata;
@@ -77,10 +75,7 @@ public class Fragment {
      * @param metadata the meta data (Starting point + length, region location, etc.).
      * @param userData third party data added to a fragment.
      */
-    public Fragment(String sourceName,
-                    String[] hosts,
-                    byte[] metadata,
-                    byte[] userData) {
+    public Fragment(String sourceName, String[] hosts, byte[] metadata, byte[] userData) {
         this.sourceName = sourceName;
         this.replicas = hosts;
         this.metadata = metadata;
@@ -128,6 +123,7 @@ public class Fragment {
         return userData;
     }
 
+    @SuppressWarnings("unused")
     public void setUserData(byte[] userData) {
         this.userData = userData;
     }

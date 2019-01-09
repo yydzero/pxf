@@ -91,6 +91,7 @@ public enum DataType {
         return type == null ? UNSUPPORTED_TYPE : type;
     }
 
+    @SuppressWarnings("unused")
     public static boolean isArrayType(int OID) {
         DataType type = lookup.get(OID);
         return type != null && type.typeElem != null;

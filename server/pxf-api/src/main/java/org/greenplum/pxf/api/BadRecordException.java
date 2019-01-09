@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 /**
  * Thrown when a problem occurs while fetching or parsing a record from the user's input data.
  */

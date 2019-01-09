@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.model;
  * under the License.
  */
 
-
 import org.apache.commons.lang.StringUtils;
 import org.greenplum.pxf.api.utilities.EnumGpdbType;
 
@@ -126,6 +125,7 @@ public class Metadata {
             return isComplexType;
         }
 
+        @SuppressWarnings("unused")
         public void setComplexType(boolean isComplexType) {
             this.isComplexType = isComplexType;
         }
@@ -148,6 +148,7 @@ public class Metadata {
      *
      * @return item's output formats
      */
+    @SuppressWarnings("unused")
     public Set<OutputFormat> getOutputFormats() {
         return outputFormats;
     }
@@ -161,6 +162,7 @@ public class Metadata {
      *
      * @return item's output parameters
      */
+    @SuppressWarnings("unused")
     public Map<String, String> getOutputParameters() {
         return outputParameters;
     }
@@ -175,8 +177,7 @@ public class Metadata {
      * @param itemName the item name
      * @param fields the item's fields
      */
-    public Metadata(Item itemName,
-            List<Metadata.Field> fields) {
+    public Metadata(Item itemName, List<Metadata.Field> fields) {
         this.item = itemName;
         this.fields = fields;
     }

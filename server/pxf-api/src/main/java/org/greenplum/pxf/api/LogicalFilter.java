@@ -34,6 +34,7 @@ public class LogicalFilter {
         return operator;
     }
 
+    @SuppressWarnings("unused")
     public void setOperator(FilterParser.LogicalOperation operator) {
         this.operator = operator;
     }
@@ -42,6 +43,7 @@ public class LogicalFilter {
         return filterList;
     }
 
+    @SuppressWarnings("unused")
     public void setFilterList(List<Object> filterList) {
         this.filterList = filterList;
     }

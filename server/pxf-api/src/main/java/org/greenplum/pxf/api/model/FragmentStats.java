@@ -147,8 +147,7 @@ public class FragmentStats {
     public static String dataToJSON(FragmentStats stats) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         // mapper serializes all members of the class by default
-        return "{\"PXFFragmentsStats\":" + mapper.writeValueAsString(stats)
-                + "}";
+        return "{\"PXFFragmentsStats\":" + mapper.writeValueAsString(stats) + "}";
     }
 
     /**
@@ -199,7 +198,7 @@ public class FragmentStats {
      *
      * @return total size
      */
-    public SizeAndUnit getTotalSize() {
+    SizeAndUnit getTotalSize() {
         return totalSize;
     }
 
@@ -242,8 +241,7 @@ public class FragmentStats {
                 break;
             default:
                 throw new IllegalArgumentException(
-                        "Unsupported order of magnitude "
-                                + orderOfMagnitude
+                        "Unsupported order of magnitude " + orderOfMagnitude
                                 + ". Size's order of magnitue can be a value between 0(Bytes) and 4(TB)");
         }
         return unit;

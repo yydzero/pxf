@@ -1,3 +1,5 @@
+package org.greenplum.pxf.api.utilities;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -16,8 +18,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-package org.greenplum.pxf.api.utilities;
 
 /**
  * Class which holds metadata of a file split and locality information.
@@ -82,5 +82,4 @@ public class FragmentMetadata {
     public void setHosts(String[] hosts) {
         this.hosts = hosts;
     }
-
 }

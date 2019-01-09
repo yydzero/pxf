@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 /**
  * Represents one row in the external system data store.
  * Supports the general case where one row contains both a record and a

@@ -21,7 +21,6 @@ package org.greenplum.pxf.api.model;
 
 import java.util.List;
 
-
 /**
  * Interface that defines getting metadata.
  */

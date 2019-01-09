@@ -194,6 +194,7 @@ public class RequestContext {
      *
      * @param userData user data
      */
+    @SuppressWarnings("unused")
     public void setFragmentUserData(byte[] userData) {
         this.userData = userData;
     }
@@ -255,6 +256,7 @@ public class RequestContext {
         return tupleDescription;
     }
 
+    @SuppressWarnings("unused")
     public void setTupleDescription(List<ColumnDescriptor> tupleDescription) {
         this.tupleDescription = tupleDescription;
     }
@@ -591,8 +593,7 @@ public class RequestContext {
         this.statsMaxFragments = statsMaxFragments;
         if (statsMaxFragments <= 0) {
             throw new IllegalArgumentException(String
-                    .format("Wrong value '%d'. STATS-MAX-FRAGMENTS must be a positive integer",
-                            statsMaxFragments));
+                    .format("Wrong value '%d'. STATS-MAX-FRAGMENTS must be a positive integer", statsMaxFragments));
         }
     }
 
@@ -611,11 +612,8 @@ public class RequestContext {
     public void setStatsSampleRatio(float statsSampleRatio) {
         this.statsSampleRatio = statsSampleRatio;
         if (statsSampleRatio < 0.0001 || statsSampleRatio > 1.0) {
-            throw new IllegalArgumentException(
-                    "Wrong value '"
-                            + statsSampleRatio
-                            + "'. "
-                            + "STATS-SAMPLE-RATIO must be a value between 0.0001 and 1.0");
+            throw new IllegalArgumentException( "Wrong value '" + statsSampleRatio + "'. "
+                    + "STATS-SAMPLE-RATIO must be a value between 0.0001 and 1.0");
         }
     }
 
@@ -664,6 +662,7 @@ public class RequestContext {
         this.additionalConfigProps = additionalConfigProps;
     }
 
+    @SuppressWarnings("unused")
     public String getTransactionId() {
         return transactionId;
     }

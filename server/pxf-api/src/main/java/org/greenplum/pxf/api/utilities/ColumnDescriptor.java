@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.utilities;
  * under the License.
  */
 
-
 import java.util.Arrays;
 
 /**
@@ -118,6 +117,7 @@ public class ColumnDescriptor {
         return isProjected;
     }
 
+    @SuppressWarnings("unused")
     public void setProjected(boolean projected) {
         isProjected = projected;
     }

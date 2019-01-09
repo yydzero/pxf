@@ -19,7 +19,6 @@ package org.greenplum.pxf.api;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.io.DataType;
 
 import java.sql.Date;

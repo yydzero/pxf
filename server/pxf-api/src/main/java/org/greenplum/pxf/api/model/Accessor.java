@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.model;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.OneRow;
 
 /**
@@ -44,7 +43,6 @@ public interface Accessor extends Plugin {
 
     /**
      * Closes the resource.
-     *
      * @throws Exception if closing the resource failed
      */
     void closeForRead() throws Exception;
@@ -68,7 +66,6 @@ public interface Accessor extends Plugin {
 
     /**
      * Closes the resource for write.
-     *
      * @throws Exception if closing the resource failed
      */
     void closeForWrite() throws Exception;
