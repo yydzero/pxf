@@ -33,7 +33,7 @@ import java.util.List;
 
 public class ReadVectorizedBridge extends ReadBridge {
 
-    public ReadVectorizedBridge(RequestContext context) {
+    ReadVectorizedBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
     }
 

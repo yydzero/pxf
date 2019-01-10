@@ -23,9 +23,9 @@ package org.greenplum.pxf.service;
  * For the purposes of pxf-server, a session is the set of requests processed on a specific segment
  * on behalf of a particular user and transaction. Grouping requests together into a session allows
  * us to re-use the UserGroupInformation object (which is expensive to destroy) for each session.
- * <p>
- * SessionId is used as the cache key to look up the UserGroupInformation for a request. See {@link
- * UGICache}.
+ *
+ * SessionId is used as the cache key to look up the UserGroupInformation for a request.
+ * See {@link UGICache}.
  */
 public class SessionId {
 

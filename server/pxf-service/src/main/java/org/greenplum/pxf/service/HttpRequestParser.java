@@ -27,12 +27,12 @@ import java.util.stream.Collectors;
  */
 public class HttpRequestParser implements RequestParser<HttpHeaders> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(HttpRequestParser.class);
+
     private static final String TRUE_LCASE = "true";
     private static final String FALSE_LCASE = "false";
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpRequestParser.class);
     private static final HttpRequestParser instance = new HttpRequestParser();
-
     private PluginConf pluginConf;
 
     public HttpRequestParser() {
@@ -297,7 +297,6 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
             return null;
 
         int typeModeCount = parsePositiveIntOrError(typeModeCountStr, typeModCountPropName);
-
         Integer[] result = new Integer[typeModeCount];
         for (int i = 0; i < typeModeCount; i++) {
             String typeModItemPropName = "ATTR-TYPEMOD" + columnIndex + "-" + i;
@@ -393,7 +392,6 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
             if (result == null) {
                 protocolViolation(property);
             }
-
             return result;
         }
 

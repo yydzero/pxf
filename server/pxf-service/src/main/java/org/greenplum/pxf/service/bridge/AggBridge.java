@@ -38,7 +38,7 @@ public class AggBridge extends ReadBridge implements Bridge {
     /* Avoid resolving rows with the same key twice */
     private LRUMap outputCache;
 
-    public AggBridge(RequestContext context) {
+    AggBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
     }
 
@@ -83,7 +83,8 @@ public class AggBridge extends ReadBridge implements Bridge {
                     break;
                 }
             }
-        } catch (Exception ex) {
+        }
+        catch (Exception ex) {
             LOG.error("Error occurred when reading next object from aggregate bridge: ", ex.getMessage());
             throw ex;
         }

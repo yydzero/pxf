@@ -108,7 +108,8 @@ public enum EnumHiveToGpdbType {
     /**
      * Returns Hive to GPDB type mapping entry for given Hive type
      * 
-     * @param hiveType full Hive type with modifiers, for example - decimal(10, 0), char(5), binary, array&lt;string&gt;, map&lt;string,float&gt; etc
+     * @param hiveType full Hive type with modifiers, for example - decimal(10, 0),
+     *                char(5), binary, array&lt;string&gt;, map&lt;string,float&gt; etc
      * @return corresponding Hive to GPDB type mapping entry
      * @throws UnsupportedTypeException if there is no corresponding GPDB type
      */
@@ -132,7 +133,8 @@ public enum EnumHiveToGpdbType {
     /**
      * 
      * @param dataType Gpdb data type
-     * @return compatible Hive type to given Gpdb type, if there are more than one compatible types, it returns one with bigger size
+     * @return compatible Hive type to given Gpdb type, if there are more than one compatible types,
+     *         it returns one with bigger size
      * @throws UnsupportedTypeException if there is no corresponding Hive type for given Gpdb type
      */
     public static EnumHiveToGpdbType getCompatibleHiveToGpdbType(DataType dataType) {
@@ -153,12 +155,11 @@ public enum EnumHiveToGpdbType {
     }
 
     /**
-     *
+     * This function is used for datatypes with modifier information
+     * such as varchar, char, decimal, etc.
      * @param hiveToGpdbType EnumHiveToGpdbType enum
      * @param modifiers Array of Modifiers
      * @return full Hive type name including modifiers. eg: varchar(3)
-     * This function is used for datatypes with modifier information
-     * such as varchar, char, decimal, etc.
      */
     public static String getFullHiveTypeName(EnumHiveToGpdbType hiveToGpdbType, Integer[] modifiers) {
         hiveToGpdbType.getTypeName();
@@ -171,7 +172,7 @@ public enum EnumHiveToGpdbType {
             fullType.append(start);
             int index = 0;
             for (Integer modifier : modifiers) {
-                if(index++ > 0) {
+                if (index++ > 0) {
                     fullType.append(separator);
                 }
                 fullType.append(modifier);
@@ -190,6 +191,7 @@ public enum EnumHiveToGpdbType {
      * @throws UnsupportedTypeException if there is no such Hive type supported
      */
     public static Integer[] extractModifiers(String hiveType) {
+
         Integer[] result = null;
         for (EnumHiveToGpdbType t : values()) {
             String hiveTypeName = hiveType;
@@ -201,8 +203,7 @@ public enum EnumHiveToGpdbType {
                 for (int i = 0; i < tokens.length - 1; i++)
                     result[i] = Integer.parseInt(tokens[i+1]);
             }
-            if (t.getTypeName().toLowerCase()
-                    .equals(hiveTypeName.toLowerCase())) {
+            if (t.getTypeName().toLowerCase().equals(hiveTypeName.toLowerCase())) {
                 return result;
             }
         }

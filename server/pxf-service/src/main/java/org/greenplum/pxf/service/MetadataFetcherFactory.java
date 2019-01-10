@@ -19,7 +19,6 @@ package org.greenplum.pxf.service;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.model.MetadataFetcher;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.Utilities;
@@ -30,7 +29,9 @@ import org.greenplum.pxf.api.utilities.Utilities;
  * abstract class which is returned by the MetadataFetcherFactory.
  */
 public class MetadataFetcherFactory {
+
     public static MetadataFetcher create(RequestContext requestContext) throws Exception {
-        return (MetadataFetcher) Utilities.createAnyInstance(RequestContext.class, (String) requestContext.getMetadata(), requestContext);
+        return (MetadataFetcher) Utilities.createAnyInstance(RequestContext.class,
+                (String) requestContext.getMetadata(), requestContext);
     }
 }

@@ -34,7 +34,6 @@ import org.greenplum.pxf.api.model.Metadata;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 
-
 /**
  * Class for serializing metadata in JSON format. The class implements
  * {@link StreamingOutput} so the serialization will be done in a stream and not

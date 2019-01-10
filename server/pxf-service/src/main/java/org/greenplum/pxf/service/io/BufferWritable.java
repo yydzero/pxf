@@ -19,7 +19,6 @@ package org.greenplum.pxf.service.io;
  * under the License.
  */
 
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;

@@ -49,6 +49,7 @@ import static org.greenplum.pxf.api.io.DataType.TEXT;
  * record.
  */
 public class BridgeOutputBuilder {
+
     private static final byte DELIM = 10; /* (byte)'\n'; */
     private static final Log LOG = LogFactory.getLog(BridgeOutputBuilder.class);
     private RequestContext context;
@@ -91,7 +92,6 @@ public class BridgeOutputBuilder {
         if (context.getOutputFormat() != OutputFormat.GPDBWritable) {
             return;
         }
-
         errorRecord = new GPDBWritable(errSchema);
         errorRecord.setError(true);
     }
@@ -125,11 +125,8 @@ public class BridgeOutputBuilder {
         if (output == null && context.getOutputFormat() == OutputFormat.GPDBWritable) {
             makeGPDBWritableOutput();
         }
-
         outputList.clear();
-
         fillOutputRecord(recFields);
-
         return outputList;
     }
 
@@ -172,7 +169,6 @@ public class BridgeOutputBuilder {
         }
 
         output = new GPDBWritable(schema);
-
         return (GPDBWritable) output;
     }
 
@@ -221,7 +217,6 @@ public class BridgeOutputBuilder {
 
             fillOneGPDBWritableField(current, i);
         }
-
         outputList.add(output);
     }
 
@@ -341,8 +336,7 @@ public class BridgeOutputBuilder {
      *
      * @param oneField field
      * @param colIdx   column index
-     * @throws BadRecordException if field type is not supported or doesn't
-     *                            match the schema
+     * @throws BadRecordException if field type is not supported or doesn't match the schema
      */
     void fillOneGPDBWritableField(OneField oneField, int colIdx)
             throws BadRecordException {

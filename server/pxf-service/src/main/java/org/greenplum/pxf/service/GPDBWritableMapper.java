@@ -19,7 +19,6 @@ package org.greenplum.pxf.service;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.UnsupportedTypeException;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.service.io.GPDBWritable;
@@ -33,13 +32,12 @@ public class GPDBWritableMapper {
     private int type;
     private DataGetter getter = null;
 
-    public GPDBWritableMapper(GPDBWritable gpdbWritable) {
+    GPDBWritableMapper(GPDBWritable gpdbWritable) {
         this.gpdbWritable = gpdbWritable;
     }
 
     public void setDataType(int type) throws UnsupportedTypeException {
         this.type = type;
-
         switch (DataType.get(type)) {
             case BOOLEAN:
                 getter = new BooleanDataGetter();
@@ -67,8 +65,7 @@ public class GPDBWritableMapper {
                 break;
             default:
                 throw new UnsupportedTypeException(
-                        "Type " + GPDBWritable.getTypeName(type) +
-                                " is not supported by GPDBWritable");
+                        "Type " + GPDBWritable.getTypeName(type) + " is not supported by GPDBWritable");
         }
     }
 

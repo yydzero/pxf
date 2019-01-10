@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
-
 /**
  * Helper class to get statistics for ANALYZE.
  */
@@ -45,29 +44,24 @@ public class AnalyzeUtils {
      * @param context container for parameters, including sampling data.
      * @return a list of fragments no bigger than pxf_max_fragments parameter.
      */
-    static public List<Fragment> getSampleFragments(List<Fragment> fragments,
-                                                    RequestContext context) {
+    static public List<Fragment> getSampleFragments(List<Fragment> fragments, RequestContext context) {
 
         int listSize = fragments.size();
         int maxSize = context.getStatsMaxFragments();
-        List<Fragment> samplingList = new ArrayList<Fragment>();
+        List<Fragment> samplingList = new ArrayList<>();
         BitSet bitSet;
 
         if (maxSize == 0) {
             return fragments;
         }
 
-        LOG.debug("fragments list has " + listSize
-                + " fragments, maxFragments = " + maxSize);
-
+        LOG.debug("fragments list has " + listSize + " fragments, maxFragments = " + maxSize);
         bitSet = generateSamplingBitSet(listSize, maxSize);
-
         for (int i = 0; i < listSize; ++i) {
             if (bitSet.get(i)) {
                 samplingList.add(fragments.get(i));
             }
         }
-
         return samplingList;
     }
 
@@ -82,7 +76,6 @@ public class AnalyzeUtils {
 
         int skip = 0, chosen = 0, curIndex = 0;
         BitSet bitSet = new BitSet();
-
         if (poolSize <= 0 || sampleSize <= 0) {
             return bitSet;
         }
@@ -104,21 +97,15 @@ public class AnalyzeUtils {
             }
 
             for (int i = 0; i < skip; ++i) {
-                curIndex = nextClearBitModulo((++curIndex) % poolSize,
-                        poolSize, bitSet);
+                curIndex = nextClearBitModulo((++curIndex) % poolSize, poolSize, bitSet);
                 if (curIndex == -1) {
                     // should never happen
-                    throw new IllegalArgumentException(
-                            "Trying to sample more than pool size "
-                                    + "(pool size " + poolSize
-                                    + ", sampling size " + sampleSize);
+                    throw new IllegalArgumentException("Trying to sample more than pool size "
+                                    + "(pool size " + poolSize + ", sampling size " + sampleSize);
                 }
             }
         }
-
-        LOG.debug("sampling bit map has " + chosen + " elements:"
-                + bitSet.toString());
-
+        LOG.debug("sampling bit map has " + chosen + " elements:" + bitSet.toString());
         return bitSet;
     }
 
@@ -142,7 +129,6 @@ public class AnalyzeUtils {
         if (indexToSet == poolSize) {
             return -1;
         }
-
         return indexToSet;
     }
 }

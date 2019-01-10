@@ -24,7 +24,7 @@ public abstract class BaseBridge implements Bridge {
      * plugin factories to request accessor and resolver.
      * @param context request context
      */
-    public BaseBridge(RequestContext context) {
+    BaseBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
     }
 

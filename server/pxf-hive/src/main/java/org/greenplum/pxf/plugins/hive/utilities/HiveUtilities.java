@@ -386,10 +386,8 @@ public class HiveUtilities {
 
     /* Turns the partition keys into a string */
     private static String serializePartitionKeys(HiveTablePartition partData) {
-        if (partData.partition == null) /*
-         * this is a simple hive table - there
-         * are no partitions
-         */ {
+        if (partData.partition == null)
+            /* this is a simple hive table - there are no partitions */ {
             return HiveDataFragmenter.HIVE_NO_PART_TBL;
         }
 
@@ -423,14 +421,11 @@ public class HiveUtilities {
     public static byte[] makeUserData(String fragmenterClassName, HiveTablePartition partData,
                                       boolean filterInFragmenter) throws Exception {
 
-        HiveUserData hiveUserData;
-
         if (fragmenterClassName == null) {
             throw new IllegalArgumentException("No fragmenter provided.");
         }
 
         Class fragmenterClass = Class.forName(fragmenterClassName);
-
         String inputFormatName = partData.storageDesc.getInputFormat();
         String serdeClassName = partData.storageDesc.getSerdeInfo().getSerializationLib();
         String propertiesString = serializeProperties(partData.properties);
@@ -443,7 +438,8 @@ public class HiveUtilities {
             assertFileType(inputFormatName, partData);
         }
 
-        hiveUserData = new HiveUserData(inputFormatName, serdeClassName, propertiesString, partitionKeys, filterInFragmenter, delimiter, colTypes, skipHeader);
+        HiveUserData hiveUserData = new HiveUserData(inputFormatName, serdeClassName, propertiesString,
+                partitionKeys, filterInFragmenter, delimiter, colTypes, skipHeader);
 
         return hiveUserData.toString().getBytes();
     }
@@ -464,14 +460,14 @@ public class HiveUtilities {
                     + HiveUserData.getNumOfTokens() + " tokens, but got " + toks.length);
         }
 
-        HiveUserData hiveUserData = new HiveUserData(toks[0], toks[1], toks[2], toks[3], Boolean.valueOf(toks[4]), toks[5], toks[6], Integer.parseInt(toks[7]));
-
-        return hiveUserData;
+        return new HiveUserData(toks[0], toks[1], toks[2], toks[3],
+                Boolean.valueOf(toks[4]), toks[5], toks[6], Integer.parseInt(toks[7]));
     }
 
     private static String getSerdeParameter(StorageDescriptor sd, String parameterKey) {
         String parameterValue = null;
-        if (sd != null && sd.getSerdeInfo() != null && sd.getSerdeInfo().getParameters() != null && sd.getSerdeInfo().getParameters().get(parameterKey) != null) {
+        if (sd != null && sd.getSerdeInfo() != null && sd.getSerdeInfo().getParameters() != null
+                && sd.getSerdeInfo().getParameters().get(parameterKey) != null) {
             parameterValue = sd.getSerdeInfo().getParameters().get(parameterKey);
         }
 
@@ -519,7 +515,6 @@ public class HiveUtilities {
                 break;
             }
         }
-
         return hasComplexTypes;
     }
 
@@ -527,9 +522,8 @@ public class HiveUtilities {
      * Populates the given metadata object with the given table's fields and partitions,
      * The partition fields are added at the end of the table schema.
      * Throws an exception if the table contains unsupported field types.
-     * Supported HCatalog types: TINYINT,
-     * SMALLINT, INT, BIGINT, BOOLEAN, FLOAT, DOUBLE, STRING, BINARY, TIMESTAMP,
-     * DATE, DECIMAL, VARCHAR, CHAR.
+     * Supported HCatalog types: TINYINT, SMALLINT, INT, BIGINT, BOOLEAN,
+     * FLOAT, DOUBLE, STRING, BINARY, TIMESTAMP, DATE, DECIMAL, VARCHAR, CHAR.
      *
      * @param tbl      Hive table
      * @param metadata schema of given table
@@ -554,9 +548,10 @@ public class HiveUtilities {
             for (FieldSchema hivePart : hivePartitions) {
                 metadata.addField(HiveUtilities.mapHiveType(hivePart));
             }
-        } catch (UnsupportedTypeException e) {
-            String errorMsg = "Failed to retrieve metadata for table " + metadata.getItem() + ". " +
-                    e.getMessage();
+        }
+        catch (UnsupportedTypeException e) {
+            String errorMsg = "Failed to retrieve metadata for table " +
+                    metadata.getItem() + ". " + e.getMessage();
             throw new UnsupportedTypeException(errorMsg);
         }
     }
@@ -582,7 +577,8 @@ public class HiveUtilities {
         try {
             Path path = new Path(requestContext.getDataSource());
             return OrcFile.createReader(path.getFileSystem(configuration), path);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new RuntimeException("Exception while getting orc reader", e);
         }
     }

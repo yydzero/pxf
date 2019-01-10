@@ -134,7 +134,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
      * @return a {@link InputFormat} derived object
      * @throws Exception if failed to create input format
      */
-    static InputFormat<?, ?> makeInputFormat(String inputFormatName, JobConf jobConf)
+    public static InputFormat<?, ?> makeInputFormat(String inputFormatName, JobConf jobConf)
             throws Exception {
         Class<?> c = Class.forName(inputFormatName, true, JavaUtils.getClassLoader());
         InputFormat<?, ?> inputFormat = (InputFormat<?, ?>) c.newInstance();
@@ -332,10 +332,10 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
 
         if (filter instanceof LogicalFilter) {
             buildCompoundFilter((LogicalFilter) filter, filtersString);
-        } else {
+        }
+        else {
             buildSingleFilter(filter, filtersString, "");
         }
-
         return filtersString.toString();
     }
 
@@ -358,7 +358,8 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         for (Object f : filter.getFilterList()) {
             if (f instanceof LogicalFilter) {
                 buildCompoundFilter((LogicalFilter) f, filterString);
-            } else {
+            }
+            else {
                 buildSingleFilter(f, filterString, prefix);
             }
         }

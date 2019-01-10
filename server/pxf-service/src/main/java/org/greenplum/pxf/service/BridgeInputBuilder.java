@@ -19,7 +19,6 @@ package org.greenplum.pxf.service;
  * under the License.
  */
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.greenplum.pxf.api.OneField;
@@ -35,8 +34,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class BridgeInputBuilder {
-    private RequestContext protocolData;
     private static final Log LOG = LogFactory.getLog(BridgeInputBuilder.class);
+
+    private RequestContext protocolData;
 
     public BridgeInputBuilder(RequestContext protocolData) {
         this.protocolData = protocolData;

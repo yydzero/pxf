@@ -50,7 +50,7 @@ public class ReadSamplingBridge extends ReadBridge {
      *
      * @param context input containing sampling ratio
      */
-    public ReadSamplingBridge(RequestContext context) {
+    ReadSamplingBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
     }
 

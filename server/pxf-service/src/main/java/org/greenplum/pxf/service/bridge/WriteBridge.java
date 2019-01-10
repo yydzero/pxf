@@ -19,7 +19,6 @@ package org.greenplum.pxf.service.bridge;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.BadRecordException;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
@@ -44,7 +43,7 @@ public class WriteBridge extends BaseBridge {
     /*
      * C'tor - set the implementation of the bridge
      */
-    public WriteBridge(RequestContext context) {
+    WriteBridge(RequestContext context) {
         super(context);
         inputBuilder = new BridgeInputBuilder(context);
     }

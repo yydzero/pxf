@@ -11,6 +11,7 @@ public interface RequestParser<T> {
 
     /**
      * Parses the request and constructs RequestContext instance
+     *
      * @param request request data
      * @return parsed information as an instance of RequestContext
      */

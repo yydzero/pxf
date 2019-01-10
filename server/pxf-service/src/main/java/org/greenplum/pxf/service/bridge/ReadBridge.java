@@ -55,7 +55,7 @@ public class ReadBridge extends BaseBridge {
      *
      * @param context input containing accessor and resolver names
      */
-    public ReadBridge(RequestContext context) {
+    ReadBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
     }
 
@@ -120,8 +120,7 @@ public class ReadBridge extends BaseBridge {
                 row_info = onerow.toString();
             }
             if (ex.getCause() != null) {
-                LOG.debug("BadRecordException " + ex.getCause().toString()
-                        + ": " + row_info);
+                LOG.debug("BadRecordException " + ex.getCause().toString() + ": " + row_info);
             } else {
                 LOG.debug(ex.toString() + ": " + row_info);
             }
@@ -156,7 +155,7 @@ public class ReadBridge extends BaseBridge {
      * analyzing the exception type, and when we discover that the actual
      * problem was a data problem, we return the errorOutput GPDBWritable.
      */
-    protected boolean isDataException(IOException ex) {
+    private boolean isDataException(IOException ex) {
         return (ex instanceof EOFException
                 || ex instanceof CharacterCodingException
                 || ex instanceof CharConversionException

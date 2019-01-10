@@ -19,7 +19,6 @@ package org.greenplum.pxf.service;
  * under the License.
  */
 
-
 import java.io.IOException;
 import java.util.List;
 
@@ -64,27 +63,25 @@ public class MetadataResponseFormatter {
             return;
         }
 
-        for(Metadata metadata: metadataList) {
+        for (Metadata metadata: metadataList) {
             StringBuilder result = new StringBuilder();
-
             if (metadata == null) {
                 result.append("None");
                 LOG.debug(result);
                 continue;
             }
-
             result.append("Metadata for item \"").append(metadata.getItem()).append("\": ");
-
             if ((metadata.getFields() == null) || metadata.getFields().isEmpty()) {
                 result.append("None");
-            } else {
+            }
+            else {
                 int i = 0;
                 for (Metadata.Field field : metadata.getFields()) {
                     result.append("Field #").append(++i).append(": [")
-                            .append("Name: ").append(field.getName())
-                            .append(", Type: ").append(field.getType().getTypeName())
-                            .append(", Source type: ").append(field.getSourceType())
-                            .append(", Source type is complex: ").append(field.isComplexType()).append("] ");
+                          .append("Name: ").append(field.getName())
+                          .append(", Type: ").append(field.getType().getTypeName())
+                          .append(", Source type: ").append(field.getSourceType())
+                          .append(", Source type is complex: ").append(field.isComplexType()).append("] ");
                 }
             }
             LOG.debug(result);

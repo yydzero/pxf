@@ -48,6 +48,7 @@ import java.io.File;
  * used.
  */
 public class SecureLogin {
+
     private static final Logger LOG = LoggerFactory.getLogger(SecureLogin.class);
 
     private static final String CONFIG_KEY_SERVICE_PRINCIPAL = "pxf.service.kerberos.principal";
