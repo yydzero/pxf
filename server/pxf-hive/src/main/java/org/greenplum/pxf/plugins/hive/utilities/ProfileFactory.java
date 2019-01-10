@@ -45,7 +45,7 @@ public class ProfileFactory {
      * @return name of optimal profile
      */
     public static String get(InputFormat inputFormat, boolean hasComplexTypes, String userProfileName) {
-        String profileName = null;
+        String profileName;
         if (HIVE_ORC_VECTORIZED_PROFILE.equals(userProfileName))
             return userProfileName;
         if (inputFormat instanceof TextInputFormat && !hasComplexTypes) {
@@ -69,8 +69,7 @@ public class ProfileFactory {
      * @return name of optimal profile
      */
     public static String get(InputFormat inputFormat, boolean hasComplexTypes) {
-        String profileName = get(inputFormat, hasComplexTypes, null);
-        return profileName;
+        return get(inputFormat, hasComplexTypes, null);
     }
 
 }

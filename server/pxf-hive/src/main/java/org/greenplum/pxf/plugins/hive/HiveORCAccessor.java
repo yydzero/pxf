@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +33,7 @@ import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.StatsAccessor;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.api.utilities.EnumAggregationType;
 import org.greenplum.pxf.api.utilities.Utilities;
 
 import java.sql.Date;
@@ -50,11 +50,7 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
 
     private static final Log LOG = LogFactory.getLog(HiveORCAccessor.class);
 
-    private final String READ_COLUMN_IDS_CONF_STR = "hive.io.file.readcolumn.ids";
-    private final String READ_ALL_COLUMNS = "hive.io.file.read.all.columns";
-    private final String READ_COLUMN_NAMES_CONF_STR = "hive.io.file.readcolumn.names";
-    private final String SARG_PUSHDOWN = "sarg.pushdown";
-    protected Reader orcReader;
+    Reader orcReader;
 
     private boolean useStats;
     private long count;
@@ -66,7 +62,7 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
     /**
      * Constructs a HiveORCFileAccessor.
      */
-    public HiveORCAccessor() {
+    HiveORCAccessor() {
         super(new OrcInputFormat());
     }
 
@@ -95,18 +91,21 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
      * Adds the table tuple description to JobConf ojbect
      * so only these columns will be returned.
      */
-    private void addColumns() throws Exception {
+    private void addColumns() {
 
-        List<Integer> colIds = new ArrayList<Integer>();
-        List<String> colNames = new ArrayList<String>();
+        List<Integer> colIds = new ArrayList<>();
+        List<String> colNames = new ArrayList<>();
         for(ColumnDescriptor col: context.getTupleDescription()) {
             if(col.isProjected()) {
                 colIds.add(col.columnIndex());
                 colNames.add(col.columnName());
             }
         }
+        String READ_ALL_COLUMNS = "hive.io.file.read.all.columns";
         jobConf.set(READ_ALL_COLUMNS, "false");
+        String READ_COLUMN_IDS_CONF_STR = "hive.io.file.readcolumn.ids";
         jobConf.set(READ_COLUMN_IDS_CONF_STR, StringUtils.join(colIds, ","));
+        String READ_COLUMN_NAMES_CONF_STR = "hive.io.file.readcolumn.names";
         jobConf.set(READ_COLUMN_NAMES_CONF_STR, StringUtils.join(colNames, ","));
     }
 
@@ -144,6 +143,7 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
             filterBuilder.end();
         }
         SearchArgument sarg = filterBuilder.build();
+        String SARG_PUSHDOWN = "sarg.pushdown";
         jobConf.set(SARG_PUSHDOWN, sarg.toKryo());
     }
 
@@ -262,16 +262,13 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
         OneRow row = null;
         if (context.getAggType() == null)
             throw new UnsupportedOperationException("Aggregate opration is required");
-        switch (context.getAggType()) {
-            case COUNT:
-                if (objectsEmitted < count) {
-                    objectsEmitted++;
-                    row = rowToEmitCount;
-                }
-                break;
-            default: {
-                throw new UnsupportedOperationException("Aggregation operation is not supported.");
+        if (context.getAggType() == EnumAggregationType.COUNT) {
+            if (objectsEmitted < count) {
+                objectsEmitted++;
+                row = rowToEmitCount;
             }
+        } else {
+            throw new UnsupportedOperationException("Aggregation operation is not supported.");
         }
         return row;
     }

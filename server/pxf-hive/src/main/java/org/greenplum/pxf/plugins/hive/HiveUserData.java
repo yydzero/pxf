@@ -59,7 +59,7 @@ public class HiveUserData {
      *
      * @return input format of a fragment
      */
-    public String getInputFormatName() {
+    String getInputFormatName() {
         return inputFormatName;
     }
 
@@ -68,7 +68,7 @@ public class HiveUserData {
      *
      * @return SerDe class name
      */
-    public String getSerdeClassName() {
+    String getSerdeClassName() {
         return serdeClassName;
     }
 
@@ -77,7 +77,7 @@ public class HiveUserData {
      *
      * @return properties string needed for SerDe initialization
      */
-    public String getPropertiesString() {
+    String getPropertiesString() {
         return propertiesString;
     }
 
@@ -95,7 +95,7 @@ public class HiveUserData {
      *
      * @return true if filtering was done in fragmenter
      */
-    public boolean isFilterInFragmenter() {
+    boolean isFilterInFragmenter() {
         return filterInFragmenter;
     }
 
@@ -104,7 +104,7 @@ public class HiveUserData {
      *
      * @return field delimiter
      */
-    public String getDelimiter() {
+    String getDelimiter() {
         return delimiter;
     }
 
@@ -113,7 +113,7 @@ public class HiveUserData {
      *
      * @return colTypes
      */
-    public String getColTypes() {
+    String getColTypes() {
         return colTypes;
     }
 
@@ -131,7 +131,7 @@ public class HiveUserData {
      *
      * @return skipHeader
      */
-    public int getSkipHeader() {
+    int getSkipHeader() {
         return skipHeader;
     }
 

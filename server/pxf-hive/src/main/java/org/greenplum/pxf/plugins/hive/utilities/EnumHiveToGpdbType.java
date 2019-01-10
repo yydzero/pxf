@@ -85,7 +85,6 @@ public enum EnumHiveToGpdbType {
     }
 
     /**
-     * 
      * @return name of type
      */
     public String getTypeName() {
@@ -93,7 +92,6 @@ public enum EnumHiveToGpdbType {
     }
 
     /**
-     * 
      * @return corresponding GPDB type
      */
     public EnumGpdbType getGpdbType() {
@@ -101,7 +99,6 @@ public enum EnumHiveToGpdbType {
     }
 
     /**
-     * 
      * @return split by expression
      */
     public String getSplitExpression() {
@@ -128,8 +125,7 @@ public enum EnumHiveToGpdbType {
                 return t;
             }
         }
-        throw new UnsupportedTypeException("Unable to map Hive's type: "
-                + hiveType + " to GPDB's type");
+        throw new UnsupportedTypeException("Unable to map Hive's type: " + hiveType + " to GPDB's type");
     }
 
 
@@ -141,13 +137,8 @@ public enum EnumHiveToGpdbType {
      */
     public static EnumHiveToGpdbType getCompatibleHiveToGpdbType(DataType dataType) {
 
-        SortedSet<EnumHiveToGpdbType> types = new TreeSet<EnumHiveToGpdbType>(
-                new Comparator<EnumHiveToGpdbType>() {
-                    public int compare(EnumHiveToGpdbType a,
-                            EnumHiveToGpdbType b) {
-                        return Byte.compare(a.getSize(), b.getSize());
-                    }
-                });
+        SortedSet<EnumHiveToGpdbType> types = new TreeSet<>(
+                Comparator.comparingInt(EnumHiveToGpdbType::getSize));
 
         for (EnumHiveToGpdbType t : values()) {
             if (t.getGpdbType().getDataType().equals(dataType)) {
@@ -231,6 +222,7 @@ public enum EnumHiveToGpdbType {
         return isComplexType;
     }
 
+    @SuppressWarnings("unused")
     public void setComplexType(boolean isComplexType) {
         this.isComplexType = isComplexType;
     }

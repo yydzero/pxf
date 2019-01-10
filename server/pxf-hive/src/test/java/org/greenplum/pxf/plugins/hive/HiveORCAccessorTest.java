@@ -43,7 +43,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({HiveORCAccessor.class, HiveUtilities.class, HdfsUtilities.class, HiveDataFragmenter.class})
 @SuppressStaticInitializationFor({"org.apache.hadoop.mapred.JobConf",
@@ -68,9 +67,7 @@ public class HiveORCAccessorTest {
 
         PowerMockito.mockStatic(HiveUtilities.class);
         PowerMockito.when(HiveUtilities.parseHiveUserData(any(RequestContext.class))).thenReturn(new HiveUserData("", "", null, HiveDataFragmenter.HIVE_NO_PART_TBL, true, "1", "", 0));
-
         PowerMockito.mockStatic(HdfsUtilities.class);
-
         PowerMockito.mockStatic(HiveDataFragmenter.class);
         PowerMockito.when(HiveDataFragmenter.makeInputFormat(any(String.class), any(JobConf.class))).thenReturn(inputFormat);
 

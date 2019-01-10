@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
 public class ProfileFactoryTest {
 
     @Test
-    public void get() throws Exception {
+    public void get() {
 
         // For TextInputFormat when table has no complex types, HiveText profile should be used
         String profileName = ProfileFactory.get(new TextInputFormat(), false);

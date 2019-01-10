@@ -68,16 +68,16 @@ import java.util.Properties;
 @SuppressWarnings("deprecation")
 public class HiveResolver extends HivePlugin implements Resolver {
     private static final Log LOG = LogFactory.getLog(HiveResolver.class);
-    protected static final String MAPKEY_DELIM = ":";
-    protected static final String COLLECTION_DELIM = ",";
-    protected String collectionDelim;
-    protected String mapkeyDelim;
-    protected SerDe deserializer;
+    static final String MAPKEY_DELIM = ":";
+    static final String COLLECTION_DELIM = ",";
+    String collectionDelim;
+    String mapkeyDelim;
+    SerDe deserializer;
     private List<OneField> partitionFields;
-    protected String serdeClassName;
-    protected String propsString;
+    String serdeClassName;
+    String propsString;
     String partitionKeys;
-    protected char delimiter;
+    char delimiter;
     String nullChar = "\\N";
     private String hiveDefaultPartName;
     private int numberOfPartitions;
@@ -127,7 +127,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
+    public OneRow setFields(List<OneField> record) {
         throw new UnsupportedOperationException();
     }
 
@@ -135,7 +135,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         return partitionFields;
     }
 
-    public int getNumberOfPartitions() {
+    int getNumberOfPartitions() {
         return numberOfPartitions;
     }
 
@@ -188,8 +188,8 @@ public class HiveResolver extends HivePlugin implements Resolver {
             String type = levelKey[1];
             String val = levelKey[2];
             DataType convertedType;
-            Object convertedValue = null;
-            boolean isDefaultPartition = false;
+            Object convertedValue;
+            boolean isDefaultPartition;
 
             LOG.debug("Partition type: " + type + ", value: " + val);
             // check if value is default partition
@@ -444,9 +444,9 @@ public class HiveResolver extends HivePlugin implements Resolver {
         return listRecord;
     }
 
-    protected List<OneField> traverseStruct(Object struct,
-                                            StructObjectInspector soi,
-                                            boolean toFlatten)
+    private List<OneField> traverseStruct(Object struct,
+                                          StructObjectInspector soi,
+                                          boolean toFlatten)
             throws BadRecordException, IOException {
         List<? extends StructField> fields = soi.getAllStructFieldRefs();
         List<Object> structFields = soi.getStructFieldsDataAsList(struct);
@@ -509,8 +509,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
     }
 
     private void resolvePrimitive(Object o, PrimitiveObjectInspector oi,
-                                  List<OneField> record, boolean toFlatten)
-            throws IOException {
+                                  List<OneField> record, boolean toFlatten) {
         Object val;
         switch (oi.getPrimitiveCategory()) {
             case BOOLEAN: {
@@ -522,7 +521,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 if (o == null) {
                     val = null;
                 } else if (o.getClass().getSimpleName().equals("ByteWritable")) {
-                    val = new Short(((ByteWritable) o).get());
+                    val = (short) ((ByteWritable) o).get();
                 } else {
                     val = ((ShortObjectInspector) oi).get(o);
                 }
@@ -603,7 +602,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 addOneFieldToRecord(record, DataType.DATE, val);
                 break;
             case BYTE: { /* TINYINT */
-                val = (o != null) ? new Short(((ByteObjectInspector) oi).get(o))
+                val = (o != null) ? (short) ((ByteObjectInspector) oi).get(o)
                         : null;
                 addOneFieldToRecord(record, DataType.SMALLINT, val);
                 break;
@@ -616,8 +615,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         }
     }
 
-    private void addOneFieldToRecord(List<OneField> record,
-                                     DataType gpdbWritableType, Object val) {
+    private void addOneFieldToRecord(List<OneField> record, DataType gpdbWritableType, Object val) {
         record.add(new OneField(gpdbWritableType.getOID(), val));
     }
 
@@ -629,7 +627,6 @@ public class HiveResolver extends HivePlugin implements Resolver {
     void parseDelimiterChar(RequestContext input) {
 
         String userDelim = input.getOption(RequestContext.DELIMITER_KEY);
-
         if (userDelim == null) {
             /* No DELIMITER in URL, try to get it from fragment's user data*/
             HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
@@ -646,8 +643,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                             "Invalid hexdecimal value for delimiter (got"
                                     + userDelim + ")");
                 }
-                delimiter = (char) Integer.parseInt(
-                        userDelim.substring(2, VALID_LENGTH_HEX), 16);
+                delimiter = (char) Integer.parseInt(userDelim.substring(2, VALID_LENGTH_HEX), 16);
                 if (!CharUtils.isAscii(delimiter)) {
                     throw new IllegalArgumentException(
                             "Invalid delimiter value. Must be a single ASCII character, or a hexadecimal sequence (got non ASCII "

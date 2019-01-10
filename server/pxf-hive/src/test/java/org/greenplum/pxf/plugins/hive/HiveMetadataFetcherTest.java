@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -156,7 +155,7 @@ public class HiveMetadataFetcherTest {
         String tableName = "cause";
 
         // mock hive table returned from hive client
-        List<FieldSchema> fields = new ArrayList<FieldSchema>();
+        List<FieldSchema> fields = new ArrayList<>();
         fields.add(new FieldSchema("field1", "string", null));
         fields.add(new FieldSchema("field2", "int", null));
         StorageDescriptor sd = new StorageDescriptor();
@@ -165,7 +164,7 @@ public class HiveMetadataFetcherTest {
         Table hiveTable = new Table();
         hiveTable.setTableType("MANAGED_TABLE");
         hiveTable.setSd(sd);
-        hiveTable.setPartitionKeys(new ArrayList<FieldSchema>());
+        hiveTable.setPartitionKeys(new ArrayList<>());
         when(hiveClient.getTable("default", tableName)).thenReturn(hiveTable);
 
         // Get metadata
@@ -196,11 +195,11 @@ public class HiveMetadataFetcherTest {
         String tablenamebase = "regulartable";
         String pattern = dbpattern + "." + tablepattern;
 
-        List<String> dbNames = new ArrayList<String>(Arrays.asList(dbname));
-        List<String> tableNames = new ArrayList<String>();
+        List<String> dbNames = new ArrayList<>(Arrays.asList(dbname));
+        List<String> tableNames = new ArrayList<>();
 
         // Prepare for tables
-        List<FieldSchema> fields = new ArrayList<FieldSchema>();
+        List<FieldSchema> fields = new ArrayList<>();
         fields.add(new FieldSchema("field1", "string", null));
         fields.add(new FieldSchema("field2", "int", null));
         StorageDescriptor sd = new StorageDescriptor();
@@ -211,11 +210,10 @@ public class HiveMetadataFetcherTest {
         for (int index = 1; index <= 2; index++) {
             String tableName = tablenamebase + index;
             tableNames.add(tableName);
-            ;
             Table hiveTable = new Table();
             hiveTable.setTableType("MANAGED_TABLE");
             hiveTable.setSd(sd);
-            hiveTable.setPartitionKeys(new ArrayList<FieldSchema>());
+            hiveTable.setPartitionKeys(new ArrayList<>());
             when(hiveClient.getTable(dbname, tableName)).thenReturn(hiveTable);
         }
 
@@ -260,7 +258,7 @@ public class HiveMetadataFetcherTest {
 
         String tableName2 = "regulartable";
         // mock hive table returned from hive client
-        List<FieldSchema> fields = new ArrayList<FieldSchema>();
+        List<FieldSchema> fields = new ArrayList<>();
         fields.add(new FieldSchema("field1", "string", null));
         fields.add(new FieldSchema("field2", "int", null));
         StorageDescriptor sd = new StorageDescriptor();
@@ -269,12 +267,12 @@ public class HiveMetadataFetcherTest {
         Table hiveTable2 = new Table();
         hiveTable2.setTableType("MANAGED_TABLE");
         hiveTable2.setSd(sd);
-        hiveTable2.setPartitionKeys(new ArrayList<FieldSchema>());
+        hiveTable2.setPartitionKeys(new ArrayList<>());
         when(hiveClient.getTable(dbname, tableName2)).thenReturn(hiveTable2);
 
         // Mock get databases and tables return from hive client
-        List<String> tableNames = new ArrayList<String>(Arrays.asList(tableName1, tableName2));
-        List<String> dbNames = new ArrayList<String>(Arrays.asList(dbname));
+        List<String> tableNames = new ArrayList<>(Arrays.asList(tableName1, tableName2));
+        List<String> dbNames = new ArrayList<>(Arrays.asList(dbname));
         when(hiveClient.getDatabases(dbpattern)).thenReturn(dbNames);
         when(hiveClient.getTables(dbname, tablepattern)).thenReturn(tableNames);
 

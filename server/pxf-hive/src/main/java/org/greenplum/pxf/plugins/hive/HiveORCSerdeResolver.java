@@ -41,7 +41,7 @@ public class HiveORCSerdeResolver extends HiveResolver {
 
     /* read the data supplied by the fragmenter: inputformat name, serde name, partition keys */
     @Override
-    void parseUserData(RequestContext input) throws Exception {
+    void parseUserData(RequestContext input) {
         HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
         serdeType = hiveUserData.getSerdeClassName();
         partitionKeys = hiveUserData.getPartitionKeys();
@@ -57,7 +57,6 @@ public class HiveORCSerdeResolver extends HiveResolver {
      * Suppress Warnings added because deserializer.initialize is an abstract function that is deprecated
      * but its implementations (ColumnarSerDe, LazyBinaryColumnarSerDe) still use the deprecated interface.
      */
-    @SuppressWarnings("deprecation")
     @Override
     void initSerde(RequestContext input) throws Exception {
         Properties serdeProperties = new Properties();

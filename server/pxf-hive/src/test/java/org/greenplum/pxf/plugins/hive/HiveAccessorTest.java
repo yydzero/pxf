@@ -134,29 +134,22 @@ class HiveUserDataBuilder {
     private String partitionKeys;
     private int skipHeader;
 
-    public HiveUserData build() {
-        return new HiveUserData(
-                null,
-                serdeClassName,
-                null,
-                partitionKeys,
-                false,
-                null,
-                null,
-                skipHeader);
+    HiveUserData build() {
+        return new HiveUserData( null, serdeClassName, null, partitionKeys,
+                false, null, null, skipHeader);
     }
 
-    public HiveUserDataBuilder withSerdeClassName(String s) {
+    HiveUserDataBuilder withSerdeClassName(String s) {
         serdeClassName = s;
         return this;
     }
 
-    public HiveUserDataBuilder withPartitionKeys(String s) {
+    HiveUserDataBuilder withPartitionKeys(String s) {
         partitionKeys = s;
         return this;
     }
 
-    public HiveUserDataBuilder withSkipHeader(int n) {
+    HiveUserDataBuilder withSkipHeader(int n) {
         skipHeader = n;
         return this;
     }

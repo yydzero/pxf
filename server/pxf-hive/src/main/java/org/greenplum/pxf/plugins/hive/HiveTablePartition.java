@@ -19,11 +19,12 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.hadoop.hive.metastore.api.Partition;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+
 import java.util.List;
 import java.util.Properties;
-import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
 
 /**
  * A Hive table unit - means a subset of the HIVE table, where we can say
@@ -36,10 +37,9 @@ public class HiveTablePartition {
     public Properties properties;
     public Partition partition;
     public List<FieldSchema> partitionKeys;
-    public String tableName;
+    private String tableName;
 
-    HiveTablePartition(StorageDescriptor storageDesc,
-                       Properties properties, Partition partition,
+    HiveTablePartition(StorageDescriptor storageDesc, Properties properties, Partition partition,
                        List<FieldSchema> partitionKeys, String tableName) {
         this.storageDesc = storageDesc;
         this.properties = properties;
@@ -50,7 +50,6 @@ public class HiveTablePartition {
 
     @Override
     public String toString() {
-        return "table - " + tableName
-                + ((partition == null) ? "" : ", partition - " + partition);
+        return "table - " + tableName + ((partition == null) ? "" : ", partition - " + partition);
     }
 }

@@ -40,7 +40,6 @@ import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.Utilities;
 import org.greenplum.pxf.plugins.hive.utilities.HiveUtilities;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -60,7 +59,7 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
 
     /* read the data supplied by the fragmenter: inputformat name, serde name, partition keys */
     @Override
-    void parseUserData(RequestContext input) throws Exception {
+    void parseUserData(RequestContext input) {
         HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
 
         serdeType = hiveUserData.getSerdeClassName();
@@ -105,8 +104,7 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
      * Suppress Warnings added because deserializer.initialize is an abstract function that is deprecated
      * but its implementations (ColumnarSerDe, LazyBinaryColumnarSerDe) still use the deprecated interface.
      */
-    @SuppressWarnings("deprecation")
-	@Override
+    @Override
     void initSerde(RequestContext input) throws Exception {
         Properties serdeProperties = new Properties();
         int numberOfDataColumns = input.getColumns() - getNumberOfPartitions();
@@ -142,7 +140,7 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
      * <p/>
      * Any other category will throw UnsupportedTypeException
      */
-    private void traverseTuple(Object obj, ObjectInspector objInspector) throws IOException, BadRecordException {
+    private void traverseTuple(Object obj, ObjectInspector objInspector) throws BadRecordException {
         ObjectInspector.Category category = objInspector.getCategory();
         if ((obj == null) && (category != ObjectInspector.Category.PRIMITIVE)) {
             throw new BadRecordException("NULL Hive composite object");
@@ -167,7 +165,7 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
         }
     }
 
-    private void resolvePrimitive(Object o, PrimitiveObjectInspector oi) throws IOException {
+    private void resolvePrimitive(Object o, PrimitiveObjectInspector oi) {
 
         if (!firstColumn) {
             builder.append(delimiter);

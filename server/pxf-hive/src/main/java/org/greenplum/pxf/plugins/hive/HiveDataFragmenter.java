@@ -90,7 +90,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
 
     private HiveMetaStoreClient client;
 
-    protected boolean filterInFragmenter = false;
+    private boolean filterInFragmenter = false;
 
     // Data structure to hold hive partition names if exist, to be used by
     // partition filtering
@@ -99,7 +99,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     private Map<String, String> partitionkeyTypes = new HashMap<>();
     private boolean canPushDownIntegral;
 
-    public HiveDataFragmenter() {
+    HiveDataFragmenter() {
         this(BaseConfigurationFactory.getInstance());
     }
 
@@ -131,14 +131,12 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
      *
      * @param inputFormatName input format class name
      * @param jobConf         configuration data for the Hadoop framework
-     * @return a {@link org.apache.hadoop.mapred.InputFormat} derived object
+     * @return a {@link InputFormat} derived object
      * @throws Exception if failed to create input format
      */
-    public static InputFormat<?, ?> makeInputFormat(String inputFormatName,
-                                                    JobConf jobConf)
+    static InputFormat<?, ?> makeInputFormat(String inputFormatName, JobConf jobConf)
             throws Exception {
-        Class<?> c = Class.forName(inputFormatName, true,
-                JavaUtils.getClassLoader());
+        Class<?> c = Class.forName(inputFormatName, true, JavaUtils.getClassLoader());
         InputFormat<?, ?> inputFormat = (InputFormat<?, ?>) c.newInstance();
 
         if ("org.apache.hadoop.mapred.TextInputFormat".equals(inputFormatName)) {
@@ -185,8 +183,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
 
         if (!filterStringForHive.isEmpty()) {
 
-            LOG.debug("Filter String for Hive partition retrieval : "
-                    + filterStringForHive);
+            LOG.debug("Filter String for Hive partition retrieval : " + filterStringForHive);
 
             filterInFragmenter = true;
 
@@ -217,8 +214,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         } else {
             // API call to Hive Metastore, will return a List of all the
             // partitions for this table (no filtering)
-            partitions = client.listPartitions(tblDesc.getPath(),
-                    tblDesc.getName(), ALL_PARTS);
+            partitions = client.listPartitions(tblDesc.getPath(), tblDesc.getName(), ALL_PARTS);
         }
 
         StorageDescriptor descTable = tbl.getSd();
@@ -242,7 +238,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         }
     }
 
-    void verifySchema(Table tbl) throws Exception {
+    void verifySchema(Table tbl) {
         /* nothing to verify here */
     }
 
@@ -318,8 +314,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     }
 
     /*
-     * Build filter string for HiveMetaStoreClient.listPartitionsByFilter API
-     * method.
+     * Build filter string for HiveMetaStoreClient.listPartitionsByFilter API method.
      *
      * The filter string parameter for
      * HiveMetaStoreClient.listPartitionsByFilter will be created from the
@@ -387,12 +382,9 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     /*
      * Build filter string for a single filter and append to the filters string.
      * Filter string shell be added if filter name match hive partition name
-     * Single filter will be in a format of: [PARTITON NAME] = \"[PARTITON
-     * VALUE]\"
+     * Single filter will be in a format of: [PARTITON NAME] = \"[PARTITON VALUE]\"
      */
-    private boolean buildSingleFilter(Object filter,
-                                      StringBuilder filtersString, String prefix)
-            throws Exception {
+    private boolean buildSingleFilter(Object filter, StringBuilder filtersString, String prefix) {
 
         // Let's look first at the filter
         BasicFilter bFilter = (BasicFilter) filter;
@@ -406,14 +398,11 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         String filterColumnName = filterColumn.columnName();
         FilterParser.Operation operation = ((BasicFilter) filter).getOperation();
         String colType = partitionkeyTypes.get(filterColumnName);
-        boolean isIntegralSupported =
-                canPushDownIntegral &&
+        boolean isIntegralSupported = canPushDownIntegral &&
                         (operation == FilterParser.Operation.HDOP_EQ || operation == FilterParser.Operation.HDOP_NE);
-        // In case this filter is not a partition, we ignore this filter (no add
-        // to filter list)
+        // In case this filter is not a partition, we ignore this filter (no add to filter list)
         if (!setPartitions.contains(filterColumnName)) {
-            LOG.debug("Filter name is not a partition , ignore this filter for hive: "
-                    + filter);
+            LOG.debug("Filter name is not a partition , ignore this filter for hive: " + filter);
             return false;
         }
 

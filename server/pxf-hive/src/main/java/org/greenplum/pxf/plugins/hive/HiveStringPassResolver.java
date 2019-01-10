@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.OutputFormat;
@@ -39,7 +38,7 @@ public class HiveStringPassResolver extends HiveResolver {
     private StringBuilder parts;
 
     @Override
-    void parseUserData(RequestContext input) throws Exception {
+    void parseUserData(RequestContext input) {
         HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
         parseDelimiterChar(input);
         parts = new StringBuilder();

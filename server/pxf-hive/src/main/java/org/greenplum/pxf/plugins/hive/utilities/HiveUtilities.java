@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive.utilities;
  * under the License.
  */
 
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,9 +72,9 @@ public class HiveUtilities {
      */
     private static final String HIVE_DEFAULT_DBNAME = "default";
 
-    static final String STR_RC_FILE_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.RCFileInputFormat";
-    static final String STR_TEXT_FILE_INPUT_FORMAT = "org.apache.hadoop.mapred.TextInputFormat";
-    static final String STR_ORC_FILE_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat";
+    private static final String STR_RC_FILE_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.RCFileInputFormat";
+    private static final String STR_TEXT_FILE_INPUT_FORMAT = "org.apache.hadoop.mapred.TextInputFormat";
+    private static final String STR_ORC_FILE_INPUT_FORMAT = "org.apache.hadoop.hive.ql.io.orc.OrcInputFormat";
     private static final int DEFAULT_DELIMITER_CODE = 44;
 
     /**
@@ -146,7 +145,7 @@ public class HiveUtilities {
      *             if the column type is not supported
      * @see EnumHiveToGpdbType
      */
-    public static Metadata.Field mapHiveType(FieldSchema hiveColumn) throws UnsupportedTypeException {
+    static Metadata.Field mapHiveType(FieldSchema hiveColumn) throws UnsupportedTypeException {
         String fieldName = hiveColumn.getName();
         String hiveType = hiveColumn.getType(); // Type name and modifiers if any
         String hiveTypeName; // Type name
@@ -236,7 +235,7 @@ public class HiveUtilities {
         }
 
         String[] rawToks = pattern.split("[.]");
-        ArrayList<String> toks = new ArrayList<String>();
+        ArrayList<String> toks = new ArrayList<>();
         for (String tok : rawToks) {
             if (StringUtils.isBlank(tok)) {
                 continue;
@@ -259,9 +258,8 @@ public class HiveUtilities {
 
     private static List<Metadata.Item> getTablesFromPattern(HiveMetaStoreClient client, String dbPattern, String tablePattern) {
 
-        List<String> databases = null;
-        List<Metadata.Item> itemList = new ArrayList<Metadata.Item>();
-        List<String> tables = new ArrayList<String>();
+        List<String> databases;
+        List<Metadata.Item> itemList = new ArrayList<>();
 
         if (client == null || (!dbPattern.contains(WILDCARD) && !tablePattern.contains(WILDCARD))) {
             /* This case occurs when the call is invoked as part of the fragmenter api or when metadata is requested for a specific table name */
@@ -369,8 +367,7 @@ public class HiveUtilities {
      * transforms the class name to an enumeration for writing it to the
      * accessors on other PXF instances.
      */
-    private static String assertFileType(String className, HiveTablePartition partData)
-            throws Exception {
+    private static String assertFileType(String className, HiveTablePartition partData) {
         switch (className) {
             case STR_RC_FILE_INPUT_FORMAT:
                 return PXF_HIVE_INPUT_FORMATS.RC_FILE_INPUT_FORMAT.name();
@@ -381,17 +378,14 @@ public class HiveUtilities {
             default:
                 throw new IllegalArgumentException(
                         "HiveInputFormatFragmenter does not yet support "
-                                + className
-                                + " for "
-                                + partData
-                                + ". Supported InputFormat are "
+                                + className + " for " + partData + ". Supported InputFormat are "
                                 + Arrays.toString(PXF_HIVE_INPUT_FORMATS.values()));
         }
     }
 
 
     /* Turns the partition keys into a string */
-    public static String serializePartitionKeys(HiveTablePartition partData) throws Exception {
+    private static String serializePartitionKeys(HiveTablePartition partData) {
         if (partData.partition == null) /*
          * this is a simple hive table - there
          * are no partitions
@@ -426,10 +420,10 @@ public class HiveUtilities {
      * @return serialized representation of fragment-related attributes
      * @throws Exception when error occurred during serialization
      */
-    @SuppressWarnings("unchecked")
-    public static byte[] makeUserData(String fragmenterClassName, HiveTablePartition partData, boolean filterInFragmenter) throws Exception {
+    public static byte[] makeUserData(String fragmenterClassName, HiveTablePartition partData,
+                                      boolean filterInFragmenter) throws Exception {
 
-        HiveUserData hiveUserData = null;
+        HiveUserData hiveUserData;
 
         if (fragmenterClassName == null) {
             throw new IllegalArgumentException("No fragmenter provided.");
@@ -492,7 +486,7 @@ public class HiveUtilities {
      * @return ASCII code of delimiter
      */
     public static Integer getDelimiterCode(StorageDescriptor sd) {
-        Integer delimiterCode = null;
+        Integer delimiterCode;
 
         String delimiter = getSerdeParameter(sd, serdeConstants.FIELD_DELIM);
         if (delimiter != null) {
@@ -576,8 +570,7 @@ public class HiveUtilities {
      */
     @SuppressWarnings("deprecation")
     public static SerDe createDeserializer(String serdeClassName) throws Exception {
-        SerDe deserializer = (SerDe) Utilities.createAnyInstance(serdeClassName);
-        return deserializer;
+        return (SerDe) Utilities.createAnyInstance(serdeClassName);
     }
 
     /**

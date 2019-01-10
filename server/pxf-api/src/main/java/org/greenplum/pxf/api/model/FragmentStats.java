@@ -198,7 +198,7 @@ public class FragmentStats {
      *
      * @return total size
      */
-    SizeAndUnit getTotalSize() {
+    public SizeAndUnit getTotalSize() {
         return totalSize;
     }
 
@@ -241,8 +241,8 @@ public class FragmentStats {
                 break;
             default:
                 throw new IllegalArgumentException(
-                        "Unsupported order of magnitude " + orderOfMagnitude
-                                + ". Size's order of magnitue can be a value between 0(Bytes) and 4(TB)");
+                        "Unsupported order of magnitude " + orderOfMagnitude +
+                                ". Size's order of magnitue can be a value between 0(Bytes) and 4(TB)");
         }
         return unit;
     }

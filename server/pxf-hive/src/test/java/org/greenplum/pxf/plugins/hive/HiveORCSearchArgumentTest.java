@@ -48,6 +48,7 @@ public class HiveORCSearchArgumentTest {
 
     @Test
     public void buildIn() throws Exception {
+
         String filterStr = "a0m1009s4drow1s4drow2o10a1m1009s3ds_6s3ds_7o10l0";
         HiveFilterBuilder eval = new HiveFilterBuilder(null);
         Object filter = eval.getFilterObject(filterStr);

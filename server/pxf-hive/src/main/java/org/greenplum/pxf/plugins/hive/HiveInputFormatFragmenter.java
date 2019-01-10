@@ -19,13 +19,11 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.greenplum.pxf.api.io.DataType;
-import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.plugins.hive.utilities.HiveUtilities;
 
@@ -64,7 +62,7 @@ public class HiveInputFormatFragmenter extends HiveDataFragmenter {
      * table definition. - the hive fields types do not match the GPDB fields.
      */
     @Override
-    void verifySchema(Table tbl) throws Exception {
+    void verifySchema(Table tbl) {
 
         int columnsSize = context.getColumns();
         int hiveColumnsSize = tbl.getSd().getColsSize();

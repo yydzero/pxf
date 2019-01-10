@@ -19,16 +19,16 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-import java.io.IOException;
-import org.apache.hadoop.mapred.*;
-import org.greenplum.pxf.api.OneRow;
-import org.greenplum.pxf.api.utilities.ColumnDescriptor;
-import org.greenplum.pxf.api.model.RequestContext;
-import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedRowBatch;
 import org.apache.hadoop.hive.ql.io.orc.Reader.Options;
 import org.apache.hadoop.hive.ql.io.orc.RecordReader;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapred.FileSplit;
+import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
+
+import java.io.IOException;
 
 /**
  * Accessor class which reads data in batches.
@@ -80,9 +80,8 @@ public class HiveORCVectorizedAccessor extends HiveORCAccessor {
     /**
      * This method updated reader options to include projected columns only.
      * @param options reader options to modify
-     * @throws Exception
      */
-    private void addColumns(Options options) throws Exception {
+    private void addColumns(Options options) {
         boolean[] includeColumns = new boolean[context.getColumns() + 1];
         for (ColumnDescriptor col : context.getTupleDescription()) {
             if (col.isProjected()) {

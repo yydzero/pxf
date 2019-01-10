@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.BasicFilter;
 import org.greenplum.pxf.api.FilterParser;
 import org.greenplum.pxf.api.LogicalFilter;
@@ -45,7 +44,7 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
      *
      * @param input input data containing filter string
      */
-    public HiveFilterBuilder(RequestContext input) {
+    HiveFilterBuilder(RequestContext input) {
         requestContext = input;
     }
 
@@ -87,9 +86,7 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Object build(FilterParser.Operation opId, Object leftOperand,
-                        Object rightOperand) throws Exception {
+    public Object build(FilterParser.Operation opId, Object leftOperand, Object rightOperand) {
         // Assume column is on the left
         return handleSimpleOperations(opId,
                 (FilterParser.ColumnIndex) leftOperand,
@@ -133,26 +130,20 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
      * @param right right hand filter
      * @return list of filters constructing the filter tree
      */
-    private List<BasicFilter> handleCompoundOperations(List<BasicFilter> left,
-                                                       BasicFilter right) {
+    private List<BasicFilter> handleCompoundOperations(List<BasicFilter> left, BasicFilter right) {
         left.add(right);
         return left;
     }
 
-    private List<BasicFilter> handleCompoundOperations(BasicFilter left,
-                                                       BasicFilter right) {
-        List<BasicFilter> result = new LinkedList<BasicFilter>();
-
+    private List<BasicFilter> handleCompoundOperations(BasicFilter left, BasicFilter right) {
+        List<BasicFilter> result = new LinkedList<>();
         result.add(left);
         result.add(right);
-
         return result;
     }
 
     private Object handleLogicalOperation(FilterParser.LogicalOperation operator, Object leftOperand, Object rightOperand) {
-
         List<Object> result = new LinkedList<>();
-
         result.add(leftOperand);
         result.add(rightOperand);
         return new LogicalFilter(operator, result);

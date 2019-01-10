@@ -56,12 +56,11 @@ import java.util.*;
         "org.apache.hadoop.hive.metastore.api.MetaException",
         "org.greenplum.pxf.plugins.hive.utilities.HiveUtilities"}) // Prevents static inits
 public class HiveDataFragmenterTest {
-    RequestContext requestContext;
-    Configuration hadoopConfiguration;
-    JobConf jobConf;
-    HiveConf hiveConfiguration;
-    HiveMetaStoreClient hiveClient;
-    HiveDataFragmenter fragmenter;
+    private RequestContext requestContext;
+    private Configuration hadoopConfiguration;
+    private HiveConf hiveConfiguration;
+    private HiveMetaStoreClient hiveClient;
+    private HiveDataFragmenter fragmenter;
     private ConfigurationFactory configurationFactory;
 
 
@@ -70,7 +69,7 @@ public class HiveDataFragmenterTest {
         requestContext = mock(RequestContext.class);
         hadoopConfiguration = mock(Configuration.class);
 
-        jobConf = mock(JobConf.class);
+        JobConf jobConf = mock(JobConf.class);
         PowerMockito.whenNew(JobConf.class).withArguments(hadoopConfiguration, HiveDataFragmenter.class).thenReturn(jobConf);
 
         hiveConfiguration = mock(HiveConf.class);
@@ -214,7 +213,6 @@ public class HiveDataFragmenterTest {
         columnDescriptors.add(smallIntColumnDescriptor);
 
         for (ColumnDescriptor cd : columnDescriptors) {
-
             checkPushDownFilter(fragmenter, cd, method, partitionkeyTypes, setPartitions);
         }
     }
@@ -240,7 +238,7 @@ public class HiveDataFragmenterTest {
         localpartitionkeyTypes.put(filterColumnName, typeName);
         partitionkeyTypes.set(fragmenter, localpartitionkeyTypes);
         // Set column as partition
-        Set<String> localSetPartitions = new TreeSet<String>(
+        Set<String> localSetPartitions = new TreeSet<>(
                 String.CASE_INSENSITIVE_ORDER);
         localSetPartitions.add(filterColumnName);
         setPartitions.set(fragmenter, localSetPartitions);
@@ -296,7 +294,7 @@ public class HiveDataFragmenterTest {
 
         // Mock private method buildSingleFilter
         Method method = PowerMockito.method(HiveDataFragmenter.class, "buildSingleFilter",
-                new Class[]{Object.class, StringBuilder.class, String.class});
+                Object.class, StringBuilder.class, String.class);
         boolean result = (Boolean) method.invoke(fragmenter, new Object[]{bFilter, localFilterString, prefix});
 
         switch (operation) {

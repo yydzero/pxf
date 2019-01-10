@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.FilterParser.LogicalOperation;
 import org.greenplum.pxf.api.LogicalFilter;
 import org.junit.Test;

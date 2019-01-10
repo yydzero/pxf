@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
@@ -86,14 +85,13 @@ public class HiveMetadataFetcher extends BasePlugin implements MetadataFetcher {
         boolean ignoreErrors = false;
         List<Metadata.Item> tblsDesc = HiveUtilities.extractTablesFromPattern(client, pattern);
 
-        if(tblsDesc == null || tblsDesc.isEmpty()) {
+        if (tblsDesc == null || tblsDesc.isEmpty()) {
             LOG.warn("No tables found for the given pattern: " + pattern);
             return null;
         }
 
-        List<Metadata> metadataList = new ArrayList<Metadata>();
-
-        if(tblsDesc.size() > 1) {
+        List<Metadata> metadataList = new ArrayList<>();
+        if (tblsDesc.size() > 1) {
             ignoreErrors = true;
         }
 
@@ -105,7 +103,7 @@ public class HiveMetadataFetcher extends BasePlugin implements MetadataFetcher {
                 boolean hasComplexTypes = HiveUtilities.hasComplexTypes(metadata);
                 metadataList.add(metadata);
                 List<Partition> tablePartitions = client.listPartitionsByFilter(tblDesc.getPath(), tblDesc.getName(), "", (short) -1);
-                Set<OutputFormat> formats = new HashSet<OutputFormat>();
+                Set<OutputFormat> formats = new HashSet<>();
                 //If table has partitions - find out all formats
                 for (Partition tablePartition : tablePartitions) {
                     String inputFormat = tablePartition.getSd().getInputFormat();
@@ -119,20 +117,18 @@ public class HiveMetadataFetcher extends BasePlugin implements MetadataFetcher {
                     formats.add(outputFormat);
                 }
                 metadata.setOutputFormats(formats);
-                Map<String, String> outputParameters = new HashMap<String, String>();
+                Map<String, String> outputParameters = new HashMap<>();
                 Integer delimiterCode = HiveUtilities.getDelimiterCode(tbl.getSd());
                 outputParameters.put(DELIM_FIELD, delimiterCode.toString());
                 metadata.setOutputParameters(outputParameters);
             } catch (UnsupportedTypeException | UnsupportedOperationException e) {
-                if(ignoreErrors) {
+                if (ignoreErrors) {
                     LOG.warn("Metadata fetch for " + tblDesc.toString() + " failed. " + e.getMessage());
-                    continue;
                 } else {
                     throw e;
                 }
             }
         }
-
         return metadataList;
     }
 

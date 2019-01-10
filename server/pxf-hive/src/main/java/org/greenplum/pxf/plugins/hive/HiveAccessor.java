@@ -63,7 +63,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
     class HivePartition {
         public String name;
         public String type;
-        public String val;
+        String val;
 
         HivePartition(String name, String type, String val) {
             this.name = name;
@@ -72,12 +72,12 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
         }
     }
 
-    protected Boolean filterInFragmenter;
+    private Boolean filterInFragmenter;
 
     /**
      * Constructs a HiveAccessor
      */
-    public HiveAccessor() {
+    HiveAccessor() {
         /*
          * Unfortunately, Java does not allow us to call a function before
          * calling the base constructor, otherwise it would have been:
@@ -96,7 +96,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
 
     /**
      * Initializes a HiveAccessor and creates an InputFormat (derived from
-     * {@link org.apache.hadoop.mapred.InputFormat}) and the Hive partition
+     * {@link InputFormat}) and the Hive partition
      * fields
      *
      * @param requestContext request context
@@ -156,10 +156,9 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
      * Opens the resource for write.
      *
      * @return true if the resource is successfully opened
-     * @throws Exception if opening the resource failed
      */
     @Override
-    public boolean openForWrite() throws Exception {
+    public boolean openForWrite() {
         throw new UnsupportedOperationException();
     }
 
@@ -168,20 +167,17 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
      *
      * @param onerow the object to be written
      * @return true if the write succeeded
-     * @throws Exception writing to the resource failed
      */
     @Override
-    public boolean writeNextObject(OneRow onerow) throws Exception {
+    public boolean writeNextObject(OneRow onerow) {
         throw new UnsupportedOperationException();
     }
 
     /**
      * Closes the resource for write.
-     *
-     * @throws Exception if closing the resource failed
      */
     @Override
-    public void closeForWrite() throws Exception {
+    public void closeForWrite() {
         throw new UnsupportedOperationException();
     }
 
@@ -204,8 +200,8 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
      * The partition fields are initialized one time base on userData provided
      * by the fragmenter
      */
-    void initPartitionFields(String partitionKeys) {
-        partitions = new LinkedList<HivePartition>();
+    private void initPartitionFields(String partitionKeys) {
+        partitions = new LinkedList<>();
         if (partitionKeys.equals(HiveDataFragmenter.HIVE_NO_PART_TBL)) {
             return;
         }
@@ -283,7 +279,8 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
         return nonAndOp;
     }
 
-    private boolean testForPartitionEquality(List<HivePartition> partitionFields, List<Object> filterList, RequestContext input) {
+    private boolean testForPartitionEquality(List<HivePartition> partitionFields,
+                                             List<Object> filterList, RequestContext input) {
         boolean partitionAllowed = true;
         for (Object filter : filterList) {
             if (filter instanceof BasicFilter) {
@@ -423,7 +420,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
     /**
      * @return ORC file reader
      */
-    protected Reader getOrcReader() {
+    Reader getOrcReader() {
         return HiveUtilities.getOrcReader(configuration, context);
     }
 }

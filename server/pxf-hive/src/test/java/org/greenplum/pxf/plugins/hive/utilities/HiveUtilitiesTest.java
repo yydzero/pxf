@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hive.utilities;
  * under the License.
  */
 
-
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
@@ -38,10 +37,10 @@ import org.greenplum.pxf.api.UnsupportedTypeException;
 
 public class HiveUtilitiesTest {
 
-    FieldSchema hiveColumn;
-    Metadata.Item tblDesc;
+    private FieldSchema hiveColumn;
+    private Metadata.Item tblDesc;
 
-    static String[][] typesMappings = {
+    private static String[][] typesMappings = {
         /* hive type -> gpdb type */
         {"tinyint", "int2"},
         {"smallint", "int2"},
@@ -56,13 +55,13 @@ public class HiveUtilitiesTest {
         {"date", "date"},
     };
 
-    static String[][] typesWithModifiers = {
+    private static String[][] typesWithModifiers = {
         {"decimal(19,84)", "numeric", "19,84"},
         {"varchar(13)", "varchar", "13"},
         {"char(40)", "bpchar", "40"},
     };
 
-    static String[][] complexTypes = {
+    private static String[][] complexTypes = {
         {"ArraY<string>", "text"},
         {"MaP<stRing, float>", "text"},
         {"Struct<street:string, city:string, state:string, zip:int>", "text"},
@@ -171,15 +170,13 @@ public class HiveUtilitiesTest {
         assertEquals(compatibleTypeName, EnumHiveToGpdbType.DecimalType.getTypeName());
 
         try {
-            compatibleTypeName = HiveUtilities.toCompatibleHiveType(DataType.UNSUPPORTED_TYPE, null);
+            HiveUtilities.toCompatibleHiveType(DataType.UNSUPPORTED_TYPE, null);
             fail("should fail because there is no mapped Hive type");
         }
         catch (UnsupportedTypeException e) {
             String errorMsg = "Unable to find compatible Hive type for given GPDB's type: " + DataType.UNSUPPORTED_TYPE;
             assertEquals(errorMsg, e.getMessage());
         }
-
-
     }
 
     @Test
@@ -201,19 +198,17 @@ public class HiveUtilitiesTest {
         assertEquals(compatibleTypeName, EnumHiveToGpdbType.DecimalType.getTypeName() + "(" + Joiner.on(",").join(gpdbModifiers) + ")");
 
         try {
-            compatibleTypeName = HiveUtilities.toCompatibleHiveType(DataType.UNSUPPORTED_TYPE, gpdbModifiers);
+            HiveUtilities.toCompatibleHiveType(DataType.UNSUPPORTED_TYPE, gpdbModifiers);
             fail("should fail because there is no mapped Hive type");
         }
         catch (UnsupportedTypeException e) {
             String errorMsg = "Unable to find compatible Hive type for given GPDB's type: " + DataType.UNSUPPORTED_TYPE;
             assertEquals(errorMsg, e.getMessage());
         }
-
-
     }
 
     @Test
-    public void validateSchema() throws Exception {
+    public void validateSchema() {
         String columnName = "abc";
 
         Integer[] gpdbModifiers = {};
@@ -250,7 +245,6 @@ public class HiveUtilitiesTest {
                     + Arrays.toString(new String[]{"38", "17"});
             assertEquals(errorMsg, e.getMessage());
         }
-
 
         //Different types, which are not mapped to each other
         try {
@@ -310,7 +304,7 @@ public class HiveUtilitiesTest {
     }
 
     @Test
-    public void mapHiveTypeInvalidModifiers() throws Exception {
+    public void mapHiveTypeInvalidModifiers() {
         String badHiveType = "decimal(abc, xyz)";
         hiveColumn = new FieldSchema("numericColumn", badHiveType, null);
         try {
@@ -323,7 +317,7 @@ public class HiveUtilitiesTest {
     }
 
     @Test
-    public void mapHiveTypeComplex() throws Exception {
+    public void mapHiveTypeComplex() {
         /*
          * array<dataType> -> text
          * map<keyDataType, valueDataType> -> text
@@ -342,7 +336,7 @@ public class HiveUtilitiesTest {
     }
 
     @Test
-    public void parseTableQualifiedNameNoDbName() throws Exception {
+    public void parseTableQualifiedNameNoDbName() {
         String name = "orphan";
         tblDesc = HiveUtilities.extractTableFromName(name);
 
@@ -351,7 +345,7 @@ public class HiveUtilitiesTest {
     }
 
     @Test
-    public void parseTableQualifiedName() throws Exception {
+    public void parseTableQualifiedName() {
         String name = "not.orphan";
         tblDesc = HiveUtilities.extractTableFromName(name);
 
@@ -409,7 +403,7 @@ public class HiveUtilitiesTest {
         //Default delimiter code should be 44(comma)
         Integer delimiterCode = HiveUtilities.getDelimiterCode(null);
         char defaultDelim = ',';
-        assertTrue(delimiterCode == (int) defaultDelim);
+        assertEquals((int) delimiterCode, (int) defaultDelim);
 
         //Some serdes use FIELD_DELIM key
         char expectedDelim = '%';
@@ -418,7 +412,7 @@ public class HiveUtilitiesTest {
         si.setParameters(Collections.singletonMap(serdeConstants.FIELD_DELIM, String.valueOf(expectedDelim)));
         sd.setSerdeInfo(si);
         delimiterCode = HiveUtilities.getDelimiterCode(sd);
-        assertTrue(delimiterCode == (int) expectedDelim);
+        assertEquals((int) delimiterCode, (int) expectedDelim);
 
         //Some serdes use SERIALIZATION_FORMAT key
         sd = new StorageDescriptor();
@@ -426,6 +420,6 @@ public class HiveUtilitiesTest {
         si.setParameters(Collections.singletonMap(serdeConstants.SERIALIZATION_FORMAT, String.valueOf((int)expectedDelim)));
         sd.setSerdeInfo(si);
         delimiterCode = HiveUtilities.getDelimiterCode(sd);
-        assertTrue(delimiterCode == (int) expectedDelim);
+        assertEquals((int) delimiterCode, (int) expectedDelim);
     }
 }
