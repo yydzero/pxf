@@ -73,13 +73,14 @@ import java.util.TreeSet;
  * </ol>
  */
 public class HiveDataFragmenter extends HdfsDataFragmenter {
+
     private static final Log LOG = LogFactory.getLog(HiveDataFragmenter.class);
-    private static final short ALL_PARTS = -1;
 
     public static final String HIVE_1_PART_DELIM = "!H1PD!";
     public static final String HIVE_PARTITIONS_DELIM = "!HPAD!";
     public static final String HIVE_NO_PART_TBL = "!HNPT!";
 
+    private static final short ALL_PARTS = -1;
     private static final String HIVE_API_EQ = " = ";
     private static final String HIVE_API_LT = " < ";
     private static final String HIVE_API_GT = " > ";
@@ -89,17 +90,15 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     private static final String HIVE_API_DQUOTE = "\"";
 
     private HiveMetaStoreClient client;
-
     private boolean filterInFragmenter = false;
 
     // Data structure to hold hive partition names if exist, to be used by
     // partition filtering
-    private Set<String> setPartitions = new TreeSet<String>(
-            String.CASE_INSENSITIVE_ORDER);
+    private Set<String> setPartitions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
     private Map<String, String> partitionkeyTypes = new HashMap<>();
     private boolean canPushDownIntegral;
 
-    HiveDataFragmenter() {
+    public HiveDataFragmenter() {
         this(BaseConfigurationFactory.getInstance());
     }
 
@@ -109,6 +108,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
 
     @Override
     public void initialize(RequestContext requestContext) {
+
         super.initialize(requestContext);
         client = HiveUtilities.initHiveClient(configuration);
         // canPushDownIntegral represents hive.metastore.integral.jdo.pushdown property in hive-site.xml
@@ -118,11 +118,11 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     }
 
     @Override
-    public List<Fragment> getFragments() throws Exception {
+    public List<Fragment> getFragments()
+            throws Exception {
+
         Metadata.Item tblDesc = HiveUtilities.extractTableFromName(context.getDataSource());
-
         fetchTableMetaData(tblDesc);
-
         return fragments;
     }
 
@@ -154,7 +154,6 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     private void fetchTableMetaData(Metadata.Item tblDesc) throws Exception {
 
         Table tbl = HiveUtilities.getHiveTable(client, tblDesc);
-
         Metadata metadata = new Metadata(tblDesc);
         HiveUtilities.getSchema(tbl, metadata);
         boolean hasComplexTypes = HiveUtilities.hasComplexTypes(metadata);
@@ -173,18 +172,15 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
                 setPartitions.add(fs.getName());
                 partitionkeyTypes.put(fs.getName(), fs.getType());
             }
-
             LOG.debug("setPartitions :" + setPartitions);
 
-            // Generate filter string for retrieve match pxf filter/hive
-            // partition name
+            // Generate filter string for retrieve match pxf filter/hive partition name
             filterStringForHive = buildFilterStringForHive();
         }
 
         if (!filterStringForHive.isEmpty()) {
 
             LOG.debug("Filter String for Hive partition retrieval : " + filterStringForHive);
-
             filterInFragmenter = true;
 
             // API call to Hive Metastore, will return a List of all the
@@ -195,23 +191,19 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
 
             // No matched partitions for the filter, no fragments to return.
             if (partitions == null || partitions.isEmpty()) {
-
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Table -  " + tblDesc.getPath() + "."
-                            + tblDesc.getName()
-                            + " Has no matched partitions for the filter : "
-                            + filterStringForHive);
+                    LOG.debug("Table -  " + tblDesc.getPath() + "." + tblDesc.getName()
+                            + " Has no matched partitions for the filter : " + filterStringForHive);
                 }
                 return;
             }
-
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Table -  " + tblDesc.getPath() + "."
-                        + tblDesc.getName()
+                LOG.debug("Table -  " + tblDesc.getPath() + "." + tblDesc.getName()
                         + " Matched partitions list size: " + partitions.size());
             }
 
-        } else {
+        }
+        else {
             // API call to Hive Metastore, will return a List of all the
             // partitions for this table (no filtering)
             partitions = client.listPartitions(tblDesc.getPath(), tblDesc.getName(), ALL_PARTS);
@@ -223,15 +215,13 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         if (partitions.isEmpty()) {
             props = getSchema(tbl);
             fetchMetaDataForSimpleTable(descTable, props, hasComplexTypes);
-        } else {
+        }
+        else {
             List<FieldSchema> partitionKeys = tbl.getPartitionKeys();
-
             for (Partition partition : partitions) {
                 StorageDescriptor descPartition = partition.getSd();
-                props = MetaStoreUtils.getSchema(descPartition, descTable,
-                        null,
-                        tblDesc.getPath(), tblDesc.getName(),
-                        partitionKeys);
+                props = MetaStoreUtils.getSchema(descPartition, descTable, null,
+                        tblDesc.getPath(), tblDesc.getName(), partitionKeys);
                 fetchMetaDataForPartitionedTable(descPartition, props,
                         partition, partitionKeys, tblDesc.getName(), hasComplexTypes);
             }
@@ -243,21 +233,19 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
     }
 
     private static Properties getSchema(Table table) {
-        return MetaStoreUtils.getSchema(table.getSd(), table.getSd(),
-                table.getParameters(), table.getDbName(), table.getTableName(),
-                table.getPartitionKeys());
+        return MetaStoreUtils.getSchema(table.getSd(), table.getSd(), table.getParameters(),
+                table.getDbName(), table.getTableName(), table.getPartitionKeys());
     }
 
-    private void fetchMetaDataForSimpleTable(StorageDescriptor stdsc,
-                                             Properties props, boolean hasComplexTypes) throws Exception {
+    private void fetchMetaDataForSimpleTable(StorageDescriptor stdsc, Properties props, boolean hasComplexTypes)
+            throws Exception {
         fetchMetaDataForSimpleTable(stdsc, props, null, hasComplexTypes);
     }
 
     private void fetchMetaDataForSimpleTable(StorageDescriptor stdsc,
                                              Properties props, String tableName, boolean hasComplexTypes)
             throws Exception {
-        fetchMetaData(new HiveTablePartition(stdsc, props, null, null,
-                tableName), hasComplexTypes);
+        fetchMetaData(new HiveTablePartition(stdsc, props, null, null, tableName), hasComplexTypes);
     }
 
     private void fetchMetaDataForPartitionedTable(StorageDescriptor stdsc,
@@ -290,13 +278,12 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
             fragmenterForProfile = context.getFragmenter();
         }
 
-        FileInputFormat.setInputPaths(jobConf, new Path(
-                tablePartition.storageDesc.getLocation()));
-
+        FileInputFormat.setInputPaths(jobConf, new Path(tablePartition.storageDesc.getLocation()));
         InputSplit[] splits = null;
         try {
             splits = fformat.getSplits(jobConf, 1);
-        } catch (org.apache.hadoop.mapred.InvalidInputException e) {
+        }
+        catch (org.apache.hadoop.mapred.InvalidInputException e) {
             LOG.debug("getSplits failed on " + e.getMessage());
             return;
         }
@@ -334,11 +321,9 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         String filterInput = context.getFilterString();
 
         if (LOG.isDebugEnabled()) {
-
             for (ColumnDescriptor cd : context.getTupleDescription()) {
                 LOG.debug("ColumnDescriptor : " + cd);
             }
-
             LOG.debug("Filter string input : " + context.getFilterString());
         }
 
@@ -354,7 +339,8 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
         return filtersString.toString();
     }
 
-    private void buildCompoundFilter(LogicalFilter filter, StringBuilder filterString) throws Exception {
+    private void buildCompoundFilter(LogicalFilter filter, StringBuilder filterString) {
+
         String prefix;
         switch (filter.getOperator()) {
             case HDOP_AND:
@@ -369,7 +355,6 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
             default:
                 prefix = "";
         }
-
         for (Object f : filter.getFilterList()) {
             if (f instanceof LogicalFilter) {
                 buildCompoundFilter((LogicalFilter) f, filterString);
@@ -460,6 +445,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
      */
     @Override
     public FragmentStats getFragmentStats() throws Exception {
+
         Metadata.Item tblDesc = HiveUtilities.extractTableFromName(context.getDataSource());
         Table tbl = HiveUtilities.getHiveTable(client, tblDesc);
         Metadata metadata = new Metadata(tblDesc);

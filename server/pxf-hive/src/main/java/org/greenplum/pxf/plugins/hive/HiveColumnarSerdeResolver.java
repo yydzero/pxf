@@ -51,7 +51,9 @@ import static org.greenplum.pxf.api.io.DataType.VARCHAR;
  * Use together with HiveInputFormatFragmenter/HiveRCFileAccessor.
  */
 public class HiveColumnarSerdeResolver extends HiveResolver {
+
     private static final Log LOG = LogFactory.getLog(HiveColumnarSerdeResolver.class);
+
     private boolean firstColumn;
     private StringBuilder builder;
     private StringBuilder parts;
@@ -60,8 +62,8 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
     /* read the data supplied by the fragmenter: inputformat name, serde name, partition keys */
     @Override
     void parseUserData(RequestContext input) {
-        HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
 
+        HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
         serdeType = hiveUserData.getSerdeClassName();
         parts = new StringBuilder();
         partitionKeys = hiveUserData.getPartitionKeys();
@@ -70,11 +72,11 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
 
     @Override
     void initPartitionFields() {
+
         if (context.getOutputFormat() == OutputFormat.TEXT) {
             initTextPartitionFields(parts);
-        } else {
-            super.initPartitionFields();
         }
+        super.initPartitionFields();
     }
 
     /**
@@ -83,20 +85,21 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
      * Object representing the field value.
      */
     @Override
-    public List<OneField> getFields(OneRow onerow) throws Exception {
+    public List<OneField> getFields(OneRow onerow)
+            throws Exception {
+
         if (context.getOutputFormat() == OutputFormat.TEXT) {
             firstColumn = true;
             builder = new StringBuilder();
             Object tuple = deserializer.deserialize((Writable) onerow.getData());
             ObjectInspector oi = deserializer.getObjectInspector();
-
             traverseTuple(tuple, oi);
+
             /* We follow Hive convention. Partition fields are always added at the end of the record */
             builder.append(parts);
             return Collections.singletonList(new OneField(VARCHAR.getOID(), builder.toString()));
-        } else {
-            return super.getFields(onerow);
         }
+        return super.getFields(onerow);
     }
 
     /*
@@ -105,10 +108,11 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
      * but its implementations (ColumnarSerDe, LazyBinaryColumnarSerDe) still use the deprecated interface.
      */
     @Override
-    void initSerde(RequestContext input) throws Exception {
+    void initSerde(RequestContext input)
+            throws Exception {
+
         Properties serdeProperties = new Properties();
         int numberOfDataColumns = input.getColumns() - getNumberOfPartitions();
-
         LOG.debug("Serde number of columns is " + numberOfDataColumns);
 
         StringBuilder columnNames = new StringBuilder(numberOfDataColumns * 2); // column + delimiter
@@ -140,7 +144,9 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
      * <p/>
      * Any other category will throw UnsupportedTypeException
      */
-    private void traverseTuple(Object obj, ObjectInspector objInspector) throws BadRecordException {
+    private void traverseTuple(Object obj, ObjectInspector objInspector)
+            throws BadRecordException {
+
         ObjectInspector.Category category = objInspector.getCategory();
         if ((obj == null) && (category != ObjectInspector.Category.PRIMITIVE)) {
             throw new BadRecordException("NULL Hive composite object");
@@ -170,7 +176,6 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
         if (!firstColumn) {
             builder.append(delimiter);
         }
-
         if (o == null) {
             builder.append(nullChar);
         } else {

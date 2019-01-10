@@ -38,11 +38,8 @@ public class HiveUserData {
     private int skipHeader;
 
     public HiveUserData(String inputFormatName, String serdeClassName,
-            String propertiesString, String partitionKeys,
-            boolean filterInFragmenter,
-            String delimiter,
-            String colTypes,
-            int skipHeader) {
+            String propertiesString, String partitionKeys, boolean filterInFragmenter,
+            String delimiter, String colTypes, int skipHeader) {
 
         this.inputFormatName = inputFormatName;
         this.serdeClassName = serdeClassName;

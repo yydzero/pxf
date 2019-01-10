@@ -62,8 +62,7 @@ public class ChunkReader implements Closeable {
     /*
      * Internal class used for holding part of a chunk brought by one read()
      * operation on the input stream. We collect several such nodes in a list by
-     * doing several read operation until we reach the chunk size -
-     * maxBytesToConsume
+     * doing several read operation until we reach the chunk size - maxBytesToConsume
      */
     private class Node {
         /* part of a chunk brought in a single inputstream.read() operation */
@@ -86,7 +85,6 @@ public class ChunkReader implements Closeable {
     int readChunk(Writable str, int maxBytesToConsume) throws IOException {
         ChunkWritable cw = (ChunkWritable) str;
         List<Node> list = new LinkedList<>();
-
         long bytesConsumed = 0;
 
         do {
@@ -108,7 +106,6 @@ public class ChunkReader implements Closeable {
                 bytesConsumed += nd.len;
                 list.add(nd);
             }
-
             bufferLength = bufferPosn = 0;
 
         } while (bytesConsumed < maxBytesToConsume);
@@ -129,7 +126,6 @@ public class ChunkReader implements Closeable {
     int readLine(Writable str, int maxBytesToConsume) throws IOException {
         ChunkWritable cw = (ChunkWritable) str;
         List<Node> list = new LinkedList<>();
-
         boolean newLine = false; // length of terminating newline
         long bytesConsumed = 0;
 
@@ -142,7 +138,6 @@ public class ChunkReader implements Closeable {
                     break; // EOF
                 }
             }
-
             for (; bufferPosn < bufferLength; ++bufferPosn) { // search for newline
                 if (buffer[bufferPosn] == LF) {
                     newLine = true;
@@ -150,10 +145,8 @@ public class ChunkReader implements Closeable {
                     break;
                 }
             }
-
             int readLength = bufferPosn - startPosn;
             bytesConsumed += readLength;
-
             if (readLength > 0) {
                 Node nd = new Node();
                 nd.slice = new byte[readLength];
@@ -175,7 +168,6 @@ public class ChunkReader implements Closeable {
                 pos += n.len;
             }
         }
-
         return bytesConsumed;
     }
 }

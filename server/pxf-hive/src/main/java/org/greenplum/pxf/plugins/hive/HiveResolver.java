@@ -56,18 +56,11 @@ import java.util.Properties;
  * Class HiveResolver handles deserialization of records that were serialized
  * using Hadoop's Hive serialization framework.
  */
-/*
- * TODO - remove SupressWarning once Hive resolves the problem described below
- * This line and the change of the deserialiazer member to Object instead of the
- * original Deserializer...., All this changes stem from the same issue. In
- * 0.11.0 The API changed and all Serde types extend a new interface -
- * AbstractSerde. But this change was not adopted by the OrcSerde (which was
- * also introduced in Hive 0.11.0). In order to cope with this inconsistency...
- * this bit of juggling has been necessary.
- */
 @SuppressWarnings("deprecation")
 public class HiveResolver extends HivePlugin implements Resolver {
+
     private static final Log LOG = LogFactory.getLog(HiveResolver.class);
+
     static final String MAPKEY_DELIM = ":";
     static final String COLLECTION_DELIM = ",";
     String collectionDelim;
@@ -105,7 +98,8 @@ public class HiveResolver extends HivePlugin implements Resolver {
     }
 
     @Override
-    public List<OneField> getFields(OneRow onerow) throws Exception {
+    public List<OneField> getFields(OneRow onerow)
+            throws Exception {
         Object tuple = deserializer.deserialize((Writable) onerow.getData());
         // Each Hive record is a Struct
         StructObjectInspector soi = (StructObjectInspector) deserializer.getObjectInspector();
@@ -115,7 +109,6 @@ public class HiveResolver extends HivePlugin implements Resolver {
          * end of the record
          */
         record.addAll(partitionFields);
-
         return record;
     }
 
@@ -154,10 +147,10 @@ public class HiveResolver extends HivePlugin implements Resolver {
     }
 
     /*
-     * Gets and init the deserializer for the records of this Hive data
-     * fragment.
+     * Gets and init the deserializer for the records of this Hive data fragment.
      */
-    void initSerde(RequestContext requestContext) throws Exception {
+    void initSerde(RequestContext requestContext)
+            throws Exception {
         Properties serdeProperties;
 
         Class<?> c = Class.forName(serdeClassName, true, JavaUtils.getClassLoader());
@@ -173,8 +166,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
     }
 
     /*
-     * The partition fields are initialized one time base on userData provided
-     * by the fragmenter.
+     * The partition fields are initialized one time base on userData provided by the fragmenter.
      */
     void initPartitionFields() {
         partitionFields = new LinkedList<>();
@@ -204,44 +196,36 @@ public class HiveResolver extends HivePlugin implements Resolver {
                     break;
                 case serdeConstants.BOOLEAN_TYPE_NAME:
                     convertedType = DataType.BOOLEAN;
-                    convertedValue = isDefaultPartition ? null
-                            : Boolean.valueOf(val);
+                    convertedValue = isDefaultPartition ? null : Boolean.valueOf(val);
                     break;
                 case serdeConstants.TINYINT_TYPE_NAME:
                 case serdeConstants.SMALLINT_TYPE_NAME:
                     convertedType = DataType.SMALLINT;
-                    convertedValue = isDefaultPartition ? null
-                            : Short.parseShort(val);
+                    convertedValue = isDefaultPartition ? null : Short.parseShort(val);
                     break;
                 case serdeConstants.INT_TYPE_NAME:
                     convertedType = DataType.INTEGER;
-                    convertedValue = isDefaultPartition ? null
-                            : Integer.parseInt(val);
+                    convertedValue = isDefaultPartition ? null : Integer.parseInt(val);
                     break;
                 case serdeConstants.BIGINT_TYPE_NAME:
                     convertedType = DataType.BIGINT;
-                    convertedValue = isDefaultPartition ? null
-                            : Long.parseLong(val);
+                    convertedValue = isDefaultPartition ? null : Long.parseLong(val);
                     break;
                 case serdeConstants.FLOAT_TYPE_NAME:
                     convertedType = DataType.REAL;
-                    convertedValue = isDefaultPartition ? null
-                            : Float.parseFloat(val);
+                    convertedValue = isDefaultPartition ? null : Float.parseFloat(val);
                     break;
                 case serdeConstants.DOUBLE_TYPE_NAME:
                     convertedType = DataType.FLOAT8;
-                    convertedValue = isDefaultPartition ? null
-                            : Double.parseDouble(val);
+                    convertedValue = isDefaultPartition ? null : Double.parseDouble(val);
                     break;
                 case serdeConstants.TIMESTAMP_TYPE_NAME:
                     convertedType = DataType.TIMESTAMP;
-                    convertedValue = isDefaultPartition ? null
-                            : Timestamp.valueOf(val);
+                    convertedValue = isDefaultPartition ? null : Timestamp.valueOf(val);
                     break;
                 case serdeConstants.DATE_TYPE_NAME:
                     convertedType = DataType.DATE;
-                    convertedValue = isDefaultPartition ? null
-                            : Date.valueOf(val);
+                    convertedValue = isDefaultPartition ? null : Date.valueOf(val);
                     break;
                 case serdeConstants.DECIMAL_TYPE_NAME:
                     convertedType = DataType.NUMERIC;
@@ -261,8 +245,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                     convertedValue = isDefaultPartition ? null : val.getBytes();
                     break;
                 default:
-                    throw new UnsupportedTypeException(
-                            "Unsupported partition type: " + type);
+                    throw new UnsupportedTypeException("Unsupported partition type: " + type);
             }
             addOneFieldToRecord(partitionFields, convertedType, convertedValue);
         }
@@ -326,8 +309,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                         Utilities.byteArrayToOctalString(val.getBytes(), parts);
                         break;
                     default:
-                        throw new UnsupportedTypeException(
-                                "Unsupported partition type: " + type);
+                        throw new UnsupportedTypeException("Unsupported partition type: " + type);
                 }
             }
         }
@@ -342,8 +324,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * @param partitionValue partition value
      * @return true if the partition value is Hive's default partition
      */
-    private boolean isDefaultPartition(String partitionType,
-                                       String partitionValue) {
+    private boolean isDefaultPartition(String partitionType, String partitionValue) {
         boolean isDefaultPartition = false;
         if (hiveDefaultPartName.equals(partitionValue)) {
             LOG.debug("partition " + partitionType
@@ -361,21 +342,18 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * then a null will appear for the field in the record in the query result.
      * flatten is true only when we are dealing with a non primitive field
      */
-    private void traverseTuple(Object obj, ObjectInspector objInspector,
-                               List<OneField> record, boolean toFlatten)
+    private void traverseTuple(Object obj, ObjectInspector objInspector, List<OneField> record, boolean toFlatten)
             throws IOException, BadRecordException {
         ObjectInspector.Category category = objInspector.getCategory();
         switch (category) {
             case PRIMITIVE:
-                resolvePrimitive(obj, (PrimitiveObjectInspector) objInspector,
-                        record, toFlatten);
+                resolvePrimitive(obj, (PrimitiveObjectInspector) objInspector, record, toFlatten);
                 break;
             case LIST:
                 if (obj == null) {
                     addOneFieldToRecord(record, DataType.TEXT, null);
                 } else {
-                    List<OneField> listRecord = traverseList(obj,
-                            (ListObjectInspector) objInspector);
+                    List<OneField> listRecord = traverseList(obj, (ListObjectInspector) objInspector);
                     addOneFieldToRecord(record, DataType.TEXT, String.format("[%s]",
                             HdfsUtilities.toString(listRecord, collectionDelim)));
                 }
@@ -384,8 +362,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 if (obj == null) {
                     addOneFieldToRecord(record, DataType.TEXT, null);
                 } else {
-                    List<OneField> mapRecord = traverseMap(obj,
-                            (MapObjectInspector) objInspector);
+                    List<OneField> mapRecord = traverseMap(obj, (MapObjectInspector) objInspector);
                     addOneFieldToRecord(record, DataType.TEXT, String.format("{%s}",
                             HdfsUtilities.toString(mapRecord, collectionDelim)));
                 }
@@ -404,8 +381,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 if (obj == null) {
                     addOneFieldToRecord(record, DataType.TEXT, null);
                 } else {
-                    List<OneField> unionRecord = traverseUnion(obj,
-                            (UnionObjectInspector) objInspector);
+                    List<OneField> unionRecord = traverseUnion(obj, (UnionObjectInspector) objInspector);
                     addOneFieldToRecord(record, DataType.TEXT, String.format("[%s]",
                             HdfsUtilities.toString(unionRecord, collectionDelim)));
                 }
@@ -421,11 +397,9 @@ public class HiveResolver extends HivePlugin implements Resolver {
         List<OneField> unionRecord = new LinkedList<>();
         List<? extends ObjectInspector> ois = uoi.getObjectInspectors();
         if (ois == null) {
-            throw new BadRecordException(
-                    "Illegal value NULL for Hive data type Union");
+            throw new BadRecordException("Illegal value NULL for Hive data type Union");
         }
-        traverseTuple(uoi.getField(obj), ois.get(uoi.getTag(obj)), unionRecord,
-                true);
+        traverseTuple(uoi.getField(obj), ois.get(uoi.getTag(obj)), unionRecord, true);
         return unionRecord;
     }
 
@@ -435,8 +409,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         List<?> list = loi.getList(obj);
         ObjectInspector eoi = loi.getListElementObjectInspector();
         if (list == null) {
-            throw new BadRecordException(
-                    "Illegal value NULL for Hive data type List");
+            throw new BadRecordException("Illegal value NULL for Hive data type List");
         }
         for (Object object : list) {
             traverseTuple(object, eoi, listRecord, true);
@@ -444,9 +417,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         return listRecord;
     }
 
-    private List<OneField> traverseStruct(Object struct,
-                                          StructObjectInspector soi,
-                                          boolean toFlatten)
+    private List<OneField> traverseStruct(Object struct, StructObjectInspector soi, boolean toFlatten)
             throws BadRecordException, IOException {
         List<? extends StructField> fields = soi.getAllStructFieldRefs();
         List<Object> structFields = soi.getStructFieldsDataAsList(struct);
@@ -465,13 +436,11 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 // Non-projected fields will be sent as null values.
                 // This case is invoked only in the top level of fields and
                 // not when interpreting fields of type struct.
-                traverseTuple(null, fields.get(i).getFieldObjectInspector(),
-                        complexRecord, toFlatten);
+                traverseTuple(null, fields.get(i).getFieldObjectInspector(), complexRecord, toFlatten);
                 continue;
             }
             traverseTuple(structFields.get(i),
-                    fields.get(i).getFieldObjectInspector(), complexRecord,
-                    toFlatten);
+                    fields.get(i).getFieldObjectInspector(), complexRecord, toFlatten);
             if (toFlatten) {
                 addOneFieldToRecord(structRecord, DataType.TEXT,
                         HdfsUtilities.toString(complexRecord, mapkeyDelim));
@@ -508,8 +477,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         return mapRecord;
     }
 
-    private void resolvePrimitive(Object o, PrimitiveObjectInspector oi,
-                                  List<OneField> record, boolean toFlatten) {
+    private void resolvePrimitive(Object o, PrimitiveObjectInspector oi, List<OneField> record, boolean toFlatten) {
         Object val;
         switch (oi.getPrimitiveCategory()) {
             case BOOLEAN: {
@@ -561,21 +529,18 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 break;
             }
             case STRING: {
-                val = (o != null) ? ((StringObjectInspector) oi).getPrimitiveJavaObject(o)
-                        : null;
+                val = (o != null) ? ((StringObjectInspector) oi).getPrimitiveJavaObject(o) : null;
                 addOneFieldToRecord(record, DataType.TEXT,
                         toFlatten ? String.format("\"%s\"", val) : val);
                 break;
             }
             case VARCHAR:
-                val = (o != null) ? ((HiveVarcharObjectInspector) oi).getPrimitiveJavaObject(o)
-                        : null;
+                val = (o != null) ? ((HiveVarcharObjectInspector) oi).getPrimitiveJavaObject(o) : null;
                 addOneFieldToRecord(record, DataType.VARCHAR,
                         toFlatten ? String.format("\"%s\"", val) : val);
                 break;
             case CHAR:
-                val = (o != null) ? ((HiveCharObjectInspector) oi).getPrimitiveJavaObject(o)
-                        : null;
+                val = (o != null) ? ((HiveCharObjectInspector) oi).getPrimitiveJavaObject(o) : null;
                 addOneFieldToRecord(record, DataType.BPCHAR,
                         toFlatten ? String.format("\"%s\"", val) : val);
                 break;
@@ -584,33 +549,28 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 if (o != null) {
                     BytesWritable bw = ((BinaryObjectInspector) oi).getPrimitiveWritableObject(o);
                     toEncode = new byte[bw.getLength()];
-                    System.arraycopy(bw.getBytes(), 0, toEncode, 0,
-                            bw.getLength());
+                    System.arraycopy(bw.getBytes(), 0, toEncode, 0, bw.getLength());
                 }
                 addOneFieldToRecord(record, DataType.BYTEA, toEncode);
                 break;
             }
             case TIMESTAMP: {
-                val = (o != null) ? ((TimestampObjectInspector) oi).getPrimitiveJavaObject(o)
-                        : null;
+                val = (o != null) ? ((TimestampObjectInspector) oi).getPrimitiveJavaObject(o) : null;
                 addOneFieldToRecord(record, DataType.TIMESTAMP, val);
                 break;
             }
             case DATE:
-                val = (o != null) ? ((DateObjectInspector) oi).getPrimitiveJavaObject(o)
-                        : null;
+                val = (o != null) ? ((DateObjectInspector) oi).getPrimitiveJavaObject(o) : null;
                 addOneFieldToRecord(record, DataType.DATE, val);
                 break;
             case BYTE: { /* TINYINT */
-                val = (o != null) ? (short) ((ByteObjectInspector) oi).get(o)
-                        : null;
+                val = (o != null) ? (short) ((ByteObjectInspector) oi).get(o) : null;
                 addOneFieldToRecord(record, DataType.SMALLINT, val);
                 break;
             }
             default: {
                 throw new UnsupportedTypeException(oi.getTypeName()
-                        + " conversion is not supported by "
-                        + getClass().getSimpleName());
+                        + " conversion is not supported by " + getClass().getSimpleName());
             }
         }
     }

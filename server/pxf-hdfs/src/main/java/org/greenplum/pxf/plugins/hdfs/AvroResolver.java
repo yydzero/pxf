@@ -49,6 +49,7 @@ import java.util.Map;
  * using the AVRO serialization framework.
  */
 public class AvroResolver extends BasePlugin implements Resolver {
+
     private static final String MAPKEY_DELIM = ":";
     private static final String RECORDKEY_DELIM = ":";
     private static final String COLLECTION_DELIM = ",";
@@ -85,7 +86,8 @@ public class AvroResolver extends BasePlugin implements Resolver {
                     schema = (new Schema.Parser()).parse(externalSchema);
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new RuntimeException("Failed to initialize AvroResolver: " + e.getMessage(), e);
         }
 
@@ -110,20 +112,15 @@ public class AvroResolver extends BasePlugin implements Resolver {
     public List<OneField> getFields(OneRow row) throws Exception {
         avroRecord = makeAvroRecord(row.getData(), avroRecord);
         List<OneField> record = new LinkedList<>();
-
         int recordkeyIndex = (context.getRecordkeyColumn() == null) ? -1
                 : context.getRecordkeyColumn().columnIndex();
         int currentIndex = 0;
-
         for (Schema.Field field : fields) {
             /* Add the record key if exists */
             if (currentIndex == recordkeyIndex) {
-                currentIndex += recordkeyAdapter.appendRecordkeyField(record,
-                        context, row);
+                currentIndex += recordkeyAdapter.appendRecordkeyField(record, context, row);
             }
-
-            currentIndex += populateRecord(record,
-                    avroRecord.get(field.name()), field.schema());
+            currentIndex += populateRecord(record, avroRecord.get(field.name()), field.schema());
         }
 
         return record;
@@ -171,7 +168,8 @@ public class AvroResolver extends BasePlugin implements Resolver {
             throws IOException {
         if (isAvroFile()) {
             return (GenericRecord) obj;
-        } else {
+        }
+        else {
             byte[] bytes = ((BytesWritable) obj).getBytes();
             decoder = DecoderFactory.get().binaryDecoder(bytes, decoder);
             return reader.read(reuseRecord, decoder);
@@ -236,8 +234,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 if (fieldValue == null) {
                     unionIndex ^= 1;
                 }
-                ret = populateRecord(record, fieldValue,
-                        fieldSchema.getTypes().get(unionIndex));
+                ret = populateRecord(record, fieldValue, fieldSchema.getTypes().get(unionIndex));
                 break;
             case ENUM:
                 ret = addOneFieldToRecord(record, DataType.TEXT, value);
@@ -380,7 +377,6 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 oneField.val = val;
                 break;
         }
-
         record.add(oneField);
         return 1;
     }

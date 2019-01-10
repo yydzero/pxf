@@ -48,7 +48,8 @@ public class HiveLineBreakAccessor extends HiveAccessor {
     }
 
     @Override
-    protected Object getReader(JobConf jobConf, InputSplit split) throws IOException {
+    protected Object getReader(JobConf jobConf, InputSplit split)
+            throws IOException {
         return new LineRecordReader(jobConf, (FileSplit) split);
     }
 }

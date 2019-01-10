@@ -44,6 +44,7 @@ import java.io.IOException;
  * A PXF Accessor for reading Avro File records
  */
 public class AvroFileAccessor extends HdfsSplittableDataAccessor {
+
     private AvroWrapper<GenericRecord> avroWrapper;
 
     /**
@@ -57,7 +58,6 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      * Initializes a AvroFileAccessor that creates the job configuration and
      * accesses the avro file to fetch the avro schema
      */
-
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
@@ -68,7 +68,8 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         Schema schema;
         try {
             schema = getAvroSchema(configuration, context.getDataSource());
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RuntimeException("Failed to obtain Avro schema for " + context.getDataSource(), e);
         }
 
@@ -101,7 +102,8 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         avroWrapper.datum(null);
         if (reader.next(avroWrapper, NullWritable.get())) { // There is one more record in the current split.
             return new OneRow(null, avroWrapper.datum());
-        } else if (getNextSplit()) { // The current split is exhausted. try to move to the next split.
+        }
+        else if (getNextSplit()) { // The current split is exhausted. try to move to the next split.
             return reader.next(avroWrapper, NullWritable.get())
                     ? new OneRow(null, avroWrapper.datum())
                     : null;
@@ -156,8 +158,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
             throws IOException {
         FsInput inStream = new FsInput(new Path(dataSource), conf);
         DatumReader<GenericRecord> dummyReader = new GenericDatumReader<>();
-        DataFileReader<GenericRecord> dummyFileReader = new DataFileReader<>(
-                inStream, dummyReader);
+        DataFileReader<GenericRecord> dummyFileReader = new DataFileReader<>(inStream, dummyReader);
         Schema schema = dummyFileReader.getSchema();
         dummyFileReader.close();
         return schema;

@@ -52,6 +52,7 @@ import static org.apache.hadoop.mapreduce.lib.input.LineRecordReader.MAX_LINE_LE
  */
 public class ChunkRecordReader implements
         RecordReader<LongWritable, ChunkWritable> {
+
     private static final Log LOG = LogFactory.getLog(ChunkRecordReader.class.getName());
 
     private long start;
@@ -80,6 +81,7 @@ public class ChunkRecordReader implements
      *
      * @return an instance of ReadStatistics class
      */
+    @SuppressWarnings("unused")
     public ReadStatistics getReadStatistics() {
         return getInputStream().getReadStatistics();
     }
@@ -169,8 +171,7 @@ public class ChunkRecordReader implements
      * @param key - output parameter. When method returns will contain the key -
      *            the number of the start byte of the chunk
      * @param value - output parameter. When method returns will contain the
-     *            value - the chunk, a byte array inside the ChunkWritable
-     *            instance
+     *            value - the chunk, a byte array inside the ChunkWritable instance
      * @return false - when end of split was reached
      * @throws IOException if an I/O error occurred while reading the next chunk
      *             or line
@@ -207,10 +208,8 @@ public class ChunkRecordReader implements
             }
 
             pos += newSize;
-
             if (pos == fileLength) { /*
-                                      * in case text file last character is not
-                                      * a linefeed
+                                      * in case text file last character is not a linefeed
                                       */
                 if (value.box[value.box.length - 1] != '\n') {
                     int newLen = value.box.length + 1;
@@ -226,7 +225,6 @@ public class ChunkRecordReader implements
         /*
          * if we got here, either newSize was 0 or curPos is bigger than end
          */
-
         return false;
     }
 
@@ -237,9 +235,9 @@ public class ChunkRecordReader implements
     public synchronized float getProgress() throws IOException {
         if (start == end) {
             return 0.0f;
-        } else {
-            return Math.min(1.0f, (getFilePosition() - start)
-                    / (float) (end - start));
+        }
+        else {
+            return Math.min(1.0f, (getFilePosition() - start) / (float) (end - start));
         }
     }
 
@@ -271,8 +269,7 @@ public class ChunkRecordReader implements
 
     private void validateLength(int maxLineLength) {
         if (maxLineLength <= 0)
-            throw new IllegalArgumentException(
-                    "maxLineLength must be a positive value");
+            throw new IllegalArgumentException("maxLineLength must be a positive value");
     }
 
     private boolean isCompressedInput() {

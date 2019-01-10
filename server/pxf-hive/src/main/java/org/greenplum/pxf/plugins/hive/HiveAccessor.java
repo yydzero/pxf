@@ -55,10 +55,13 @@ import java.util.List;
  * filtering will be done only for Hive tables that are partitioned.
  */
 public class HiveAccessor extends HdfsSplittableDataAccessor {
+
     private static final Log LOG = LogFactory.getLog(HiveAccessor.class);
+
     private List<HivePartition> partitions;
     private static final String HIVE_DEFAULT_PARTITION = "__HIVE_DEFAULT_PARTITION__";
     private int skipHeaderCount;
+    private Boolean filterInFragmenter;
 
     class HivePartition {
         public String name;
@@ -71,8 +74,6 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
             this.val = val;
         }
     }
-
-    private Boolean filterInFragmenter;
 
     /**
      * Constructs a HiveAccessor
@@ -96,8 +97,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
 
     /**
      * Initializes a HiveAccessor and creates an InputFormat (derived from
-     * {@link InputFormat}) and the Hive partition
-     * fields
+     * {@link InputFormat}) and the Hive partition fields
      *
      * @param requestContext request context
      * @throws RuntimeException if failed to create input format
@@ -112,7 +112,8 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
                 this.inputFormat = HiveDataFragmenter.makeInputFormat(
                         hiveUserData.getInputFormatName(), jobConf);
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             throw new RuntimeException("Failed to initialize HiveAccessor", e);
         }
 
@@ -197,8 +198,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
     }
 
     /*
-     * The partition fields are initialized one time base on userData provided
-     * by the fragmenter
+     * The partition fields are initialized one time base on userData provided by the fragmenter
      */
     private void initPartitionFields(String partitionKeys) {
         partitions = new LinkedList<>();
@@ -216,11 +216,11 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
         }
     }
 
-    private boolean isOurDataInsideFilteredPartition() throws Exception {
+    private boolean isOurDataInsideFilteredPartition()
+            throws Exception {
         if (!context.hasFilter()) {
             return true;
         }
-
         if (filterInFragmenter) {
             LOG.debug("filtering was done in fragmenter");
             return true;
@@ -229,7 +229,6 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
         String filterStr = context.getFilterString();
         HiveFilterBuilder eval = new HiveFilterBuilder(context);
         Object filter = eval.getFilterObject(filterStr);
-
         boolean returnData = isFiltered(partitions, filter);
 
         if (LOG.isDebugEnabled()) {
@@ -242,12 +241,10 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
                 printOneBasicFilter(filter);
             }
         }
-
         return returnData;
     }
 
-    private boolean isFiltered(List<HivePartition> partitionFields,
-                               Object filter) {
+    private boolean isFiltered(List<HivePartition> partitionFields, Object filter) {
         if (filter instanceof List) {
             /*
              * We are going over each filter in the filters list and test it
@@ -262,7 +259,6 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
             }
             return true;
         }
-
         return testOneFilter(partitionFields, filter, context);
     }
 
@@ -288,8 +284,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
                 boolean isFilterOperationEqual = (bFilter.getOperation() == FilterParser.Operation.HDOP_EQ);
                 if (!isFilterOperationEqual) /*
                  * in case this is not an "equality filter"
-                 * we ignore it here - in partition
-                 * filtering
+                 * we ignore it here - in partition filtering
                  */ {
                     return true;
                 }
@@ -303,8 +298,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
                     if (filterColumnName.equals(partition.name)) {
 
                         /*
-                         * the filter field matches a partition field, but the values do
-                         * not match
+                         * the filter field matches a partition field, but the values do not match
                          */
                         boolean keepPartition = filterValue.equals(partition.val);
 

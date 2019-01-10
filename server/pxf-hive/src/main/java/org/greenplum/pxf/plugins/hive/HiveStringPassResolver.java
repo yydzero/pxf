@@ -35,6 +35,7 @@ import static org.greenplum.pxf.api.io.DataType.VARCHAR;
  * Use together with HiveInputFormatFragmenter/HiveLineBreakAccessor.
  */
 public class HiveStringPassResolver extends HiveResolver {
+
     private StringBuilder parts;
 
     @Override
@@ -62,9 +63,8 @@ public class HiveStringPassResolver extends HiveResolver {
     void initPartitionFields() {
         if (context.getOutputFormat() == OutputFormat.TEXT) {
             initTextPartitionFields(parts);
-        } else {
-            super.initPartitionFields();
         }
+        super.initPartitionFields();
     }
 
     /**
@@ -78,9 +78,8 @@ public class HiveStringPassResolver extends HiveResolver {
             String line = (onerow.getData()).toString();
             /* We follow Hive convention. Partition fields are always added at the end of the record */
             return Collections.singletonList(new OneField(VARCHAR.getOID(), line + parts));
-        } else {
-            return super.getFields(onerow);
         }
+        return super.getFields(onerow);
     }
 
 }

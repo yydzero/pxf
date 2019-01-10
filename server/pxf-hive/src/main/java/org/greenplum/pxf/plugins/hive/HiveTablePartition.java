@@ -33,6 +33,7 @@ import java.util.Properties;
  * and for an unpartitioned table, the HiveTableUnit will be the whole table
  */
 public class HiveTablePartition {
+
     public StorageDescriptor storageDesc;
     public Properties properties;
     public Partition partition;

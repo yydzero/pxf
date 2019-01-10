@@ -49,15 +49,12 @@ public class HdfsUtilities {
     /*
      * Helper routine to get a compression codec class
      */
-    private static Class<? extends CompressionCodec> getCodecClass(Configuration conf,
-                                                                   String name) {
+    private static Class<? extends CompressionCodec> getCodecClass(Configuration conf, String name) {
         Class<? extends CompressionCodec> codecClass;
         try {
-            codecClass = conf.getClassByName(name).asSubclass(
-                    CompressionCodec.class);
+            codecClass = conf.getClassByName(name).asSubclass( CompressionCodec.class);
         } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Compression codec " + name
-                    + " was not found.", e);
+            throw new IllegalArgumentException("Compression codec " + name + " was not found.", e);
         }
         return codecClass;
     }
@@ -105,7 +102,6 @@ public class HdfsUtilities {
         if (null == codec) {
             return true;
         }
-
         return codec instanceof SplittableCompressionCodec;
     }
 
@@ -137,19 +133,18 @@ public class HdfsUtilities {
      */
     public static byte[] prepareFragmentMetadata(FileSplit fsp)
             throws IOException {
-
         return prepareFragmentMetadata(fsp.getStart(), fsp.getLength(), fsp.getLocations());
     }
 
     public static byte[] prepareFragmentMetadata(long start, long length, String[] locations)
             throws IOException {
-
         ByteArrayOutputStream byteArrayStream = writeBaseFragmentInfo(start, length, locations);
         return byteArrayStream.toByteArray();
     }
 
 
-    private static ByteArrayOutputStream writeBaseFragmentInfo(long start, long length, String[] locations) throws IOException {
+    private static ByteArrayOutputStream writeBaseFragmentInfo(long start, long length, String[] locations)
+            throws IOException {
         ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
         ObjectOutputStream objectStream = new ObjectOutputStream(byteArrayStream);
         objectStream.writeLong(start);

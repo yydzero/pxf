@@ -70,8 +70,7 @@ public class RecordkeyAdapter {
      * This method also verifies cases in which record keys are not supported by
      * the underlying source type, and therefore "illegally" requested.
      *
-     * @param recFields existing list of record (non-key) fields and their
-     *            values.
+     * @param recFields existing list of record (non-key) fields and their values.
      * @param input all input parameters coming from the client request
      * @param onerow a row object which is used here in order to find out if the
      *            given type supports recordkeys or not.
@@ -134,7 +133,6 @@ public class RecordkeyAdapter {
         if (extractor == null) {
             extractor = InitializeExtractor(key);
         }
-
         return extractor.get(key);
     }
 
@@ -178,10 +176,8 @@ public class RecordkeyAdapter {
     public Writable convertKeyValue(Object key) {
         if (converter == null) {
             converter = initializeConverter(key);
-            LOG.debug("converter initialized for type " + key.getClass()
-                    + " (key value: " + key + ")");
+            LOG.debug("converter initialized for type " + key.getClass() + " (key value: " + key + ")");
         }
-
         return converter.get(key);
     }
 

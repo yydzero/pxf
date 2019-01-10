@@ -80,8 +80,8 @@ public class HiveMetadataFetcher extends BasePlugin implements MetadataFetcher {
      * @param pattern pattern table/file name or pattern in the given source
      */
     @Override
-    public List<Metadata> getMetadata(String pattern) throws Exception {
-
+    public List<Metadata> getMetadata(String pattern)
+           throws Exception {
         boolean ignoreErrors = false;
         List<Metadata.Item> tblsDesc = HiveUtilities.extractTablesFromPattern(client, pattern);
 
@@ -102,7 +102,8 @@ public class HiveMetadataFetcher extends BasePlugin implements MetadataFetcher {
                 HiveUtilities.getSchema(tbl, metadata);
                 boolean hasComplexTypes = HiveUtilities.hasComplexTypes(metadata);
                 metadataList.add(metadata);
-                List<Partition> tablePartitions = client.listPartitionsByFilter(tblDesc.getPath(), tblDesc.getName(), "", (short) -1);
+                List<Partition> tablePartitions = client.listPartitionsByFilter(tblDesc.getPath(),
+                        tblDesc.getName(), "", (short) -1);
                 Set<OutputFormat> formats = new HashSet<>();
                 //If table has partitions - find out all formats
                 for (Partition tablePartition : tablePartitions) {
@@ -132,7 +133,8 @@ public class HiveMetadataFetcher extends BasePlugin implements MetadataFetcher {
         return metadataList;
     }
 
-    private OutputFormat getOutputFormat(String inputFormat, boolean hasComplexTypes) throws Exception {
+    private OutputFormat getOutputFormat(String inputFormat, boolean hasComplexTypes)
+            throws Exception {
         InputFormat<?, ?> fformat = HiveDataFragmenter.makeInputFormat(inputFormat, jobConf);
         String profile = ProfileFactory.get(fformat, hasComplexTypes);
         String outputFormatClassName = context.getPluginConf().getPlugins(profile).get("OUTPUTFORMAT");

@@ -21,6 +21,11 @@ package org.greenplum.pxf.plugins.hive;
 
 import org.greenplum.pxf.api.BasicFilter;
 import org.greenplum.pxf.api.FilterParser;
+import org.greenplum.pxf.api.FilterParser.ColumnIndex;
+import org.greenplum.pxf.api.FilterParser.Constant;
+import org.greenplum.pxf.api.FilterParser.FilterBuilder;
+import org.greenplum.pxf.api.FilterParser.LogicalOperation;
+import org.greenplum.pxf.api.FilterParser.Operation;
 import org.greenplum.pxf.api.LogicalFilter;
 import org.greenplum.pxf.api.model.RequestContext;
 
@@ -36,8 +41,7 @@ import java.util.List;
  * {@link HiveAccessor} will use the filter for
  * partition filtering.
  */
-public class HiveFilterBuilder implements FilterParser.FilterBuilder {
-    private RequestContext requestContext;
+public class HiveFilterBuilder implements FilterBuilder {
 
     /**
      * Constructs a HiveFilterBuilder object.
@@ -45,7 +49,7 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
      * @param input input data containing filter string
      */
     HiveFilterBuilder(RequestContext input) {
-        requestContext = input;
+        RequestContext requestContext = input;
     }
 
     /**
@@ -65,23 +69,20 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
 
         FilterParser parser = new FilterParser(this);
         Object result = parser.parse(filterString.getBytes(FilterParser.DEFAULT_CHARSET));
-
-        if (!(result instanceof LogicalFilter) && !(result instanceof BasicFilter)
-                && !(result instanceof List)) {
-            throw new Exception("String " + filterString
-                    + " resolved to no filter");
+        if (!(result instanceof LogicalFilter) && !(result instanceof BasicFilter) && !(result instanceof List)) {
+            throw new Exception("String " + filterString + " resolved to no filter");
         }
 
         return result;
     }
 
     @Override
-    public Object build(FilterParser.LogicalOperation op, Object leftOperand, Object rightOperand) {
+    public Object build(LogicalOperation op, Object leftOperand, Object rightOperand) {
         return handleLogicalOperation(op, leftOperand, rightOperand);
     }
 
     @Override
-    public Object build(FilterParser.LogicalOperation op, Object filter) {
+    public Object build(LogicalOperation op, Object filter) {
         return handleLogicalOperation(op, filter);
     }
 
@@ -94,10 +95,10 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
     }
 
     @Override
-    public Object build(FilterParser.Operation operation, Object operand) throws Exception {
-        if (operation == FilterParser.Operation.HDOP_IS_NULL || operation == FilterParser.Operation.HDOP_IS_NOT_NULL) {
+    public Object build(Operation operation, Object operand) throws Exception {
+        if (operation == Operation.HDOP_IS_NULL || operation == Operation.HDOP_IS_NOT_NULL) {
             // use null for the constant value of null comparison
-            return handleSimpleOperations(operation, (FilterParser.ColumnIndex) operand, null);
+            return handleSimpleOperations(operation, (ColumnIndex) operand, null);
         } else {
             throw new Exception("Unsupported unary operation " + operation);
         }
@@ -107,9 +108,7 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
      * Handles simple column-operator-constant expressions Creates a special
      * filter in the case the column is the row key column
      */
-    private BasicFilter handleSimpleOperations(FilterParser.Operation opId,
-                                               FilterParser.ColumnIndex column,
-                                               FilterParser.Constant constant) {
+    private BasicFilter handleSimpleOperations(Operation opId, ColumnIndex column, Constant constant) {
         return new BasicFilter(opId, column, constant);
     }
 
@@ -130,11 +129,13 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
      * @param right right hand filter
      * @return list of filters constructing the filter tree
      */
+    @SuppressWarnings("unused")
     private List<BasicFilter> handleCompoundOperations(List<BasicFilter> left, BasicFilter right) {
         left.add(right);
         return left;
     }
 
+    @SuppressWarnings("unused")
     private List<BasicFilter> handleCompoundOperations(BasicFilter left, BasicFilter right) {
         List<BasicFilter> result = new LinkedList<>();
         result.add(left);
@@ -142,14 +143,14 @@ public class HiveFilterBuilder implements FilterParser.FilterBuilder {
         return result;
     }
 
-    private Object handleLogicalOperation(FilterParser.LogicalOperation operator, Object leftOperand, Object rightOperand) {
+    private Object handleLogicalOperation(LogicalOperation operator, Object leftOperand, Object rightOperand) {
         List<Object> result = new LinkedList<>();
         result.add(leftOperand);
         result.add(rightOperand);
         return new LogicalFilter(operator, result);
     }
 
-    private Object handleLogicalOperation(FilterParser.LogicalOperation operator, Object filter) {
+    private Object handleLogicalOperation(LogicalOperation operator, Object filter) {
         return new LogicalFilter(operator, Arrays.asList(filter));
     }
 }

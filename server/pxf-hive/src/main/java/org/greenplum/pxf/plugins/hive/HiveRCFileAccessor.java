@@ -42,7 +42,8 @@ public class HiveRCFileAccessor extends HiveAccessor {
     }
 
     @Override
-    protected Object getReader(JobConf jobConf, InputSplit split) throws IOException {
+    protected Object getReader(JobConf jobConf, InputSplit split)
+            throws IOException {
         return new RCFileRecordReader(jobConf, (FileSplit) split);
     }
 }

@@ -19,7 +19,6 @@ package org.greenplum.pxf.plugins.hdfs.utilities;
  * under the License.
  */
 
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
@@ -40,7 +39,8 @@ public class PxfInputFormat extends FileInputFormat {
 
     @Override
     public RecordReader getRecordReader(InputSplit split, JobConf conf, Reporter reporter) {
-        throw new UnsupportedOperationException("PxfInputFormat should not be used for reading data, but only for obtaining the splits of a file");
+        throw new UnsupportedOperationException(
+                "PxfInputFormat should not be used for reading data, but only for obtaining the splits of a file");
     }
 
     /*
