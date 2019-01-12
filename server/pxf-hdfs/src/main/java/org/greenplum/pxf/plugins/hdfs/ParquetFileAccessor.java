@@ -67,6 +67,13 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     private static final int DEFAULT_DICTIONARY_PAGE_SIZE = 512 * 1024;
     private static final WriterVersion DEFAULT_PARQUET_VERSION = WriterVersion.PARQUET_1_0;
 
+    private ParquetFileReader fileReader;
+    private MessageColumnIO columnIO;
+    private HcfsType hcfsType;
+    private ParquetWriter<Group> parquetWriter;
+    private RecordReader<Group> recordReader;
+    private long rowsInRowGroup;
+    private long rowGroupsReadCount;
     private MessageType schema;
     private ParquetFileReader fileReader;
     private MessageColumnIO columnIO;
@@ -129,20 +136,18 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         return new OneRow(null, recordReader.read());
     }
 
-    private long readNextRowGroup() throws IOException {
-
+    private boolean readNextRowGroup() throws IOException {
         PageReadStore currentRowGroup = fileReader.readNextRowGroup();
         if (currentRowGroup == null) {
             LOG.debug("All row groups have been exhausted");
-            return 0;
+            return false;
         }
         rowGroupsReadCount++;
         recordReader = columnIO.getRecordReader(currentRowGroup, new GroupRecordConverter(schema));
-        long count = currentRowGroup.getRowCount();
+        rowsInRowGroup = currentRowGroup.getRowCount();
+        LOG.debug("Found {} rows in row group #{}", rowsInRowGroup, rowGroupsReadCount);
 
-        LOG.debug("Found {} rows in row group #{}", count, rowGroupsReadCount);
-
-        return count;
+        return true;
     }
 
     private CompressionCodecName getCodec(String name) {
