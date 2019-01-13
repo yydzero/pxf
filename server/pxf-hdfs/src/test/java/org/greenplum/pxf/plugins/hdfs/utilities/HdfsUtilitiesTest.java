@@ -153,7 +153,8 @@ public class HdfsUtilitiesTest {
                 false);
     }
 
-    private void testIsThreadSafe(String testDescription, String path, String codecStr, CompressionCodec codec, boolean expectedResult) {
+    private void testIsThreadSafe(String testDescription, String path, String codecStr,
+                                  CompressionCodec codec, boolean expectedResult) {
         prepareDataForIsThreadSafe(path, codecStr, codec);
 
         boolean result = HdfsUtilities.isThreadSafe(conf, path, codecStr);
@@ -215,6 +216,7 @@ public class HdfsUtilitiesTest {
         os.writeLong(100);
         os.writeObject(new String[] { "hostname" });
         os.close();
+
         when(requestContext.getFragmentMetadata()).thenReturn(bas.toByteArray());
         FileSplit fileSplit = HdfsUtilities.parseFileSplit(requestContext);
         assertEquals(fileSplit.getStart(), 10);
