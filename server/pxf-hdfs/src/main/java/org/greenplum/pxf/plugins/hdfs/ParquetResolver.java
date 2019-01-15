@@ -32,7 +32,6 @@ import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.UnsupportedTypeException;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
-import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
 
 import java.io.IOException;
@@ -57,16 +56,9 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     private SimpleGroupFactory groupFactory;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
-
-        schema = (MessageType) requestContext.getMetadata();
-        groupFactory = new SimpleGroupFactory(schema);
-    }
-
-    @Override
     public List<OneField> getFields(OneRow row) {
         Group group = (Group) row.getData();
+        MessageType schema = (MessageType) row.getKey();
         List<OneField> output = new LinkedList<>();
 
         for (int i = 0; i < schema.getFieldCount(); i++) {
@@ -88,6 +80,10 @@ public class ParquetResolver extends BasePlugin implements Resolver {
      */
     @Override
     public OneRow setFields(List<OneField> record) throws IOException {
+        if (groupFactory == null) {
+            schema = (MessageType)context.getMetadata();
+            groupFactory = new SimpleGroupFactory(schema);
+        }
         Group group = groupFactory.newGroup();
         for (int i = 0; i < record.size(); i++) {
             fillGroup(i, record.get(i), group, schema.getType(i));
@@ -152,75 +148,59 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         OneField field = new OneField();
         OriginalType originalType = type.getOriginalType();
         PrimitiveType primitiveType = type.asPrimitiveType();
+        int repetitionCount = g.getFieldRepetitionCount(columnIndex);
         switch (primitiveType.getPrimitiveTypeName()) {
-            case BINARY: {
+            case BINARY:
                 if (originalType == null) {
                     field.type = DataType.BYTEA.getOID();
-                    field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                            null : g.getBinary(columnIndex, 0).getBytes();
-                } else if (originalType == OriginalType.DATE) { // DATE type
+                    field.val = repetitionCount == 0 ? null : g.getBinary(columnIndex, 0).getBytes();
+                } else if (originalType == OriginalType.DATE) {
                     field.type = DataType.DATE.getOID();
-                    field.val = g.getFieldRepetitionCount(columnIndex) == 0 ? null : g.getString(columnIndex, 0);
-                } else if (originalType == OriginalType.TIMESTAMP_MILLIS) { // TIMESTAMP type
+                    field.val = repetitionCount == 0 ? null : g.getString(columnIndex, 0);
+                } else if (originalType == OriginalType.TIMESTAMP_MILLIS) {
                     field.type = DataType.TIMESTAMP.getOID();
-                    field.val = g.getFieldRepetitionCount(columnIndex) == 0 ? null : g.getString(columnIndex, 0);
+                    field.val = repetitionCount == 0 ? null : g.getString(columnIndex, 0);
                 } else {
                     field.type = DataType.TEXT.getOID();
-                    field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                            null : g.getString(columnIndex, 0);
+                    field.val = repetitionCount == 0 ? null : g.getString(columnIndex, 0);
                 }
                 break;
-            }
-            case INT32: {
+            case INT32:
                 if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
                     field.type = DataType.SMALLINT.getOID();
-                    field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                            null : (short) g.getInteger(columnIndex, 0);
+                    field.val = repetitionCount == 0 ? null : (short)g.getInteger(columnIndex, 0);
                 } else {
                     field.type = DataType.INTEGER.getOID();
-                    field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                            null : g.getInteger(columnIndex, 0);
+                    field.val = repetitionCount == 0 ? null : g.getInteger(columnIndex, 0);
                 }
                 break;
-            }
-            case INT64: {
+            case INT64:
                 field.type = DataType.BIGINT.getOID();
-                field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                        null : g.getLong(columnIndex, 0);
+                field.val = repetitionCount == 0 ? null : g.getLong(columnIndex, 0);
                 break;
-            }
-            case DOUBLE: {
+            case DOUBLE:
                 field.type = DataType.FLOAT8.getOID();
-                field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                        null : g.getDouble(columnIndex, 0);
+                field.val = repetitionCount == 0 ? null : g.getDouble(columnIndex, 0);
                 break;
-            }
-            case INT96: {
+            case INT96:
                 field.type = DataType.TIMESTAMP.getOID();
-                field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                        null : bytesToTimestamp(g.getInt96(columnIndex, 0).getBytes());
+                field.val = repetitionCount == 0 ? null : bytesToTimestamp(g.getInt96(columnIndex, 0).getBytes());
                 break;
-            }
-            case FLOAT: {
+            case FLOAT:
                 field.type = DataType.REAL.getOID();
-                field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                        null : g.getFloat(columnIndex, 0);
+                field.val = repetitionCount == 0 ? null : g.getFloat(columnIndex, 0);
                 break;
-            }
-            case FIXED_LEN_BYTE_ARRAY: {
+            case FIXED_LEN_BYTE_ARRAY:
                 field.type = DataType.NUMERIC.getOID();
-                if (g.getFieldRepetitionCount(columnIndex) > 0) {
+                if (repetitionCount > 0) {
                     int scale = type.asPrimitiveType().getDecimalMetadata().getScale();
                     field.val = new BigDecimal(new BigInteger(g.getBinary(columnIndex, 0).getBytes()), scale);
                 }
                 break;
-            }
-            case BOOLEAN: {
+            case BOOLEAN:
                 field.type = DataType.BOOLEAN.getOID();
-                field.val = g.getFieldRepetitionCount(columnIndex) == 0 ?
-                        null : g.getBoolean(columnIndex, 0);
+                field.val = repetitionCount == 0 ? null : g.getBoolean(columnIndex, 0);
                 break;
-            }
             default: {
                 throw new UnsupportedTypeException("Type " + primitiveType.getPrimitiveTypeName()
                         + "is not supported");
