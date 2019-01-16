@@ -31,6 +31,7 @@ import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
+import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -212,7 +213,6 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         return field;
     }
 
->>>>>>> Stashed changes
     private OneField resolvePrimitive(Integer columnIndex, Group g, Type type) {
         OneField field = new OneField();
         OriginalType originalType = type.getOriginalType();
