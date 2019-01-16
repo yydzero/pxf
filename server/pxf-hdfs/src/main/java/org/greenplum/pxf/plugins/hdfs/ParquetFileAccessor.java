@@ -204,11 +204,16 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             LOG.debug("Created new dir {}", parent);
         }
 
+        int pageSize = context.getOption("PAGE_SIZE") != null ? Integer.parseInt(context.getOption("PAGE_SIZE")) : DEFAULT_PAGE_SIZE;
+        int rowgroupSize = context.getOption("ROWGROUP_SIZE") != null ? Integer.parseInt(context.getOption("ROWGROUP_SIZE")) : DEFAULT_ROWGROUP_SIZE;
+        int dictionarySize = context.getOption("DICTIONARY_PAGE_SIZE") != null ? Integer.parseInt(context.getOption("DICTIONARY_PAGE_SIZE")) : DEFAULT_DICTIONARY_PAGE_SIZE;
+        WriterVersion parquetVersion = context.getOption("PARQUET_VERSION") != null ? WriterVersion.fromString(context.getOption("PARQUET_VERSION")) : DEFAULT_PARQUET_VERSION;
+
         GroupWriteSupport.setSchema(schema, configuration);
         //noinspection deprecation
         parquetWriter = new ParquetWriter<>(file, new GroupWriteSupport(), codecName,
-                DEFAULT_ROWGROUP_SIZE, DEFAULT_PAGE_SIZE, DEFAULT_DICTIONARY_PAGE_SIZE,
-                false, false, DEFAULT_PARQUET_VERSION, configuration);
+                rowgroupSize, pageSize, dictionarySize,
+                true, false, parquetVersion, configuration);
 
         return true;
     }
