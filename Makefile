@@ -26,6 +26,9 @@ test:
 	make -C cli/go/src/pxf-cli test
 	make -C server test
 
+it:
+	make -C automation TEST=$(TEST)
+
 install:
 	make -C cli/go/src/pxf-cli install
 	make -C server install

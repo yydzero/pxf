@@ -23,10 +23,7 @@ import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.NanoTime;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
 import org.apache.parquet.io.api.Binary;
-import org.apache.parquet.schema.MessageType;
-import org.apache.parquet.schema.OriginalType;
-import org.apache.parquet.schema.PrimitiveType;
-import org.apache.parquet.schema.Type;
+import org.apache.parquet.schema.*;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.UnsupportedTypeException;
@@ -43,6 +40,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -51,6 +49,10 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     private static final int JULIAN_EPOCH_OFFSET_DAYS = 2440588;
     private static final int SECOND_IN_MILLIS = 1000;
     private static final long MILLIS_IN_DAY = 24 * 3600 * 1000;
+    private static final String COLLECTION_DELIM = ",";
+    private static final String MAPKEY_DELIM = ":";
+    private String collectionDelim;
+    private String mapkeyDelim;
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private MessageType schema;
@@ -62,21 +64,10 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 
         schema = (MessageType) requestContext.getMetadata();
         groupFactory = new SimpleGroupFactory(schema);
-    }
-
-    @Override
-    public List<OneField> getFields(OneRow row) {
-        Group group = (Group) row.getData();
-        List<OneField> output = new LinkedList<>();
-
-        for (int i = 0; i < schema.getFieldCount(); i++) {
-            if (schema.getType(i).isPrimitive()) {
-                output.add(resolvePrimitive(i, group, schema.getType(i)));
-            } else {
-                throw new UnsupportedTypeException("Only primitive types are supported.");
-            }
-        }
-        return output;
+        collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
+                : context.getOption("COLLECTION_DELIM");
+        mapkeyDelim = context.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
+                : context.getOption("MAPKEY_DELIM");
     }
 
     /**
@@ -148,6 +139,80 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         }
     }
 
+    @Override
+    public List<OneField> getFields(OneRow row) {
+        Group group = (Group) row.getData();
+        List<OneField> output = new LinkedList<>();
+
+        for (int fieldIndex = 0; fieldIndex < schema.getFieldCount(); fieldIndex++) {
+            if (schema.getType(fieldIndex).isPrimitive()) {
+                output.add(resolvePrimitive(fieldIndex, group, schema.getType(fieldIndex)));
+            } else {
+                Type type = schema.getFields().get(fieldIndex);
+//                int repeatCount = group.getFieldRepetitionCount(fieldIndex);
+//                for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
+//                    output.add(resolveComplex(group.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
+//                }
+                output.add(resolveComplex(group.getGroup(fieldIndex, 0), type.asGroupType()));
+            }
+
+        }
+        return output;
+    }
+
+    private OneField resolveComplex(Group g, GroupType groupType) {
+        List<Type> types = groupType.getFields();
+        OneField result = new OneField();
+        result.type = DataType.TEXT.getOID();
+
+        List<OneField> fieldList = new ArrayList<>();
+        int fieldCount = types.size();
+
+        for (int fieldIndex = 0; fieldIndex < fieldCount; fieldIndex++) {
+            Type type = types.get(fieldIndex);
+            OneField field = new OneField();
+            field.type = DataType.TEXT.getOID();
+            int repeatCount = g.getFieldRepetitionCount(fieldIndex);
+            for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
+                if (type.isPrimitive()) {
+                    if(type.getOriginalType() != null) {
+                        field.val = type.getName() + mapkeyDelim + g.getValueToString(fieldIndex, repeatIndex);
+                    } else {
+                        field.val = g.getValueToString(fieldIndex, repeatIndex);
+                    }
+                    fieldList.add(field);
+                } else {
+                    fieldList.add(resolveComplex(g.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
+                }
+            }
+        }
+
+        if(fieldCount == 1 && types.get(0).isPrimitive()) {
+            // Primitive type within List
+            result.val = fieldList.get(0).val;
+        } else if (OriginalType.LIST == groupType.getOriginalType()) {
+            // List type
+            result.val = String.format("[%s]", HdfsUtilities.toString(fieldList, collectionDelim));
+        }
+        else {
+            // Struct type
+            result.val = String.format("{%s}", HdfsUtilities.toString(fieldList, collectionDelim));
+        }
+
+        return result;
+    }
+
+    private OneField resolveArray(int index, Group g, Type type) {
+        List<OneField> fieldList = new LinkedList<>();
+        for (int i = 0; i < g.getFieldRepetitionCount(index); i++)
+            fieldList.add(resolvePrimitive(index, g, type));
+        OneField field = new OneField();
+        field.type = DataType.TEXT.getOID();
+        field.val = String.format("[%s]", HdfsUtilities.toString(fieldList, collectionDelim));
+        return field;
+    }
+
+>>>>>>> Stashed changes
     private OneField resolvePrimitive(Integer columnIndex, Group g, Type type) {
         OneField field = new OneField();
         OriginalType originalType = type.getOriginalType();
@@ -226,6 +291,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                         + "is not supported");
             }
         }
+
         return field;
     }
 
