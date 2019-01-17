@@ -28,6 +28,7 @@ import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
+import org.greenplum.pxf.api.GPDBWritableMapper;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.UnsupportedTypeException;
@@ -45,7 +46,6 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedList;
 import java.util.List;
 
 public class ParquetResolver extends BasePlugin implements Resolver {
@@ -58,14 +58,12 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     private MessageType schema;
     private SimpleGroupFactory groupFactory;
     private GPDBWritable gpdbOutput;
-    private LinkedList<Writable> outputList;
 
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
 
         gpdbOutput = makeGPDBWritableOutput();
-        outputList = new LinkedList<>();
     }
 
     @Override
@@ -74,12 +72,12 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     }
 
     @Override
-    public boolean isGPDBWritable() {
+    public boolean supportsWritable() {
         return true;
     }
 
     @Override
-    public LinkedList<Writable> getGPDBWritable(OneRow row) throws IOException {
+    public Writable getWritable(OneRow row) throws IOException {
         Group group = (Group) row.getData();
         MessageType schema = (MessageType) row.getKey();
 
@@ -90,26 +88,34 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                 throw new UnsupportedTypeException("Only primitive types are supported.");
             }
         }
-        outputList.add(gpdbOutput);
-        return outputList;
+        return gpdbOutput;
+    }
+
+    @Override
+    public OneRow setFields(List<OneField> record) {
+        return null;
     }
 
     /**
      * Constructs and sets the fields of a {@link OneRow}.
      *
-     * @param record list of {@link OneField}
+     * @param  writable of {@link GPDBWritable}
      * @return the constructed {@link OneRow}
      * @throws IOException if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws IOException {
+    public OneRow setWritable(Writable writable) throws IOException {
         if (groupFactory == null) {
             schema = (MessageType)context.getMetadata();
             groupFactory = new SimpleGroupFactory(schema);
         }
         Group group = groupFactory.newGroup();
-        for (int i = 0; i < record.size(); i++) {
-            fillGroup(i, record.get(i), group, schema.getType(i));
+        GPDBWritable gpdbWritable = (GPDBWritable)writable;
+        int[] colTypes = gpdbWritable.getColType();
+        GPDBWritableMapper mapper = new GPDBWritableMapper(gpdbWritable);
+        for (int i = 0; i < colTypes.length; i++) {
+            mapper.setDataType(colTypes[i]);
+            fillGroup(i, mapper.getData(i), group, schema.getType(i));
         }
         return new OneRow(null, group);
     }
@@ -129,33 +135,33 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         return new GPDBWritable(schema);
     }
 
-    private void fillGroup(int index, OneField field, Group group, Type type) throws IOException {
-        if (field.val == null)
+    private void fillGroup(int index, Object val, Group group, Type type) throws IOException {
+        if (val == null)
             return;
         switch (type.asPrimitiveType().getPrimitiveTypeName()) {
             case BINARY:
                 if (type.getOriginalType() == OriginalType.UTF8)
-                    group.add(index, (String) field.val);
+                    group.add(index, (String) val);
                 else
-                    group.add(index, Binary.fromReusedByteArray((byte[]) field.val));
+                    group.add(index, Binary.fromReusedByteArray((byte[]) val));
                 break;
             case INT32:
                 if (type.getOriginalType() == OriginalType.INT_16)
-                    group.add(index, (Short) field.val);
+                    group.add(index, (Short) val);
                 else
-                    group.add(index, (Integer) field.val);
+                    group.add(index, (Integer) val);
                 break;
             case INT64:
-                group.add(index, (Long) field.val);
+                group.add(index, (Long) val);
                 break;
             case DOUBLE:
-                group.add(index, (Double) field.val);
+                group.add(index, (Double) val);
                 break;
             case FLOAT:
-                group.add(index, (Float) field.val);
+                group.add(index, (Float) val);
                 break;
             case FIXED_LEN_BYTE_ARRAY:
-                BigDecimal value = new BigDecimal((String) field.val);
+                BigDecimal value = new BigDecimal((String) val);
                 byte fillByte = (byte) (value.signum() < 0 ? 0xFF : 0x00);
                 byte[] unscaled = value.unscaledValue().toByteArray();
                 byte[] bytes = new byte[16];
@@ -170,12 +176,12 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                 group.add(index, Binary.fromReusedByteArray(bytes));
                 break;
             case INT96:
-                LocalDateTime date = LocalDateTime.parse((String) field.val, dateFormatter);
+                LocalDateTime date = LocalDateTime.parse((String) val, dateFormatter);
                 long millisSinceEpoch = date.toEpochSecond(ZoneOffset.UTC) * SECOND_IN_MILLIS;
                 group.add(index, getBinary(millisSinceEpoch));
                 break;
             case BOOLEAN:
-                group.add(index, (Boolean) field.val);
+                group.add(index, (Boolean) val);
                 break;
             default:
                 throw new IOException("Not supported type " + type.asPrimitiveType().getPrimitiveTypeName());
