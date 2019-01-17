@@ -73,7 +73,8 @@ public class ReadBridge extends BaseBridge {
     }
 
     protected Deque<Writable> makeOutput(OneRow oneRow) throws Exception {
-        return outputBuilder.makeOutput(resolver.getFields(oneRow));
+        return resolver.isGPDBWritable() ? resolver.getGPDBWritable(oneRow) :
+                outputBuilder.makeOutput(resolver.getFields(oneRow));
     }
 
     /**
@@ -90,7 +91,7 @@ public class ReadBridge extends BaseBridge {
         }
 
         try {
-            while (outputQueue.isEmpty()) {
+            while (true) {
                 onerow = accessor.readNextObject();
                 if (onerow == null) {
                     output = outputBuilder.getPartialLine();

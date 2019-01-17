@@ -22,7 +22,9 @@ package org.greenplum.pxf.api.model;
 
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.io.Writable;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -41,6 +43,14 @@ public interface Resolver extends Plugin {
      * @throws Exception if decomposing the row into fields failed
      */
     List<OneField> getFields(OneRow row) throws Exception;
+
+    default LinkedList<Writable> getGPDBWritable(OneRow row) throws Exception {
+        return null;
+    }
+
+    default boolean isGPDBWritable() {
+        return false;
+    }
 
     /**
      * Constructs and sets the fields of a {@link OneRow}.

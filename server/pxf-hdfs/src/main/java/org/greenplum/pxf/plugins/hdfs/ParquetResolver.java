@@ -19,6 +19,7 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.NanoTime;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
@@ -30,8 +31,10 @@ import org.apache.parquet.schema.Type;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.UnsupportedTypeException;
-import org.greenplum.pxf.api.io.DataType;
+import org.greenplum.pxf.api.io.GPDBWritable;
+import org.greenplum.pxf.api.io.Writable;
 import org.greenplum.pxf.api.model.BasePlugin;
+import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
 
 import java.io.IOException;
@@ -54,21 +57,41 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 
     private MessageType schema;
     private SimpleGroupFactory groupFactory;
+    private GPDBWritable gpdbOutput;
+    private LinkedList<Writable> outputList;
+
+    @Override
+    public void initialize(RequestContext requestContext) {
+        super.initialize(requestContext);
+
+        gpdbOutput = makeGPDBWritableOutput();
+        outputList = new LinkedList<>();
+    }
 
     @Override
     public List<OneField> getFields(OneRow row) {
+        return null;
+    }
+
+    @Override
+    public boolean isGPDBWritable() {
+        return true;
+    }
+
+    @Override
+    public LinkedList<Writable> getGPDBWritable(OneRow row) throws IOException {
         Group group = (Group) row.getData();
         MessageType schema = (MessageType) row.getKey();
-        List<OneField> output = new LinkedList<>();
 
         for (int i = 0; i < schema.getFieldCount(); i++) {
             if (schema.getType(i).isPrimitive()) {
-                output.add(resolvePrimitive(i, group, schema.getType(i)));
+                resolvePrimitive(i, group, schema.getType(i));
             } else {
                 throw new UnsupportedTypeException("Only primitive types are supported.");
             }
         }
-        return output;
+        outputList.add(gpdbOutput);
+        return outputList;
     }
 
     /**
@@ -89,6 +112,21 @@ public class ParquetResolver extends BasePlugin implements Resolver {
             fillGroup(i, record.get(i), group, schema.getType(i));
         }
         return new OneRow(null, group);
+    }
+
+    /**
+     * Creates the GPDBWritable object. The object is created one time and is
+     * refilled from recFields for each record sent
+     *
+     * @return empty GPDBWritable object with set columns
+     */
+    private GPDBWritable makeGPDBWritableOutput() {
+        int num_actual_fields = context.getColumns();
+        int[] schema = new int[num_actual_fields];
+        for (int i = 0; i < num_actual_fields; i++) {
+            schema[i] = context.getColumn(i).columnTypeCode();
+        }
+        return new GPDBWritable(schema);
     }
 
     private void fillGroup(int index, OneField field, Group group, Type type) throws IOException {
@@ -144,69 +182,55 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         }
     }
 
-    private OneField resolvePrimitive(Integer columnIndex, Group g, Type type) {
-        OneField field = new OneField();
+    private void resolvePrimitive(Integer colIndex, Group g, Type type) throws GPDBWritable.TypeMismatchException {
         OriginalType originalType = type.getOriginalType();
         PrimitiveType primitiveType = type.asPrimitiveType();
-        int repetitionCount = g.getFieldRepetitionCount(columnIndex);
+        int repetitionCount = g.getFieldRepetitionCount( colIndex);
         switch (primitiveType.getPrimitiveTypeName()) {
             case BINARY:
                 if (originalType == null) {
-                    field.type = DataType.BYTEA.getOID();
-                    field.val = repetitionCount == 0 ? null : g.getBinary(columnIndex, 0).getBytes();
-                } else if (originalType == OriginalType.DATE) {
-                    field.type = DataType.DATE.getOID();
-                    field.val = repetitionCount == 0 ? null : g.getString(columnIndex, 0);
-                } else if (originalType == OriginalType.TIMESTAMP_MILLIS) {
-                    field.type = DataType.TIMESTAMP.getOID();
-                    field.val = repetitionCount == 0 ? null : g.getString(columnIndex, 0);
+                    gpdbOutput.setBytes(colIndex, repetitionCount == 0 ? null : g.getBinary(colIndex, 0).getBytes());
                 } else {
-                    field.type = DataType.TEXT.getOID();
-                    field.val = repetitionCount == 0 ? null : g.getString(columnIndex, 0);
+                    gpdbOutput.setString(colIndex, ObjectUtils.toString(repetitionCount == 0 ? null : g.getString(colIndex, 0)));
                 }
                 break;
             case INT32:
                 if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
-                    field.type = DataType.SMALLINT.getOID();
-                    field.val = repetitionCount == 0 ? null : (short)g.getInteger(columnIndex, 0);
+                    gpdbOutput.setShort(colIndex, repetitionCount == 0 ? null : (short)g.getInteger(colIndex, 0));
                 } else {
-                    field.type = DataType.INTEGER.getOID();
-                    field.val = repetitionCount == 0 ? null : g.getInteger(columnIndex, 0);
+                    gpdbOutput.setInt(colIndex, repetitionCount == 0 ? null : g.getInteger(colIndex, 0));
                 }
                 break;
             case INT64:
-                field.type = DataType.BIGINT.getOID();
-                field.val = repetitionCount == 0 ? null : g.getLong(columnIndex, 0);
+                gpdbOutput.setLong(colIndex, repetitionCount == 0 ? null : g.getLong(colIndex, 0));
                 break;
             case DOUBLE:
-                field.type = DataType.FLOAT8.getOID();
-                field.val = repetitionCount == 0 ? null : g.getDouble(columnIndex, 0);
+                gpdbOutput.setDouble(colIndex, repetitionCount == 0 ? null : g.getDouble(colIndex, 0));
                 break;
             case INT96:
-                field.type = DataType.TIMESTAMP.getOID();
-                field.val = repetitionCount == 0 ? null : bytesToTimestamp(g.getInt96(columnIndex, 0).getBytes());
+                gpdbOutput.setString(colIndex, ObjectUtils.toString(
+                        repetitionCount == 0 ? null : bytesToTimestamp(g.getInt96(colIndex, 0).getBytes()), null));
                 break;
             case FLOAT:
-                field.type = DataType.REAL.getOID();
-                field.val = repetitionCount == 0 ? null : g.getFloat(columnIndex, 0);
+                gpdbOutput.setFloat(colIndex, repetitionCount == 0 ? null : g.getFloat(colIndex, 0));
                 break;
             case FIXED_LEN_BYTE_ARRAY:
-                field.type = DataType.NUMERIC.getOID();
                 if (repetitionCount > 0) {
                     int scale = type.asPrimitiveType().getDecimalMetadata().getScale();
-                    field.val = new BigDecimal(new BigInteger(g.getBinary(columnIndex, 0).getBytes()), scale);
+                    gpdbOutput.setString(colIndex, ObjectUtils.toString(
+                            new BigDecimal(new BigInteger(g.getBinary(colIndex, 0).getBytes()), scale), null));
+                } else {
+                    gpdbOutput.setString(colIndex, null);
                 }
                 break;
             case BOOLEAN:
-                field.type = DataType.BOOLEAN.getOID();
-                field.val = repetitionCount == 0 ? null : g.getBoolean(columnIndex, 0);
+                gpdbOutput.setBoolean(colIndex, repetitionCount == 0 ? null : g.getBoolean( colIndex, 0));
                 break;
             default: {
                 throw new UnsupportedTypeException("Type " + primitiveType.getPrimitiveTypeName()
                         + "is not supported");
             }
         }
-        return field;
     }
 
     // Convert parquet byte array to java timestamp
