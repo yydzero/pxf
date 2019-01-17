@@ -153,23 +153,14 @@ resources:
       bucket: {{tf-bucket-name}}
       bucket_path: {{tf-bucket-path}}
 
-- name: timed-trigger
-  type: time
-  source:
-    interval: {{perf-trigger-interval}}
-    location: America/Los_Angeles
-    start: {{perf-trigger-start}}
-    stop: {{perf-trigger-stop}}
-
 jobs:
 
 - name: compile_pxf
   plan:
-  - get: timed-trigger
-    trigger: true
   - aggregate:
     - get: gpdb_src
     - get: pxf_src
+      trigger: true
     - get: gpdb-pxf-dev-centos6
   - task: compile_pxf
     image: gpdb-pxf-dev-centos6

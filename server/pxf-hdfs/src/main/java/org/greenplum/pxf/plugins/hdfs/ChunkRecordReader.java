@@ -28,10 +28,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.DFSInputStream.ReadStatistics;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.compress.CodecPool;
@@ -71,8 +71,8 @@ public class ChunkRecordReader implements
     /**
      * Translates the FSDataInputStream into a DFSInputStream.
      */
-    private DFSInputStream getInputStream() {
-        return (DFSInputStream) (fileIn.getWrappedStream());
+    private FSInputStream getInputStream() {
+        return (FSInputStream) (fileIn.getWrappedStream());
     }
 
     /**
@@ -83,7 +83,7 @@ public class ChunkRecordReader implements
      * @return an instance of ReadStatistics class
      */
     public ReadStatistics getReadStatistics() {
-        return getInputStream().getReadStatistics();
+        throw new RuntimeException("Not implementted");
     }
 
     /**
@@ -108,7 +108,7 @@ public class ChunkRecordReader implements
         // openForWrite the file and seek to the start of the split
         final FileSystem fs = file.getFileSystem(job);
         fileIn = fs.open(file, ChunkReader.DEFAULT_BUFFER_SIZE);
-        fileLength = getInputStream().getFileLength();
+        fileLength = getInputStream().available();
         if (isCompressedInput()) {
             decompressor = CodecPool.getDecompressor(codec);
             if (codec instanceof SplittableCompressionCodec) {
