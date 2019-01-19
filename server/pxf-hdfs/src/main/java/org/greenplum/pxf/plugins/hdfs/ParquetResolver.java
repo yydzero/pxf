@@ -177,8 +177,10 @@ public class ParquetResolver extends BasePlugin implements Resolver {
             for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
                 if (type.isPrimitive()) {
                     if(type.getOriginalType() != null) {
+                        // we have a primitive that is part of key, value pair
                         field.val = type.getName() + mapkeyDelim + g.getValueToString(fieldIndex, repeatIndex);
                     } else {
+                        // we have a primitive in an array
                         field.val = g.getValueToString(fieldIndex, repeatIndex);
                     }
                     fieldList.add(field);

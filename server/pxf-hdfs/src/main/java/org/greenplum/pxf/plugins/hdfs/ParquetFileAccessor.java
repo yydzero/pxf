@@ -54,6 +54,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.parquet.schema.PrimitiveType.*;
+
 /**
  * Parquet file accessor.
  * Unit of operation is record.
@@ -256,41 +258,41 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             String columnName = column.columnName();
             int columnTypeCode = column.columnTypeCode();
 
-            PrimitiveType.PrimitiveTypeName typeName;
+            PrimitiveTypeName typeName;
             OriginalType origType = null;
             DecimalMetadata dmt = null;
             int length = 0;
             switch (DataType.get(columnTypeCode)) {
                 case BOOLEAN:
-                    typeName = PrimitiveType.PrimitiveTypeName.BOOLEAN;
+                    typeName = PrimitiveTypeName.BOOLEAN;
                     break;
                 case BYTEA:
-                    typeName = PrimitiveType.PrimitiveTypeName.BINARY;
+                    typeName = PrimitiveTypeName.BINARY;
                     break;
                 case BIGINT:
-                    typeName = PrimitiveType.PrimitiveTypeName.INT64;
+                    typeName = PrimitiveTypeName.INT64;
                     break;
                 case SMALLINT:
                     origType = OriginalType.INT_16;
-                    typeName = PrimitiveType.PrimitiveTypeName.INT32;
+                    typeName = PrimitiveTypeName.INT32;
                     break;
                 case INTEGER:
-                    typeName = PrimitiveType.PrimitiveTypeName.INT32;
+                    typeName = PrimitiveTypeName.INT32;
                     break;
                 case REAL:
-                    typeName = PrimitiveType.PrimitiveTypeName.FLOAT;
+                    typeName = PrimitiveTypeName.FLOAT;
                     break;
                 case FLOAT8:
-                    typeName = PrimitiveType.PrimitiveTypeName.DOUBLE;
+                    typeName = PrimitiveTypeName.DOUBLE;
                     break;
                 case NUMERIC:
                     origType = OriginalType.DECIMAL;
-                    typeName = PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY;
+                    typeName = PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY;
                     length = 16; //per parquet specs
                     dmt = new DecimalMetadata(DECIMAL_PRECISION, DECIMAL_SCALE);
                     break;
                 case TIMESTAMP:
-                    typeName = PrimitiveType.PrimitiveTypeName.INT96;
+                    typeName = PrimitiveTypeName.INT96;
                     break;
                 case DATE:
                 case TIME:
@@ -298,7 +300,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
                 case BPCHAR:
                 case TEXT:
                     origType = OriginalType.UTF8;
-                    typeName = PrimitiveType.PrimitiveTypeName.BINARY;
+                    typeName = PrimitiveTypeName.BINARY;
                     break;
                 default:
                     throw new UnsupportedTypeException("Type " + columnTypeCode + "is not supported");
