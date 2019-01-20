@@ -200,10 +200,12 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                             ObjectUtils.toString(group.getString(index, 0));
                     break;
                 case INT32:
-                    val = (type.getOriginalType() == OriginalType.INT_8 ||
-                            type.getOriginalType() == OriginalType.INT_16) ?
-                            (short)group.getInteger(index, 0) : group.getInteger(index, 0);
-
+                    if (type.getOriginalType() == OriginalType.INT_8 ||
+                            type.getOriginalType() == OriginalType.INT_16) {
+                        val = (short) group.getInteger(index, 0);
+                    } else {
+                        val = group.getInteger(index, 0);
+                    }
                     break;
                 case INT64:
                     val = group.getLong(index, 0);

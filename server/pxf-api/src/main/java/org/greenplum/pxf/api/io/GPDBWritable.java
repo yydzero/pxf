@@ -531,10 +531,6 @@ public class GPDBWritable implements Writable {
     }
 
     /**
-     * Getter/Setter methods to get/set the column value
-     */
-
-    /**
      * Sets the column value of the record.
      *
      * @param colIdx the column index
@@ -830,7 +826,7 @@ public class GPDBWritable implements Writable {
      * @param type the type OID that we want to check
      */
     private boolean isTextForm(int type) {
-        return !Arrays.asList(DataType.BIGINT, DataType.BOOLEAN, DataType.BYTEA, DataType.FLOAT8, DataType.INTEGER, DataType.REAL, DataType.SMALLINT).contains(DataType.get(type));
+        return DataType.isTextForm(type);
     }
 
     /**
