@@ -61,6 +61,9 @@ public class BridgeInputBuilder {
         }
 
         GPDBWritable gpdbWritable = makeGBDBWritable(inputStream);
+        if (gpdbWritable == null)
+            return null;
+
         GPDBWritableMapper mapper = new GPDBWritableMapper(gpdbWritable);
         int[] colTypes = gpdbWritable.getColType();
         List<OneField> record = new LinkedList<>();

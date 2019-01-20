@@ -23,7 +23,12 @@ package org.greenplum.pxf.api.io;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.EOFException;
+import java.io.IOException;
 import java.util.Arrays;
 
 
@@ -739,6 +744,14 @@ public class GPDBWritable implements Writable {
             throws TypeMismatchException {
         checkType(DataType.SMALLINT, colIdx, false);
         return (Short) colValue[colIdx];
+    }
+
+    public Object getObject(int colIdx) {
+        return colValue[colIdx];
+    }
+
+    public void setObject(int colIdx, Object val) {
+        colValue[colIdx] = val;
     }
 
     /**

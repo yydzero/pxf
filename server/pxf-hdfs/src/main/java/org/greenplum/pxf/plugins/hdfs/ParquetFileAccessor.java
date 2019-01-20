@@ -52,7 +52,6 @@ import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,8 +65,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     private static final int DECIMAL_PRECISION = 38;
     private static final int DEFAULT_PAGE_SIZE = 1024 * 1024;
     private static final int DEFAULT_FILE_SIZE = 128 * 1024 * 1024;
-    private static final int DEFAULT_ROWGROUP_SIZE = 8 * 1024 * 1024;
-    private static final int DEFAULT_DICTIONARY_PAGE_SIZE = 512 * 1024;
+    private static final int DEFAULT_ROWGROUP_SIZE = 64 * 1024 * 1024;
+    private static final int DEFAULT_DICTIONARY_PAGE_SIZE = 1024 * 1024;
     private static final WriterVersion DEFAULT_PARQUET_VERSION = WriterVersion.PARQUET_1_0;
 
     private MessageType schema;
@@ -104,6 +103,10 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         ParquetMetadata metadata = fileReader.getFooter();
         schema = metadata.getFileMetaData().getSchema();
         columnIO = new ColumnIOFactory().getColumnIO(schema);
+
+        // Set the schema to the metadata in the request context
+        // to avoid computing the schema again in the Resolver
+        context.setMetadata(schema);
         return true;
     }
 
@@ -119,7 +122,16 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         if (rowsRead == rowsInRowGroup && !readNextRowGroup())
             return null;
         rowsRead++;
-        return new OneRow(schema, recordReader.read());
+        return new OneRow(null, recordReader.read());
+    }
+
+    public List<OneRow> readNextBatch() {
+
+        int i = 0;
+        List<OneRow> list = new ArrayList<>();
+        while (rowsRead++ < rowsInRowGroup && i++ < 1000)
+            list.add(new OneRow(null, recordReader.read()));
+        return list;
     }
 
     private boolean readNextRowGroup() throws IOException {
@@ -192,7 +204,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
                 generateParquetSchema(context.getTupleDescription());
         LOG.debug("Schema fields = {}", schema.getFields());
 
-        // We get the parquet schema and set it to the metadata in the request context
+        // Set the schema to the metadata in the request context
         // to avoid computing the schema again in the Resolver
         context.setMetadata(schema);
         createParquetWriter();
@@ -240,19 +252,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
 
         String fileName = filePrefix + "." + fileIndex;
         fileName += codecName.getExtension() + ".parquet";
-        LOG.info("Creating file {}", fileName);
-        FileSystem fs = FileSystem.get(URI.create(fileName), configuration);
-        file = new Path(fileName);
-        if (fs.exists(file)) {
-            throw new IOException("File " + file.toString() + " already exists, can't write data");
-        }
-        Path parent = file.getParent();
-        if (!fs.exists(parent)) {
-            if (!fs.mkdirs(parent)) {
-                throw new IOException("Creation of dir '" + parent.toString() + "' failed");
-            }
-            LOG.debug("Created new dir {}", parent);
-        }
+        file = HdfsUtilities.createFile(fileName, configuration);
 
         GroupWriteSupport.setSchema(schema, configuration);
         //noinspection deprecation

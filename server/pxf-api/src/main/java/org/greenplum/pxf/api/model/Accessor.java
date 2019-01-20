@@ -22,6 +22,8 @@ package org.greenplum.pxf.api.model;
 
 import org.greenplum.pxf.api.OneRow;
 
+import java.util.List;
+
 /**
  * Interface that defines access to the source data store (e.g, a file on HDFS, a region of an HBase table, etc).
  */
@@ -41,6 +43,14 @@ public interface Accessor extends Plugin {
      * @throws Exception if reading from the resource failed
      */
     OneRow readNextObject() throws Exception;
+
+    default List<OneRow> readNextBatch() throws Exception {
+        return null;
+    }
+
+    default boolean supportsBatching() {
+        return false;
+    }
 
     /**
      * Closes the resource.

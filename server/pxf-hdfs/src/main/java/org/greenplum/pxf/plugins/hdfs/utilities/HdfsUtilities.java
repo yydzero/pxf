@@ -20,6 +20,7 @@ package org.greenplum.pxf.plugins.hdfs.utilities;
  */
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.BZip2Codec;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -38,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -107,6 +109,25 @@ public class HdfsUtilities {
         return codec instanceof SplittableCompressionCodec;
     }
 
+    public static Path createFile(String fileName, Configuration configuration) throws IOException {
+
+        LOG.info("Creating file {}", fileName);
+        FileSystem fs = FileSystem.get(URI.create(fileName), configuration);
+        Path file = new Path(fileName);
+        if (fs.exists(file)) {
+            throw new IOException("File " + file.toString() + " already exists, can't write data");
+        }
+        Path parent = file.getParent();
+        if (!fs.exists(parent)) {
+            if (!fs.mkdirs(parent)) {
+                throw new IOException("Creation of dir '" + parent.toString() + "' failed");
+            }
+            LOG.debug("Created new dir {}", parent);
+        }
+        fs.close();
+        return file;
+    }
+
     /**
      * Checks if requests should be handle in a single thread or not.
      *
@@ -139,7 +160,7 @@ public class HdfsUtilities {
         return prepareFragmentMetadata(fsp.getStart(), fsp.getLength(), fsp.getLocations());
     }
 
-    public static byte[] prepareFragmentMetadata(long start, long length, String[] locations)
+    private static byte[] prepareFragmentMetadata(long start, long length, String[] locations)
             throws IOException {
 
         ByteArrayOutputStream byteArrayStream = writeBaseFragmentInfo(start, length, locations);

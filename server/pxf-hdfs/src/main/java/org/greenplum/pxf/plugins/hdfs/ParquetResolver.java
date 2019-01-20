@@ -28,14 +28,12 @@ import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
-import org.greenplum.pxf.api.GPDBWritableMapper;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.UnsupportedTypeException;
 import org.greenplum.pxf.api.io.GPDBWritable;
 import org.greenplum.pxf.api.io.Writable;
 import org.greenplum.pxf.api.model.BasePlugin;
-import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
 
 import java.io.IOException;
@@ -56,18 +54,19 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private MessageType schema;
+    private Type[] types;
+    private PrimitiveType.PrimitiveTypeName[] primitiveTypeNames;
     private SimpleGroupFactory groupFactory;
     private GPDBWritable gpdbOutput;
-
-    @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
-
-        gpdbOutput = makeGPDBWritableOutput();
-    }
+    private int numFields;
 
     @Override
     public List<OneField> getFields(OneRow row) {
+        return null;
+    }
+
+    @Override
+    public OneRow setFields(List<OneField> record) {
         return null;
     }
 
@@ -77,23 +76,16 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     }
 
     @Override
-    public Writable getWritable(OneRow row) throws IOException {
+    public Writable getWritable(OneRow row) {
+        if (schema == null) {
+            initSchema();
+            gpdbOutput = makeGPDBWritableOutput();
+        }
         Group group = (Group) row.getData();
-        MessageType schema = (MessageType) row.getKey();
-
-        for (int i = 0; i < schema.getFieldCount(); i++) {
-            if (schema.getType(i).isPrimitive()) {
-                resolvePrimitive(i, group, schema.getType(i));
-            } else {
-                throw new UnsupportedTypeException("Only primitive types are supported.");
-            }
+        for (int i = 0; i < numFields; i++) {
+            resolvePrimitive(i, gpdbOutput, group, types[i]);
         }
         return gpdbOutput;
-    }
-
-    @Override
-    public OneRow setFields(List<OneField> record) {
-        return null;
     }
 
     /**
@@ -106,16 +98,13 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     @Override
     public OneRow setWritable(Writable writable) throws IOException {
         if (groupFactory == null) {
-            schema = (MessageType)context.getMetadata();
+            initSchema();
             groupFactory = new SimpleGroupFactory(schema);
         }
         Group group = groupFactory.newGroup();
         GPDBWritable gpdbWritable = (GPDBWritable)writable;
-        int[] colTypes = gpdbWritable.getColType();
-        GPDBWritableMapper mapper = new GPDBWritableMapper(gpdbWritable);
-        for (int i = 0; i < colTypes.length; i++) {
-            mapper.setDataType(colTypes[i]);
-            fillGroup(i, mapper.getData(i), group, schema.getType(i));
+        for (int i = 0; i < numFields; i++) {
+            fillGroup(i, gpdbWritable.getObject(i), group, types[i]);
         }
         return new OneRow(null, group);
     }
@@ -135,10 +124,23 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         return new GPDBWritable(schema);
     }
 
+    private void initSchema() {
+        schema = (MessageType)context.getMetadata();
+        numFields = schema.getFieldCount();
+        types = new Type[numFields];
+        primitiveTypeNames = new PrimitiveType.PrimitiveTypeName[numFields];
+        for (int i = 0; i < numFields; i++) {
+            types[i] = schema.getType(i);
+            if (!types[i].isPrimitive())
+                throw new UnsupportedTypeException("Only primitive types are supported.");
+            primitiveTypeNames[i] = types[i].asPrimitiveType().getPrimitiveTypeName();
+        }
+    }
+
     private void fillGroup(int index, Object val, Group group, Type type) throws IOException {
         if (val == null)
             return;
-        switch (type.asPrimitiveType().getPrimitiveTypeName()) {
+        switch (primitiveTypeNames[index]) {
             case BINARY:
                 if (type.getOriginalType() == OriginalType.UTF8)
                     group.add(index, (String) val);
@@ -188,55 +190,46 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         }
     }
 
-    private void resolvePrimitive(Integer colIndex, Group g, Type type) throws GPDBWritable.TypeMismatchException {
-        OriginalType originalType = type.getOriginalType();
-        PrimitiveType primitiveType = type.asPrimitiveType();
-        int repetitionCount = g.getFieldRepetitionCount( colIndex);
-        switch (primitiveType.getPrimitiveTypeName()) {
-            case BINARY:
-                if (originalType == null) {
-                    gpdbOutput.setBytes(colIndex, repetitionCount == 0 ? null : g.getBinary(colIndex, 0).getBytes());
-                } else {
-                    gpdbOutput.setString(colIndex, ObjectUtils.toString(repetitionCount == 0 ? null : g.getString(colIndex, 0)));
-                }
-                break;
-            case INT32:
-                if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
-                    gpdbOutput.setShort(colIndex, repetitionCount == 0 ? null : (short)g.getInteger(colIndex, 0));
-                } else {
-                    gpdbOutput.setInt(colIndex, repetitionCount == 0 ? null : g.getInteger(colIndex, 0));
-                }
-                break;
-            case INT64:
-                gpdbOutput.setLong(colIndex, repetitionCount == 0 ? null : g.getLong(colIndex, 0));
-                break;
-            case DOUBLE:
-                gpdbOutput.setDouble(colIndex, repetitionCount == 0 ? null : g.getDouble(colIndex, 0));
-                break;
-            case INT96:
-                gpdbOutput.setString(colIndex, ObjectUtils.toString(
-                        repetitionCount == 0 ? null : bytesToTimestamp(g.getInt96(colIndex, 0).getBytes()), null));
-                break;
-            case FLOAT:
-                gpdbOutput.setFloat(colIndex, repetitionCount == 0 ? null : g.getFloat(colIndex, 0));
-                break;
-            case FIXED_LEN_BYTE_ARRAY:
-                if (repetitionCount > 0) {
+    private void resolvePrimitive(int index, GPDBWritable gpdbOutput, Group group, Type type) {
+        Object val = null;
+        int repetitionCount = group.getFieldRepetitionCount(index);
+        if (repetitionCount > 0) {
+            switch (primitiveTypeNames[index]) {
+                case BINARY:
+                    val = (type.getOriginalType() == null) ? group.getBinary(index, 0).getBytes() :
+                            ObjectUtils.toString(group.getString(index, 0));
+                    break;
+                case INT32:
+                    val = (type.getOriginalType() == OriginalType.INT_8 ||
+                            type.getOriginalType() == OriginalType.INT_16) ?
+                            (short)group.getInteger(index, 0) : group.getInteger(index, 0);
+
+                    break;
+                case INT64:
+                    val = group.getLong(index, 0);
+                    break;
+                case DOUBLE:
+                    val = group.getDouble(index, 0);
+                    break;
+                case INT96:
+                    val = ObjectUtils.toString(bytesToTimestamp(group.getInt96(index, 0).getBytes()), null);
+                    break;
+                case FLOAT:
+                    val = group.getFloat(index, 0);
+                    break;
+                case FIXED_LEN_BYTE_ARRAY:
                     int scale = type.asPrimitiveType().getDecimalMetadata().getScale();
-                    gpdbOutput.setString(colIndex, ObjectUtils.toString(
-                            new BigDecimal(new BigInteger(g.getBinary(colIndex, 0).getBytes()), scale), null));
-                } else {
-                    gpdbOutput.setString(colIndex, null);
+                    val = ObjectUtils.toString(new BigDecimal(new BigInteger(group.getBinary(index, 0).getBytes()), scale), null);
+                    break;
+                case BOOLEAN:
+                    val = group.getBoolean(index, 0);
+                    break;
+                default: {
+                    throw new UnsupportedTypeException("Type " + primitiveTypeNames[index] + "is not supported");
                 }
-                break;
-            case BOOLEAN:
-                gpdbOutput.setBoolean(colIndex, repetitionCount == 0 ? null : g.getBoolean( colIndex, 0));
-                break;
-            default: {
-                throw new UnsupportedTypeException("Type " + primitiveType.getPrimitiveTypeName()
-                        + "is not supported");
             }
         }
+        gpdbOutput.setObject(index, repetitionCount == 0 ? null : val);
     }
 
     // Convert parquet byte array to java timestamp
