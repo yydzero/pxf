@@ -83,7 +83,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         }
         Group group = (Group) row.getData();
         for (int i = 0; i < numFields; i++) {
-            resolvePrimitive(i, gpdbOutput, group, types[i]);
+            resolvePrimitive(i, group, types[i]);
         }
         return gpdbOutput;
     }
@@ -190,14 +190,14 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         }
     }
 
-    private void resolvePrimitive(int index, GPDBWritable gpdbOutput, Group group, Type type) {
+    private void resolvePrimitive(int index, Group group, Type type) {
         Object val = null;
         int repetitionCount = group.getFieldRepetitionCount(index);
         if (repetitionCount > 0) {
             switch (primitiveTypeNames[index]) {
                 case BINARY:
                     val = (type.getOriginalType() == null) ? group.getBinary(index, 0).getBytes() :
-                            ObjectUtils.toString(group.getString(index, 0));
+                            ObjectUtils.toString(group.getString(index, 0)) + "\0";
                     break;
                 case INT32:
                     if (type.getOriginalType() == OriginalType.INT_8 ||
@@ -214,14 +214,14 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                     val = group.getDouble(index, 0);
                     break;
                 case INT96:
-                    val = ObjectUtils.toString(bytesToTimestamp(group.getInt96(index, 0).getBytes()), null);
+                    val = ObjectUtils.toString(bytesToTimestamp(group.getInt96(index, 0).getBytes()), null) + "\0";
                     break;
                 case FLOAT:
                     val = group.getFloat(index, 0);
                     break;
                 case FIXED_LEN_BYTE_ARRAY:
                     int scale = type.asPrimitiveType().getDecimalMetadata().getScale();
-                    val = ObjectUtils.toString(new BigDecimal(new BigInteger(group.getBinary(index, 0).getBytes()), scale), null);
+                    val = ObjectUtils.toString(new BigDecimal(new BigInteger(group.getBinary(index, 0).getBytes()), scale), null) + "\0";
                     break;
                 case BOOLEAN:
                     val = group.getBoolean(index, 0);

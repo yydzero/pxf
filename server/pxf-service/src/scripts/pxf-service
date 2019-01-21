@@ -164,6 +164,7 @@ function waitForTomcat()
     sleep_time=1 # sleep 1 second between attempts
 
     # wait until tomcat is up:
+    sleep 2
     echo Checking if tomcat is up and running...
     until curl --silent --connect-timeout 1 -I http://localhost:${PXF_PORT} | grep 'Coyote'
     do

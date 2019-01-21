@@ -67,12 +67,13 @@ public class HdfsDataFragmenter extends BaseFragmenter {
         Path path = new Path(hcfsType.getDataUri(configuration, context));
         List<InputSplit> splits = getSplits(path);
 
-        LOG.debug("Total number of fragments = {}", splits.size());
+        LOG.info("Total number of fragments = {}", splits.size());
         for (InputSplit split : splits) {
             FileSplit fsp = (FileSplit) split;
 
             String filepath = fsp.getPath().toString();
             String[] hosts = fsp.getLocations();
+            LOG.info("Split {} length = {}", filepath, fsp.getLength());
 
             /*
              * metadata information includes: file split's start, length and

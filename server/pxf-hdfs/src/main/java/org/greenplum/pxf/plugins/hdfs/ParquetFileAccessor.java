@@ -64,8 +64,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     private static final int DECIMAL_SCALE = 18;
     private static final int DECIMAL_PRECISION = 38;
     private static final int DEFAULT_PAGE_SIZE = 1024 * 1024;
-    private static final int DEFAULT_FILE_SIZE = 128 * 1024 * 1024;
-    private static final int DEFAULT_ROWGROUP_SIZE = 64 * 1024 * 1024;
+    private static final int DEFAULT_FILE_SIZE = 64 * 1024 * 1024;
+    private static final int DEFAULT_ROWGROUP_SIZE = 65 * 1024 * 1024;
     private static final int DEFAULT_DICTIONARY_PAGE_SIZE = 1024 * 1024;
     private static final WriterVersion DEFAULT_PARQUET_VERSION = WriterVersion.PARQUET_1_0;
 
@@ -226,6 +226,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         if (rowsWritten % 1000 == 0 && parquetWriter.getDataSize() > DEFAULT_FILE_SIZE) {
             parquetWriter.close();
             totalRowsWritten += rowsWritten;
+            LOG.info("Rows written = ", rowsWritten);
             rowsWritten = 0;
             fileIndex++;
             createParquetWriter();
