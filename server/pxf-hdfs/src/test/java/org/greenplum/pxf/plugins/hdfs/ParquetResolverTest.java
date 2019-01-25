@@ -33,15 +33,15 @@ import static org.junit.Assert.*;
 @RunWith(MockitoJUnitRunner.class)
 public class ParquetResolverTest {
 
-    ParquetResolver resolver;
-    RequestContext context;
-    MessageType schema;
+    private ParquetResolver resolver;
+    private RequestContext context;
+    private MessageType schema;
 
     @Before
     public void setup() {
         resolver = new ParquetResolver();
         context = new RequestContext();
-        schema = new MessageType("test", new Type[]{});
+        schema = new MessageType("test");
         context.setMetadata(schema);
     }
 
@@ -62,8 +62,8 @@ public class ParquetResolverTest {
 
     @Test
     public void testGetFieldsPrimitive() throws IOException, ParseException {
-        // TODO define correct schema corresponding to the dataset
         schema = getParquetSchemaForPrimitiveTypes();
+        // schema has changed, set metadata again
         context.setMetadata(schema);
         resolver.initialize(context);
 
@@ -76,7 +76,7 @@ public class ParquetResolverTest {
         assertField(fields, 1, "s_6", DataType.TEXT);
         assertField(fields, 2, 1, DataType.INTEGER);
         assertField(fields, 3, 6.0d, DataType.FLOAT8);
-        assertField(fields, 4, BigDecimal.valueOf(1234560000000000000l, 18), DataType.NUMERIC);
+        assertField(fields, 4, BigDecimal.valueOf(1234560000000000000L, 18), DataType.NUMERIC);
         assertField(fields, 5, java.sql.Timestamp.valueOf(ZonedDateTime.parse("2013-07-13T21:00:05-07:00").toLocalDateTime()), DataType.TIMESTAMP);
         assertField(fields, 6, 7.7f, DataType.REAL);
         assertField(fields, 7, 23456789l, DataType.BIGINT);

@@ -382,7 +382,7 @@ public class RequestContext {
     }
 
     /**
-     * Returns the contents of pxf_remote_service_login set in Gpdb. Should the
+     * Returns the contents of pxf_remote_service_login set in GPDB. Should the
      * user set it to an empty string this function will return null.
      *
      * @return remote login details if set, null otherwise
@@ -392,7 +392,7 @@ public class RequestContext {
     }
 
     /**
-     * Returns the contents of pxf_remote_service_secret set in Gpdb. Should the
+     * Returns the contents of pxf_remote_service_secret set in GPDB. Should the
      * user set it to an empty string this function will return null.
      *
      * @return remote password if set, null otherwise
@@ -477,7 +477,7 @@ public class RequestContext {
     /**
      * Sets number of attributes projected
      *
-     * @param numAttrsProjected number of attrivutes projected
+     * @param numAttrsProjected number of attributes projected
      */
     public void setNumAttrsProjected(int numAttrsProjected) {
         this.numAttrsProjected = numAttrsProjected;
