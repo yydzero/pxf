@@ -14,7 +14,7 @@
     </property>
     <property>
         <name>fs.s3a.fast.upload.buffer</name>
-        <value>bytebuffer</value>
+        <value>disk</value>
     </property>
     <property>
         <name>fs.s3a.multipart.size</name>
