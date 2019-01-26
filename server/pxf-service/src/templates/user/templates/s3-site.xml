@@ -17,7 +17,7 @@
         <value>bytebuffer</value>
     </property>
     <property>
-        <name>fs.s3a.multipart.size<</name>
+        <name>fs.s3a.multipart.size</name>
         <value>32M</value>
     </property>
 </configuration>
