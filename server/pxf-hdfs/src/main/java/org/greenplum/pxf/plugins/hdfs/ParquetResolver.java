@@ -98,6 +98,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                     group.add(index, Binary.fromReusedByteArray((byte[]) field.val));
                 break;
             case INT32:
+                //if ( (type.getOriginalType() == OriginalType.INT_16) || (type.getOriginalType() == OriginalType.INT_8) )
                 if (type.getOriginalType() == OriginalType.INT_16)
                     group.add(index, (Short) field.val);
                 else

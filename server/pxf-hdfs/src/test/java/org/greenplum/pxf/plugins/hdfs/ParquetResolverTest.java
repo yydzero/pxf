@@ -51,6 +51,53 @@ public class ParquetResolverTest {
     }
 
     @Test
+    public void testSetFieldsPrimitive() throws IOException {
+        schema = getParquetSchemaForPrimitiveTypes(false);
+        // schema has changed, set metadata again
+        context.setMetadata(schema);
+        resolver.initialize(context);
+        List<OneField> fields = new ArrayList<>();
+        fields.add(new OneField(DataType.TEXT.getOID(), "row1"));
+        fields.add(new OneField(DataType.TEXT.getOID(), "s_6"));
+        fields.add(new OneField(DataType.INTEGER.getOID(), 1));
+        fields.add(new OneField(DataType.FLOAT8.getOID(), 6.0d));
+        fields.add(new OneField(DataType.NUMERIC.getOID(), "1.234560000000000000"));
+//        fields.add(new OneField(DataType.TIMESTAMP.getOID(), java.sql.Timestamp.valueOf(ZonedDateTime.parse("2013-07-13T21:00:05-07:00").toLocalDateTime())));
+        fields.add(new OneField(DataType.TIMESTAMP.getOID(), "2013-07-13 21:00:05"));
+        fields.add(new OneField(DataType.REAL.getOID(), 7.7f));
+        fields.add(new OneField(DataType.BIGINT.getOID(), 23456789l));
+        fields.add(new OneField(DataType.BOOLEAN.getOID(), false));
+        fields.add(new OneField(DataType.SMALLINT.getOID(), (short) 1));
+        fields.add(new OneField(DataType.SMALLINT.getOID(), (short) 10));
+        fields.add(new OneField(DataType.TEXT.getOID(), "abcd"));
+        fields.add(new OneField(DataType.TEXT.getOID(), "abc"));
+        fields.add(new OneField(DataType.BYTEA.getOID(), new byte[]{(byte) 49}));
+        OneRow row = resolver.setFields(fields);
+        assertNotNull(row);
+        Object data = row.getData();
+        assertNotNull(data);
+        assertTrue(data instanceof Group);
+        Group group = (Group) data;
+
+        assertEquals("row1", group.getString(0,0));
+        assertEquals(1, group.getFieldRepetitionCount(0));
+
+        assertEquals("s_6", group.getString(1,0));
+        assertEquals(1, group.getFieldRepetitionCount(1));
+
+        assertEquals(1, group.getInteger(2,0));
+        assertEquals(1, group.getFieldRepetitionCount(2));
+
+        assertEquals(6.0d, group.getDouble(3,0), 0d);
+        assertEquals(1, group.getFieldRepetitionCount(3));
+
+        org.apache.parquet.pig.convert..DecimalUtils
+        assertEquals(11, group.getBinary(4,0));
+        assertEquals(1, group.getFieldRepetitionCount(4));
+
+    }
+
+    @Test
     public void testGetFieldsPrimitive_EmptySchema() throws IOException {
         resolver.initialize(context);
 
@@ -62,7 +109,7 @@ public class ParquetResolverTest {
 
     @Test
     public void testGetFieldsPrimitive() throws IOException, ParseException {
-        schema = getParquetSchemaForPrimitiveTypes();
+        schema = getParquetSchemaForPrimitiveTypes(true);
         // schema has changed, set metadata again
         context.setMetadata(schema);
         resolver.initialize(context);
@@ -133,7 +180,7 @@ public class ParquetResolverTest {
 
     }
 
-    private MessageType getParquetSchemaForPrimitiveTypes() {
+    private MessageType getParquetSchemaForPrimitiveTypes(boolean readCase) {
         List<Type> fields = new ArrayList<>();
 
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "s1", OriginalType.UTF8));
@@ -145,7 +192,10 @@ public class ParquetResolverTest {
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.FLOAT, "f", null));
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT64, "bg", null));
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BOOLEAN, "b", null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT32, "tn", OriginalType.INT_8));
+
+        // GPDB only has int16 and not int8 type, so for write tiny numbers int8 are still treated as shorts in16
+        OriginalType tinyType = readCase ? OriginalType.INT_8 : OriginalType.INT_16;
+        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT32, "tn", tinyType));
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT32, "sml", OriginalType.INT_16));
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "vc1", OriginalType.UTF8));
         fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "c1", OriginalType.UTF8));
@@ -173,4 +223,5 @@ public class ParquetResolverTest {
         assertEquals(expectedSize, result.size());
         return result;
     }
+
 }
