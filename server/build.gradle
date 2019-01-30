@@ -179,7 +179,8 @@ project('pxf-hdfs') {
         compile "org.apache.parquet:parquet-encoding:${parquetVersion}"
         compile "org.apache.parquet:parquet-generator:${parquetVersion}"
         compile "org.apache.parquet:parquet-hadoop:${parquetVersion}"
-        testCompile    "org.apache.parquet:parquet-pig:${parquetVersion}"
+        // for parquet tests
+        testCompile "org.apache.parquet:parquet-pig:1.10.0"
 
         bundleJars "org.apache.avro:avro:1.7.7"
     }

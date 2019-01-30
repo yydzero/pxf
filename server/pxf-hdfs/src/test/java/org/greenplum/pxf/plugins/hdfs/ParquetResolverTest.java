@@ -4,12 +4,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.column.page.PageReadStore;
 import org.apache.parquet.example.data.Group;
+import org.apache.parquet.example.data.simple.NanoTime;
 import org.apache.parquet.example.data.simple.convert.GroupRecordConverter;
 import org.apache.parquet.format.converter.ParquetMetadataConverter;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.io.ColumnIOFactory;
 import org.apache.parquet.io.MessageColumnIO;
 import org.apache.parquet.io.RecordReader;
+import org.apache.parquet.pig.convert.DecimalUtils;
 import org.apache.parquet.schema.*;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
@@ -22,7 +24,6 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.text.ParseException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,7 +63,6 @@ public class ParquetResolverTest {
         fields.add(new OneField(DataType.INTEGER.getOID(), 1));
         fields.add(new OneField(DataType.FLOAT8.getOID(), 6.0d));
         fields.add(new OneField(DataType.NUMERIC.getOID(), "1.234560000000000000"));
-//        fields.add(new OneField(DataType.TIMESTAMP.getOID(), java.sql.Timestamp.valueOf(ZonedDateTime.parse("2013-07-13T21:00:05-07:00").toLocalDateTime())));
         fields.add(new OneField(DataType.TIMESTAMP.getOID(), "2013-07-13 21:00:05"));
         fields.add(new OneField(DataType.REAL.getOID(), 7.7f));
         fields.add(new OneField(DataType.BIGINT.getOID(), 23456789l));
@@ -79,22 +79,63 @@ public class ParquetResolverTest {
         assertTrue(data instanceof Group);
         Group group = (Group) data;
 
+        // assert column values
         assertEquals("row1", group.getString(0,0));
-        assertEquals(1, group.getFieldRepetitionCount(0));
-
         assertEquals("s_6", group.getString(1,0));
-        assertEquals(1, group.getFieldRepetitionCount(1));
-
         assertEquals(1, group.getInteger(2,0));
-        assertEquals(1, group.getFieldRepetitionCount(2));
-
         assertEquals(6.0d, group.getDouble(3,0), 0d);
-        assertEquals(1, group.getFieldRepetitionCount(3));
+        assertEquals(BigDecimal.valueOf(1234560000000000000L, 18),
+                DecimalUtils.binaryToDecimal(group.getBinary(4,0), 19, 18));
 
-        org.apache.parquet.pig.convert..DecimalUtils
-        assertEquals(11, group.getBinary(4,0));
-        assertEquals(1, group.getFieldRepetitionCount(4));
+        NanoTime nanoTime = NanoTime.fromBinary(group.getInt96(5,0));
+        assertEquals(2456487, nanoTime.getJulianDay()); // 13 Jul 2013 in Julian days
+        assertEquals((21*60*60+5L) * 1000 * 1000 * 1000, nanoTime.getTimeOfDayNanos()); // 21:00:05 time
+        assertEquals(7.7f, group.getFloat(6,0), 0f);
+        assertEquals(23456789L, group.getLong(7,0));
+        assertEquals(false, group.getBoolean(8,0));
+        assertEquals(1, group.getInteger(9,0));
+        assertEquals(10, group.getInteger(10,0));
+        assertEquals("abcd", group.getString(11,0));
+        assertEquals("abc", group.getString(12,0));
+        assertArrayEquals(new byte[]{(byte) 49}, group.getBinary(13,0).getBytes());
 
+        // assert value repetition count
+        for (int i=0; i<14; i++) {
+            assertEquals(1, group.getFieldRepetitionCount(i));
+        }
+    }
+
+    @Test
+    public void testSetFieldsPrimitive_Nulls() throws IOException {
+        schema = getParquetSchemaForPrimitiveTypes(false);
+        // schema has changed, set metadata again
+        context.setMetadata(schema);
+        resolver.initialize(context);
+        List<OneField> fields = new ArrayList<>();
+        fields.add(new OneField(DataType.TEXT.getOID(), null));
+        fields.add(new OneField(DataType.TEXT.getOID(), null));
+        fields.add(new OneField(DataType.INTEGER.getOID(), null));
+        fields.add(new OneField(DataType.FLOAT8.getOID(), null));
+        fields.add(new OneField(DataType.NUMERIC.getOID(), null));
+        fields.add(new OneField(DataType.TIMESTAMP.getOID(), null));
+        fields.add(new OneField(DataType.REAL.getOID(), null));
+        fields.add(new OneField(DataType.BIGINT.getOID(), null));
+        fields.add(new OneField(DataType.BOOLEAN.getOID(), null));
+        fields.add(new OneField(DataType.SMALLINT.getOID(), null));
+        fields.add(new OneField(DataType.SMALLINT.getOID(), null));
+        fields.add(new OneField(DataType.TEXT.getOID(), null));
+        fields.add(new OneField(DataType.TEXT.getOID(), null));
+        fields.add(new OneField(DataType.BYTEA.getOID(), null));
+        OneRow row = resolver.setFields(fields);
+        assertNotNull(row);
+        Object data = row.getData();
+        assertNotNull(data);
+        assertTrue(data instanceof Group);
+        Group group = (Group) data;
+        // assert value repetition count
+        for (int i=0; i<14; i++) {
+            assertEquals(0, group.getFieldRepetitionCount(i));
+        }
     }
 
     @Test
@@ -108,7 +149,7 @@ public class ParquetResolverTest {
     }
 
     @Test
-    public void testGetFieldsPrimitive() throws IOException, ParseException {
+    public void testGetFieldsPrimitive() throws IOException {
         schema = getParquetSchemaForPrimitiveTypes(true);
         // schema has changed, set metadata again
         context.setMetadata(schema);
