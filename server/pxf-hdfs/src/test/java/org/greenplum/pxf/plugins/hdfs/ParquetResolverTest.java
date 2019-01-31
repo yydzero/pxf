@@ -204,6 +204,34 @@ public class ParquetResolverTest {
         assertField(fields, 13, null, DataType.BYTEA);
     }
 
+    @Test
+    public void testGetFieldsComplex_RepeatedString() throws IOException {
+        List<Type> columns = new ArrayList<>();
+        columns.add(new PrimitiveType(Type.Repetition.REPEATED, PrimitiveTypeName.BINARY, "myString", OriginalType.UTF8));
+        schema = new MessageType("TestProtobuf.StringArray", columns);
+        context.setMetadata(schema);
+        resolver.initialize(context);
+
+        List<Group> groups = readParquetFile("proto-repeated-string.parquet", 3);
+        List<OneField> fields;
+
+        // row 0
+        fields = assertRow(groups, 0, 1);
+        assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
+        assertEquals("{\"myString\":[\"hello\",\"world\"]}", fields.get(0).val);
+
+        // row 1
+        fields = assertRow(groups, 1, 1);
+        assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
+        assertEquals("{\"myString\":[\"good\",\"bye\"]}", fields.get(0).val);
+
+        // row 2
+        fields = assertRow(groups, 2, 1);
+        assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
+        assertEquals("{\"myString\":[\"one\",\"two\",\"three\"]}", fields.get(0).val);
+
+    }
+
     private List<OneField> assertRow(List<Group> groups, int desiredRow, int numFields) {
         OneRow row = new OneRow(groups.get(desiredRow)); // get row
         List<OneField> fields = resolver.getFields(row);

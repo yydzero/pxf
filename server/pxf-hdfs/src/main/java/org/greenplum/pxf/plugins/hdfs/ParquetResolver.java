@@ -147,6 +147,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 
         for (int fieldIndex = 0; fieldIndex < schema.getFieldCount(); fieldIndex++) {
             if (schema.getType(fieldIndex).isPrimitive()) {
+                //TODO check repetition count > 1 or REPEATED type -- if repeated with single value is it array or primitive ?
                 output.add(resolvePrimitive(fieldIndex, group, schema.getType(fieldIndex)));
             } else {
                 Type type = schema.getFields().get(fieldIndex);
