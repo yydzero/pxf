@@ -218,17 +218,19 @@ public class ParquetResolverTest {
         // row 0
         fields = assertRow(groups, 0, 1);
         assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
-        assertEquals("{\"myString\":[\"hello\",\"world\"]}", fields.get(0).val);
+        assertEquals("[\"hello\",\"world\"]", fields.get(0).val);
 
         // row 1
         fields = assertRow(groups, 1, 1);
         assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
-        assertEquals("{\"myString\":[\"good\",\"bye\"]}", fields.get(0).val);
+        assertEquals("[\"good\",\"bye\"]", fields.get(0).val);
 
         // row 2
         fields = assertRow(groups, 2, 1);
         assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
-        assertEquals("{\"myString\":[\"one\",\"two\",\"three\"]}", fields.get(0).val);
+        assertEquals("[\"one\",\"two\",\"three\"]", fields.get(0).val);
+
+        {"foo": {"bar": [1,2,3]}}
 
     }
 

@@ -113,9 +113,6 @@ project('pxf') {
     jar.enabled = false
     dependencies {
         // AWS S3 support jars
-        bundleJars "com.fasterxml.jackson.core:jackson-core:2.6.7"
-        bundleJars "com.fasterxml.jackson.core:jackson-databind:2.6.7.1"
-        bundleJars "com.fasterxml.jackson.core:jackson-annotations:2.6.0"
         bundleJars "org.apache.httpcomponents:httpclient:4.5.2"
         bundleJars "org.apache.httpcomponents:httpcore:4.4.4"
         bundleJars "org.apache.hadoop:hadoop-aws:${hadoopVersion}"
@@ -167,6 +164,10 @@ project('pxf-hdfs') {
     dependencies {
         compile(project(':pxf-api'))
         compile "org.apache.avro:avro-mapred:1.7.7"
+        compile "com.fasterxml.jackson.core:jackson-databind:2.6.7.1"
+        compile "com.fasterxml.jackson.core:jackson-core:2.6.7"
+        compile "com.fasterxml.jackson.core:jackson-annotations:2.6.0"
+
         compile "org.apache.hadoop:hadoop-mapreduce-client-core:${hadoopVersion}"
         compile "org.apache.hadoop:hadoop-yarn-api:${hadoopVersion}" // Kerberos dependency
         compile "org.apache.hadoop:hadoop-common:${hadoopVersion}"
