@@ -52,7 +52,7 @@ public class ParquetResolverTest {
     }
 
     @Test
-    public void testSetFieldsPrimitive() throws IOException {
+    public void testSetFields_Primitive() throws IOException {
         schema = getParquetSchemaForPrimitiveTypes(false);
         // schema has changed, set metadata again
         context.setMetadata(schema);
@@ -106,7 +106,7 @@ public class ParquetResolverTest {
     }
 
     @Test
-    public void testSetFieldsPrimitive_Nulls() throws IOException {
+    public void testSetFields_Primitive_Nulls() throws IOException {
         schema = getParquetSchemaForPrimitiveTypes(false);
         // schema has changed, set metadata again
         context.setMetadata(schema);
@@ -139,7 +139,7 @@ public class ParquetResolverTest {
     }
 
     @Test
-    public void testGetFieldsPrimitive_EmptySchema() throws IOException {
+    public void testGetFields_Primitive_EmptySchema() throws IOException {
         resolver.initialize(context);
 
         List<Group> groups = readParquetFile("primitive_types.parquet", 25);
@@ -149,7 +149,7 @@ public class ParquetResolverTest {
     }
 
     @Test
-    public void testGetFieldsPrimitive() throws IOException {
+    public void testGetFields_Primitive() throws IOException {
         schema = getParquetSchemaForPrimitiveTypes(true);
         // schema has changed, set metadata again
         context.setMetadata(schema);
@@ -205,7 +205,7 @@ public class ParquetResolverTest {
     }
 
     @Test
-    public void testGetFieldsComplex_RepeatedString() throws IOException {
+    public void testGetFields_Primitive_RepeatedString() throws IOException {
         List<Type> columns = new ArrayList<>();
         columns.add(new PrimitiveType(Type.Repetition.REPEATED, PrimitiveTypeName.BINARY, "myString", OriginalType.UTF8));
         schema = new MessageType("TestProtobuf.StringArray", columns);
@@ -229,8 +229,6 @@ public class ParquetResolverTest {
         fields = assertRow(groups, 2, 1);
         assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
         assertEquals("[\"one\",\"two\",\"three\"]", fields.get(0).val);
-
-        {"foo": {"bar": [1,2,3]}}
 
     }
 

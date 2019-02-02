@@ -227,7 +227,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
             case INT96:
                 LocalDateTime date = LocalDateTime.parse((String) field.val, dateFormatter);
                 long millisSinceEpoch = date.toEpochSecond(ZoneOffset.UTC) * SECOND_IN_MILLIS;
-                group.add(index, getBinary(millisSinceEpoch));
+                group.add(index, ParquetTypeConverter.getBinary(millisSinceEpoch));
                 break;
             case BOOLEAN:
                 group.add(index, (Boolean) field.val);
@@ -242,7 +242,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         Group group = (Group) row.getData();
         List<OneField> output = new LinkedList<>();
 
-        for (int fieldIndex = 0; fieldIndex < schema.getFieldCount(); fieldIndex++) {
+        for (int columnIndex = 0; columnIndex < schema.getFieldCount(); columnIndex++) {
 
 //            Type parquetType = schema.getType(fieldIndex);
 //            if (parquetType.getRepetition() == REPEATED) {
@@ -252,23 +252,24 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 //            }
 
 
-            Type type = schema.getType(fieldIndex);
-            if (schema.getType(fieldIndex).isPrimitive()) {
-                output.add(resolvePrimitive(fieldIndex, group, type));
+            Type type = schema.getType(columnIndex);
+            if (schema.getType(columnIndex).isPrimitive()) {
+                output.add(resolvePrimitive(group, columnIndex, type, 0));
             } else {
 //                int repeatCount = group.getFieldRepetitionCount(fieldIndex);
 //                for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
 //                    output.add(resolveComplex(group.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
 //                }
-                output.add(resolveComplex(group.getGroup(fieldIndex, 0), type.asGroupType()));
+                output.add(resolveComplex(group.getGroup(columnIndex, 0), type.asGroupType(), 0));
             }
 
         }
         return output;
     }
 
-    private OneField resolveComplex(Group g, GroupType groupType) {
+    private OneField resolveComplex(Group g, GroupType groupType, int level) {
 
+        level++;
         ObjectNode node = mapper.createObjectNode();
 
 
@@ -287,24 +288,25 @@ public class ParquetResolver extends BasePlugin implements Resolver {
             int repeatCount = g.getFieldRepetitionCount(fieldIndex);
 
             // primitive ? --> cal our method, get either value or json back, hook to key
-            "foo" : 123
-            "froo": [123, 567]
-            Object value = resolvePrimitive(fieldIndex, g, type).val;
-            node.put(type.getName(), )
+            //"foo" : 123
+            //"froo": [123, 567]
+            Object value = resolvePrimitive(g, fieldIndex, type, level).val;
+            //node.put(type.getName(), )
 
 
             for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
                 if (type.isPrimitive()) {
                     if(type.getOriginalType() != null) {
                         // we have a primitive that is part of key, value pair
-                        field.val = type.getName() + mapkeyDelim + g.getValueToString(fieldIndex, repeatIndex);
+                        // TODO: create JsonNode
+                        //field.val = type.getName() + mapkeyDelim + g.getValueToString(fieldIndex, repeatIndex);
                     } else {
                         // we have a primitive in an array
-                        field.val = g.getValueToString(fieldIndex, repeatIndex);
+                        //field.val = g.getValueToString(fieldIndex, repeatIndex);
                     }
-                    fieldList.add(field);
+                    //fieldList.add(field);
                 } else {
-                    fieldList.add(resolveComplex(g.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
+                    fieldList.add(resolveComplex(g.getGroup(fieldIndex, repeatIndex), type.asGroupType(), level));
                 }
             }
         }
@@ -324,77 +326,50 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         return result;
     }
 
-    private OneField resolveArray(int index, Group g, Type type) {
-        List<OneField> fieldList = new LinkedList<>();
-        for (int i = 0; i < g.getFieldRepetitionCount(index); i++)
-            fieldList.add(resolvePrimitive(index, g, type));
-        OneField field = new OneField();
-        field.type = DataType.TEXT.getOID();
-        field.val = String.format("[%s]", HdfsUtilities.toString(fieldList, collectionDelim));
-        return field;
-    }
+//    private OneField resolveArray(int index, Group g, Type type) {
+//        List<OneField> fieldList = new LinkedList<>();
+//        for (int i = 0; i < g.getFieldRepetitionCount(index); i++)
+//            fieldList.add(resolvePrimitive(index, g, type));
+//        OneField field = new OneField();
+//        field.type = DataType.TEXT.getOID();
+//        field.val = String.format("[%s]", HdfsUtilities.toString(fieldList, collectionDelim));
+//        return field;
+//    }
 
-    private OneField resolvePrimitive(Integer columnIndex, Group g, Type type) {
-        OneField field = new OneField();
-        OriginalType originalType = type.getOriginalType();
-        PrimitiveType primitiveType = type.asPrimitiveType();
+    private OneField resolvePrimitive(Group group, int columnIndex, Type type, int level) {
 
-        ParquetTypeConverter converter = ParquetTypeConverter.from(primitiveType);
-        int repetitionCount = g.getFieldRepetitionCount(columnIndex);
-        if (type.getRepetition() == REPEATED) {
-            field.type = DataType.TEXT.getOID();
-//            List<Object> values = new ArrayList<>(repetitionCount);
+        OneField field = new OneField();
+        // get type converter based on the primitive type
+        ParquetTypeConverter converter = ParquetTypeConverter.from(type.asPrimitiveType());
+
+        // determine how many values for the primitive are present in the column
+        int repetitionCount = group.getFieldRepetitionCount(columnIndex);
+
+        // at the top level (top field), non-repeated primitives will convert to typed OneField
+        if (level == 0 && type.getRepetition() != REPEATED) {
+            field.type = converter.getDataType(type).getOID();
+            field.val = repetitionCount == 0 ? null : converter.getValue(group, columnIndex, 0, type);
+        } else if (type.getRepetition() == REPEATED) {
+            // repeated primitive at any level will convert into JSON
             ArrayNode jsonArray = mapper.createArrayNode();
-
-            OneField scratchField = new OneField();
-
             for (int repeatIndex = 0; repeatIndex < repetitionCount; repeatIndex++) {
-                converter.addValueToJsonArray(g, columnIndex, repeatIndex, repetitionCount, originalType, jsonArray);
+                converter.addValueToJsonArray(group, columnIndex, repeatIndex, type, jsonArray);
             }
-            try {
-                field.val = mapper.writeValueAsString(jsonArray);
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to serialize repeated parquet type " + type.asPrimitiveType().getName(), e);
+            // but will become a string only at top level
+            if (level == 0) {
+                field.type = DataType.TEXT.getOID();
+                try {
+                    field.val = mapper.writeValueAsString(jsonArray);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to serialize repeated parquet type " + type.asPrimitiveType().getName(), e);
+                }
+            } else {
+                // just return the array node within OneField container
+                field.val = jsonArray;
             }
-        } else {
-            field.type = converter.getDataType(originalType).getOID();
-            field.val = converter.getValue(g, columnIndex, 0, repetitionCount, originalType);
         }
 
         return field;
     }
 
-    private void setByteArrayValue(OneField field, ArrayNode jsonArrayNode, byte[] value) {
-        if (jsonArrayNode != null)
-            jsonArrayNode.add(value);
-        else
-            field.populate(DataType.BYTEA, value);
-    }
-
-//    private OneField getPrimitiveScalarValue(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-//
-//        ParquetTypeConverter resolver = ParquetTypeConverter.from(primitiveType);
-//        resolver.resolveToField(group, columnIndex, repeatIndex, primitiveType, originalType, repetitionCount, field, jsonArrayNode);
-//        resolver.addToJsonArray(group, columnIndex, repeatIndex, primitiveType, originalType, repetitionCount, field, jsonArrayNode);
-//
-//        return field;
-//    }
-
-    // Convert parquet byte array to java timestamp
-    static Timestamp bytesToTimestamp(byte[] bytes) {
-        long timeOfDayNanos = ByteBuffer.wrap(new byte[]{
-                bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]}).getLong();
-        int julianDays = (ByteBuffer.wrap(new byte[]{bytes[11], bytes[10], bytes[9], bytes[8]})).getInt();
-        long unixTimeMs = (julianDays - JULIAN_EPOCH_OFFSET_DAYS) * MILLIS_IN_DAY + timeOfDayNanos / 1000000;
-        return new Timestamp(unixTimeMs);
-    }
-
-    // Convert epoch timestamp to byte array (INT96)
-    // Inverse of the function above
-    private Binary getBinary(long timeMillis) {
-        long daysSinceEpoch = timeMillis / MILLIS_IN_DAY;
-        int julianDays = JULIAN_EPOCH_OFFSET_DAYS + (int) daysSinceEpoch;
-        long timeOfDayNanos = (timeMillis % MILLIS_IN_DAY) * 1000000;
-        return new NanoTime(julianDays, timeOfDayNanos).toBinary();
-    }
 }

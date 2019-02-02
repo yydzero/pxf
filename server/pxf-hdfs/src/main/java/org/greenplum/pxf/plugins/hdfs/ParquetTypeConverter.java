@@ -1,41 +1,25 @@
 package org.greenplum.pxf.plugins.hdfs;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.parquet.example.data.Group;
+import org.apache.parquet.example.data.simple.NanoTime;
+import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
-import org.greenplum.pxf.api.OneField;
+import org.apache.parquet.schema.Type;
 import org.greenplum.pxf.api.io.DataType;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.sql.Timestamp;
 
 public enum ParquetTypeConverter {
 
     BINARY {
         @Override
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-            if (originalType == null) {
-                byte[] value = repetitionCount == 0 ? null : group.getBinary(columnIndex, repeatIndex).getBytes();
-                if (jsonArrayNode != null)
-                    jsonArrayNode.add(value);
-                else
-                    field.populate(DataType.BYTEA, value);
-            } else if (originalType == OriginalType.DATE) { // DATE type
-                field.type = DataType.DATE.getOID();
-                field.val = repetitionCount == 0 ? null : group.getString(columnIndex, repeatIndex);
-            } else if (originalType == OriginalType.TIMESTAMP_MILLIS) { // TIMESTAMP type
-                field.type = DataType.TIMESTAMP.getOID();
-                field.val = repetitionCount == 0 ? null : group.getString(columnIndex, repeatIndex);
-            } else {
-                field.type = DataType.TEXT.getOID();
-                field.val = repetitionCount == 0 ? null : group.getString(columnIndex, repeatIndex);
-            }
-        }
-
-        @Override
-        public DataType getDataType(OriginalType originalType) {
+        public DataType getDataType(Type type) {
+            OriginalType originalType = type.getOriginalType();
             if (originalType == null) {
                 return DataType.BYTEA;
             }
@@ -47,39 +31,28 @@ public enum ParquetTypeConverter {
         }
 
         @Override
-        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, int repetitionCount, OriginalType originalType, ArrayNode jsonNode) {
-            if (getDataType(originalType) == DataType.BYTEA) {
-                jsonNode.add(getByteArray(group, columnIndex, repeatIndex, repetitionCount);
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            if (getDataType(type) == DataType.BYTEA) {
+                jsonNode.add(group.getBinary(columnIndex, repeatIndex).getBytes());
             } else {
-                jsonNode.add(getString(group, columnIndex, repeatIndex, repetitionCount);
+                jsonNode.add(group.getString(columnIndex, repeatIndex));
             }
         }
 
         @Override
-        public Object getValue(Group group, int columnIndex, int repeatIndex, int repetitionCount, OriginalType originalType) {
-            if (getDataType(originalType) == DataType.BYTEA) {
-                return getByteArray(group, columnIndex, repeatIndex, repetitionCount);
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            if (getDataType(type) == DataType.BYTEA) {
+                return group.getBinary(columnIndex, repeatIndex).getBytes();
             } else {
-                return getString(group, columnIndex, repeatIndex, repetitionCount);
+                return group.getString(columnIndex, repeatIndex);
             }
         }
-
-
-
     },
-    INT32 {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-            if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
-                field.type = DataType.SMALLINT.getOID();
-                field.val = repetitionCount == 0 ? null : (short) group.getInteger(columnIndex, repeatIndex);
-            } else {
-                field.type = DataType.INTEGER.getOID();
-                field.val = repetitionCount == 0 ? null : group.getInteger(columnIndex, repeatIndex);
-            }
-        }
 
+    INT32 {
         @Override
-        public DataType getDataType(OriginalType originalType) {
+        public DataType getDataType(Type type) {
+            OriginalType originalType = type.getOriginalType();
             if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
                 return DataType.SMALLINT;
             } else {
@@ -88,80 +61,153 @@ public enum ParquetTypeConverter {
         }
 
         @Override
-        public Object getValue(Group group, int columnIndex, int repeatIndex, int repetitionCount, OriginalType originalType) {
-            Integer result = getInteger(group, columnIndex, repeatIndex, repetitionCount);
-            return (getDataType(originalType) == DataType.SMALLINT) ? result.shortValue() : result;
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            Integer result = group.getInteger(columnIndex, repeatIndex);
+            Short shortResult = Short.valueOf(result.shortValue());
+            return (getDataType(type) == DataType.SMALLINT) ?
+                    shortResult :
+                    result;
         }
 
         @Override
-        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, int repetitionCount, OriginalType originalType, ArrayNode jsonNode) {
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            jsonNode.add(group.getInteger(columnIndex, repeatIndex));
+        }
+    },
 
-        }
-    },
     INT64 {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-        field.type = DataType.BIGINT.getOID();
-        field.val = repetitionCount == 0 ? null : group.getLong(columnIndex, repeatIndex);
+        @Override
+        public DataType getDataType(Type type) {
+            return DataType.BIGINT;
+        }
+
+        @Override
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            return group.getLong(columnIndex, repeatIndex);
+        }
+
+        @Override
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            jsonNode.add(group.getLong(columnIndex, repeatIndex));
         }
     },
+
     DOUBLE {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-            field.type = DataType.FLOAT8.getOID();
-        field.val = repetitionCount == 0 ? null : group.getDouble(columnIndex, repeatIndex);
+        @Override
+        public DataType getDataType(Type type) {
+            return DataType.FLOAT8;
+        }
+
+        @Override
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            return group.getDouble(columnIndex, repeatIndex);
+        }
+
+        @Override
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            jsonNode.add(group.getDouble(columnIndex, repeatIndex));
         }
     },
+
     INT96 {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-            field.type = DataType.TIMESTAMP.getOID();
-            field.val = repetitionCount == 0 ? null : ParquetResolver.bytesToTimestamp(group.getInt96(columnIndex, repeatIndex).getBytes());
+        @Override
+        public DataType getDataType(Type type) {
+            return DataType.TIMESTAMP;
+        }
+
+        @Override
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            return bytesToTimestamp(group.getInt96(columnIndex, repeatIndex).getBytes());
+        }
+
+        @Override
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            Timestamp timestamp = (Timestamp) getValue(group, columnIndex, repeatIndex, type);
+            jsonNode.add(timestamp.getTime()); // TODO: How to properly serialize timestamp into JSON?
         }
     },
+
     FLOAT {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-        field.type = DataType.REAL.getOID();
-        field.val = repetitionCount == 0 ? null : group.getFloat(columnIndex, repeatIndex);
+        @Override
+        public DataType getDataType(Type type) {
+            return DataType.REAL;
+        }
+
+        @Override
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            return group.getFloat(columnIndex, repeatIndex);
+        }
+
+        @Override
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            jsonNode.add(group.getFloat(columnIndex, repeatIndex));
         }
     },
+
     FIXED_LEN_BYTE_ARRAY {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-            field.type = DataType.NUMERIC.getOID();
-            if (repetitionCount > 0) {
-                int scale = primitiveType.getDecimalMetadata().getScale();
-                field.val = new BigDecimal(new BigInteger(group.getBinary(columnIndex, repeatIndex).getBytes()), scale);
-            }
+        @Override
+        public DataType getDataType(Type type) {
+            return DataType.NUMERIC;
+        }
+
+        @Override
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            int scale = type.asPrimitiveType().getDecimalMetadata().getScale();
+            return new BigDecimal(new BigInteger(group.getBinary(columnIndex, repeatIndex).getBytes()), scale);
+        }
+
+        @Override
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            jsonNode.add((BigDecimal) getValue(group, columnIndex, repeatIndex, type));
         }
     },
+
     BOOLEAN {
-        public void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode) {
-            field.type = DataType.BOOLEAN.getOID();
-            field.val = repetitionCount == 0 ? null : group.getBoolean(columnIndex, repeatIndex);
+        @Override
+        public DataType getDataType(Type type) {
+            return DataType.BOOLEAN;
+        }
+
+        @Override
+        public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
+            return group.getBoolean(columnIndex, repeatIndex);
+        }
+
+        @Override
+        public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
+            jsonNode.add(group.getBoolean(columnIndex, repeatIndex));
         }
     };
+
 
     public static ParquetTypeConverter from(PrimitiveType primitiveType) {
         return valueOf(primitiveType.getPrimitiveTypeName().name());
     }
 
-    public abstract void resolve(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount, OneField field, ArrayNode jsonArrayNode);
-
     // ********** PUBLIC INTERFACE **********
-    public abstract DataType getDataType(OriginalType originalType);
-    public abstract Object getValue(Group group, int columnIndex, int repeatIndex, int repetitionCount, OriginalType originalType);
-    public abstract void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, int repetitionCount, OriginalType originalType, ArrayNode jsonNode);
+    public abstract DataType getDataType(Type type);
+    public abstract Object getValue(Group group, int columnIndex, int repeatIndex, Type type);
+    public abstract void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode);
 
-    // ********** PRIVATE TYPED METHODS **********
 
-    private static String getString(Group group, int columnIndex, int repeatIndex, int repetitionCount) {
-        return (repetitionCount == 0) ? null : group.getString(columnIndex, repeatIndex);
+    // Convert parquet byte array to java timestamp
+    private static Timestamp bytesToTimestamp(byte[] bytes) {
+        long timeOfDayNanos = ByteBuffer.wrap(new byte[]{
+                bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]}).getLong();
+        int julianDays = (ByteBuffer.wrap(new byte[]{bytes[11], bytes[10], bytes[9], bytes[8]})).getInt();
+        long unixTimeMs = (julianDays - JULIAN_EPOCH_OFFSET_DAYS) * MILLIS_IN_DAY + timeOfDayNanos / 1000000;
+        return new Timestamp(unixTimeMs);
     }
 
-    private static byte[] getByteArray(Group group, int columnIndex, int repeatIndex, int repetitionCount) {
-        return (repetitionCount == 0) ? null : group.getBinary(columnIndex, repeatIndex).getBytes();
+    // Convert epoch timestamp to byte array (INT96)
+    // Inverse of the function above
+    public static Binary getBinary(long timeMillis) {
+        long daysSinceEpoch = timeMillis / MILLIS_IN_DAY;
+        int julianDays = JULIAN_EPOCH_OFFSET_DAYS + (int) daysSinceEpoch;
+        long timeOfDayNanos = (timeMillis % MILLIS_IN_DAY) * 1000000;
+        return new NanoTime(julianDays, timeOfDayNanos).toBinary();
     }
 
-    private static Integer getInteger(Group group, int columnIndex, int repeatIndex, int repetitionCount) {
-        return (repetitionCount == 0) ? null : group.getInteger(columnIndex, repeatIndex);
-    }
-
-
+    private static final int JULIAN_EPOCH_OFFSET_DAYS = 2440588;
+    private static final long MILLIS_IN_DAY = 24 * 3600 * 1000;
 }
