@@ -216,12 +216,17 @@ function create_gphdfs_tables() {
     writable_external_table_text_query "${name}" "gphdfs://${HADOOP_HOSTNAME}:8020/tmp/lineitem_gphdfs_write/"
 }
 
-function create_hadoop_tables() {
+function create_hadoop_text_tables() {
     local name=${1}
     local run_id=${2}
     # create text tables
     readable_external_table_text_query "${name}" "pxf://tmp/lineitem_read/?PROFILE=HdfsTextSimple"
     writable_external_table_text_query "${name}" "pxf://tmp/lineitem_hadoop_write/${run_id}/?PROFILE=HdfsTextSimple"
+}
+
+function create_hadoop_parquet_tables() {
+    local name=${1}
+    local run_id=${2}
     # create parquet tables
     readable_external_table_parquet_query "${name}" "pxf://tmp/lineitem_write_parquet/${run_id}/?PROFILE=hdfs:parquet"
     writable_external_table_parquet_query "${name}" "pxf://tmp/lineitem_write_parquet/${run_id}/?PROFILE=hdfs:parquet"
@@ -271,12 +276,17 @@ function configure_s3_server() {
     sync_configuration
 }
 
-function create_s3_tables() {
+function create_s3_text_tables() {
     local name=${1}
     local run_id=${2}
     # create text tables
     readable_external_table_text_query "${name}" "pxf://gpdb-ud-scratch/s3-profile-test/lineitem/${SCALE}/?PROFILE=s3:text&SERVER=s3benchmark"
     writable_external_table_text_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:text&SERVER=s3benchmark"
+}
+
+function create_s3_parquet_tables() {
+    local name=${1}
+    local run_id=${2}
     # create parquet tables
     readable_external_table_parquet_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:parquet&SERVER=s3benchmark"
     writable_external_table_parquet_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:parquet&SERVER=s3benchmark"
@@ -347,20 +357,6 @@ function run_text_benchmark() {
     local prepare_test_fn=${1}
     local benchmark_name=${2}
     local benchmark_description=${3}
-
-    ${prepare_test_fn} ${benchmark_name}
-
-    write_header "${benchmark_description} PXF READ TEXT BENCHMARK"
-    read_and_validate_table_count "lineitem_${benchmark_name}_read" "${LINEITEM_COUNT}"
-
-    write_header "${benchmark_description} PXF WRITE TEXT BENCHMARK"
-    time psql -c "INSERT INTO lineitem_${benchmark_name}_write SELECT * FROM lineitem"
-}
-
-function run_text_and_parquet_benchmark() {
-    local prepare_test_fn=${1}
-    local benchmark_name=${2}
-    local benchmark_description=${3}
     local run_id=${4}
     local name="${benchmark_name}_${run_id}"
 
@@ -374,13 +370,28 @@ function run_text_and_parquet_benchmark() {
     write_header "${benchmark_description} PXF READ TEXT BENCHMARK (Run ${run_id})"
     read_and_validate_table_count "lineitem_${name}_read" "${LINEITEM_COUNT}"
 
-    write_header "${benchmark_description} PXF WRITE TEXT BENCHMARK (Run ${run_id})"
+    write_header "${benchmark_description} PXF WRITE TEXT BENCHMARK"
     local write_count=$(time psql -c "INSERT INTO lineitem_${name}_write SELECT * FROM lineitem" | awk '{print $3}')
 
     if [[ "${write_count}" != "${LINEITEM_COUNT}" ]]; then
         echo "ERROR! Unable to validate text data written from GPDB to external. Expected ${LINEITEM_COUNT}, got ${write_count}"
         exit 1
     fi
+}
+
+function run_parquet_benchmark() {
+    local prepare_test_fn=${1}
+    local benchmark_name=${2}
+    local benchmark_description=${3}
+    local run_id=${4}
+    local name="${benchmark_name}_${run_id}"
+
+    echo ""
+    echo "---------------------------------------------------------------------------"
+    echo "--- ${benchmark_description} PXF Benchmark ${i} with UUID ${UUID}-${i} ---"
+    echo "---------------------------------------------------------------------------"
+
+    ${prepare_test_fn} "${name}" "${run_id}"
 
     write_header "${benchmark_description} PXF WRITE PARQUET BENCHMARK (Run ${run_id})"
     local write_parquet_count=$(time psql -c "INSERT INTO lineitem_${name}_write_parquet SELECT * FROM lineitem" | awk '{print $3}')
@@ -424,9 +435,15 @@ function main() {
         run_text_benchmark create_gcs_tables "gcs" "GOOGLE CLOUD STORAGE"
     fi
 
+    if [[ ${BENCHMARK_GPHDFS} == true ]]; then
+        run_text_benchmark create_gphdfs_tables "gphdfs" "GPHDFS"
+        echo -ne "\n>>> Validating GPHDFS data <<<\n"
+        validate_write_to_external "gphdfs" "gphdfs://${HADOOP_HOSTNAME}:8020/tmp/lineitem_gphdfs_write/"
+    fi
+
+    concurrency=${BENCHMARK_CONCURRENCY:-1}
     if [[ ${BENCHMARK_S3_EXTENSION} == true ]]; then
         configure_s3_extension
-        concurrency=${BENCHMARK_S3_CONCURRENCY:-1}
         if [[ ${concurrency} == 1 ]]; then
             run_text_benchmark create_s3_extension_tables "s3_c" "S3_EXTENSION"
         else
@@ -436,28 +453,24 @@ function main() {
 
     if [[ ${BENCHMARK_S3} == true ]]; then
         configure_s3_server
-        concurrency=${BENCHMARK_S3_CONCURRENCY:-1}
         if [[ ${concurrency} == 1 ]]; then
-            run_text_and_parquet_benchmark create_s3_tables "s3" "S3" "0"
+            run_text_benchmark create_s3_text_tables "s3" "S3" "0"
+            run_parquet_benchmark create_s3_parquet_tables "s3" "S3" "0"
         else
-            run_concurrent_benchmark run_text_and_parquet_benchmark create_s3_tables "s3" "S3" "${concurrency}"
+            run_concurrent_benchmark run_text_benchmark create_s3_text_tables "s3" "S3" "${concurrency}"
+            run_concurrent_benchmark run_parquet_benchmark create_s3_parquet_tables "s3" "S3" "${concurrency}"
         fi
     fi
 
-    if [[ ${BENCHMARK_GPHDFS} == true ]]; then
-        run_text_benchmark create_gphdfs_tables "gphdfs" "GPHDFS"
-        echo -ne "\n>>> Validating GPHDFS data <<<\n"
-        validate_write_to_external "gphdfs" "gphdfs://${HADOOP_HOSTNAME}:8020/tmp/lineitem_gphdfs_write/"
-    fi
-
     if [[ ${BENCHMARK_HADOOP} == true ]]; then
-        concurrency=${BENCHMARK_HADOOP_CONCURRENCY:-1}
         if [[ ${concurrency} == 1 ]]; then
-            run_text_and_parquet_benchmark create_hadoop_tables "hadoop" "HADOOP" "0"
+            run_text_benchmark create_hadoop_text_tables "hadoop" "HADOOP" "0"
+            run_parquet_benchmark create_hadoop_parquet_tables "hadoop" "HADOOP" "0"
             echo -ne "\n>>> Validating HADOOP data <<<\n"
             validate_write_to_external "hadoop" "pxf://tmp/lineitem_hadoop_write/0/?PROFILE=HdfsTextSimple"
         else
-            run_concurrent_benchmark run_text_and_parquet_benchmark create_hadoop_tables "hadoop" "HADOOP" ${concurrency}
+            run_concurrent_benchmark run_text_benchmark create_hadoop_text_tables "hadoop" "HADOOP" ${concurrency}
+            run_concurrent_benchmark run_parquet_benchmark create_hadoop_parquet_tables "s3" "S3" "${concurrency}"
         fi
     fi
 }

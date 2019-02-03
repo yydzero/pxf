@@ -22,6 +22,7 @@ perf-trigger-interval: 24h
 perf-trigger-start: 12:30 PM
 perf-trigger-stop: 12:40 PM
 
+perf-benchmark-concurrency: 1
 perf-benchmark-adl: true
 perf-benchmark-s3: true
 perf-benchmark-gcs: true
