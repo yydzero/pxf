@@ -31,5 +31,6 @@ perf-benchmark-s3-extension: true
 perf-benchmark-gcs: false
 perf-benchmark-gphdfs: false
 perf-benchmark-wasb: false
+perf-sleep-before-destroy: 600
 
 job-name: perf-multi-node-500G

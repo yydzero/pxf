@@ -360,17 +360,12 @@ function run_text_benchmark() {
     local run_id=${4}
     local name="${benchmark_name}_${run_id}"
 
-    echo ""
-    echo "---------------------------------------------------------------------------"
-    echo "--- ${benchmark_description} PXF Benchmark ${i} with UUID ${UUID}-${i} ---"
-    echo "---------------------------------------------------------------------------"
-
     ${prepare_test_fn} "${name}" "${run_id}"
 
-    write_header "${benchmark_description} PXF READ TEXT BENCHMARK (Run ${run_id})"
+    write_header "${benchmark_description} READ TEXT BENCHMARK (Run ${run_id})"
     read_and_validate_table_count "lineitem_${name}_read" "${LINEITEM_COUNT}"
 
-    write_header "${benchmark_description} PXF WRITE TEXT BENCHMARK"
+    write_header "${benchmark_description} WRITE TEXT BENCHMARK (Run ${run_id})"
     local write_count=$(time psql -c "INSERT INTO lineitem_${name}_write SELECT * FROM lineitem" | awk '{print $3}')
 
     if [[ "${write_count}" != "${LINEITEM_COUNT}" ]]; then
@@ -386,14 +381,9 @@ function run_parquet_benchmark() {
     local run_id=${4}
     local name="${benchmark_name}_${run_id}"
 
-    echo ""
-    echo "---------------------------------------------------------------------------"
-    echo "--- ${benchmark_description} PXF Benchmark ${i} with UUID ${UUID}-${i} ---"
-    echo "---------------------------------------------------------------------------"
-
     ${prepare_test_fn} "${name}" "${run_id}"
 
-    write_header "${benchmark_description} PXF WRITE PARQUET BENCHMARK (Run ${run_id})"
+    write_header "${benchmark_description} WRITE PARQUET BENCHMARK (Run ${run_id})"
     local write_parquet_count=$(time psql -c "INSERT INTO lineitem_${name}_write_parquet SELECT * FROM lineitem" | awk '{print $3}')
 
     if [[ "${write_parquet_count}" != "${LINEITEM_COUNT}" ]]; then
@@ -401,7 +391,7 @@ function run_parquet_benchmark() {
         exit 1
     fi
 
-    write_header "${benchmark_description} PXF READ PARQUET BENCHMARK (Run ${run_id})"
+    write_header "${benchmark_description} READ PARQUET BENCHMARK (Run ${run_id})"
     read_and_validate_table_count "lineitem_${name}_read_parquet" "${LINEITEM_COUNT}"
 }
 
@@ -470,9 +460,13 @@ function main() {
             validate_write_to_external "hadoop" "pxf://tmp/lineitem_hadoop_write/0/?PROFILE=HdfsTextSimple"
         else
             run_concurrent_benchmark run_text_benchmark create_hadoop_text_tables "hadoop" "HADOOP" ${concurrency}
-            run_concurrent_benchmark run_parquet_benchmark create_hadoop_parquet_tables "s3" "S3" "${concurrency}"
+            run_concurrent_benchmark run_parquet_benchmark create_hadoop_parquet_tables "hadoop" "HADOOP" "${concurrency}"
         fi
     fi
+
+    echo "Destroying cluster in ${sleep_time} seconds"
+    sleep_time=${SLEEP_BEFORE_DESTROY_IN_SEC:-150}
+    sleep ${sleep_time}
 }
 
 main
