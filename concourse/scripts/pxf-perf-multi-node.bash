@@ -322,7 +322,7 @@ function run_concurrent_benchmark() {
     local has_failures=0
 
     for i in `seq 1 ${concurrency}`; do
-        echo "Starting PXF Benchmark ${benchmark_fn} ${i} with UUID ${UUID}-${i}"
+        echo "Starting ${benchmark_name} Benchmark ${benchmark_fn} ${i} with UUID ${UUID}-${i}"
         ${benchmark_fn} ${prepare_test_fn} "${benchmark_name}" "${benchmark_description}" "${i}" >/tmp/${benchmark_fn}-${benchmark_name}-${i}.bench 2>&1 &
         pids+=("$!")
     done
@@ -370,7 +370,6 @@ function run_text_benchmark() {
 
     if [[ "${write_count}" != "${LINEITEM_COUNT}" ]]; then
         echo "ERROR! Unable to validate text data written from GPDB to external. Expected ${LINEITEM_COUNT}, got ${write_count}"
-        exit 1
     fi
 }
 
@@ -388,7 +387,6 @@ function run_parquet_benchmark() {
 
     if [[ "${write_parquet_count}" != "${LINEITEM_COUNT}" ]]; then
         echo "ERROR! Unable to validate parquet data written from GPDB to external. Expected ${LINEITEM_COUNT}, got ${write_parquet_count}"
-        exit 1
     fi
 
     write_header "${benchmark_description} READ PARQUET BENCHMARK (Run ${run_id})"
@@ -459,13 +457,13 @@ function main() {
             echo -ne "\n>>> Validating HADOOP data <<<\n"
             validate_write_to_external "hadoop" "pxf://tmp/lineitem_hadoop_write/0/?PROFILE=HdfsTextSimple"
         else
-            run_concurrent_benchmark run_text_benchmark create_hadoop_text_tables "hadoop" "HADOOP" ${concurrency}
             run_concurrent_benchmark run_parquet_benchmark create_hadoop_parquet_tables "hadoop" "HADOOP" "${concurrency}"
+            run_concurrent_benchmark run_text_benchmark create_hadoop_text_tables "hadoop" "HADOOP" ${concurrency}
         fi
     fi
 
-    echo "Destroying cluster in ${sleep_time} seconds"
     sleep_time=${SLEEP_BEFORE_DESTROY_IN_SEC:-150}
+    echo "Destroying cluster in ${sleep_time} seconds"
     sleep ${sleep_time}
 }
 
