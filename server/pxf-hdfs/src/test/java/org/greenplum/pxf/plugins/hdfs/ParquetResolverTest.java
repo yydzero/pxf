@@ -20,7 +20,9 @@ import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.runners.MockitoJUnitRunner;
 
@@ -40,6 +42,9 @@ public class ParquetResolverTest {
     private RequestContext context;
     private MessageType schema;
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Before
     public void setup() {
         resolver = new ParquetResolver();
@@ -51,6 +56,26 @@ public class ParquetResolverTest {
     @Test
     public void testInitialize() {
         resolver.initialize(context);
+    }
+
+    @Test
+    public void testGetFields_FailsOnMissingSchema() {
+        thrown.expect(RuntimeException.class);
+        thrown.expectMessage("No schema detected in request context");
+
+        context.setMetadata(null);
+        resolver.initialize(context);
+        resolver.getFields(new OneRow());
+    }
+
+    @Test
+    public void testSetFields_FailsOnMissingSchema() throws IOException {
+        thrown.expect(RuntimeException.class);
+        thrown.expectMessage("No schema detected in request context");
+
+        context.setMetadata(null);
+        resolver.initialize(context);
+        resolver.setFields(new ArrayList<>());
     }
 
     @Test
