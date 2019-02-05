@@ -33,7 +33,6 @@ import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
-import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
@@ -62,15 +61,26 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     private ObjectMapper mapper = new ObjectMapper();
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public List<OneField> getFields(OneRow row) {
+        validateSchema();
+        Group group = (Group) row.getData();
+        List<OneField> output = new LinkedList<>();
 
-        schema = (MessageType) requestContext.getMetadata();
-        groupFactory = new SimpleGroupFactory(schema);
-        collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
-                : context.getOption("COLLECTION_DELIM");
-        mapkeyDelim = context.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
-                : context.getOption("MAPKEY_DELIM");
+        for (int columnIndex = 0; columnIndex < schema.getFieldCount(); columnIndex++) {
+
+            Type type = schema.getType(columnIndex);
+            if (schema.getType(columnIndex).isPrimitive()) {
+                output.add(resolvePrimitive(group, columnIndex, type, 0));
+            } else {
+                throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
+//                int repeatCount = group.getFieldRepetitionCount(fieldIndex);
+//                for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
+//                    output.add(resolveComplex(group.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
+//                }
+//                output.add(resolveComplex(group.getGroup(columnIndex, 0), type.asGroupType(), 0));
+            }
+        }
+        return output;
     }
 
     /**
@@ -82,6 +92,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
      */
     @Override
     public OneRow setFields(List<OneField> record) throws IOException {
+        validateSchema();
         Group group = groupFactory.newGroup();
         for (int i = 0; i < record.size(); i++) {
             fillGroup(i, record.get(i), group, schema.getType(i));
@@ -121,11 +132,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                 byte[] bytes = new byte[16];
                 int offset = bytes.length - unscaled.length;
                 for (int i = 0; i < bytes.length; i += 1) {
-                    if (i < offset) {
-                        bytes[i] = fillByte;
-                    } else {
-                        bytes[i] = unscaled[i - offset];
-                    }
+                    bytes[i] = (i < offset) ? fillByte : unscaled[i - offset];
                 }
                 group.add(index, Binary.fromReusedByteArray(bytes));
                 break;
@@ -142,27 +149,16 @@ public class ParquetResolver extends BasePlugin implements Resolver {
         }
     }
 
-    @Override
-    public List<OneField> getFields(OneRow row) {
-        Group group = (Group) row.getData();
-        List<OneField> output = new LinkedList<>();
-
-        for (int columnIndex = 0; columnIndex < schema.getFieldCount(); columnIndex++) {
-
-            Type type = schema.getType(columnIndex);
-            if (schema.getType(columnIndex).isPrimitive()) {
-                output.add(resolvePrimitive(group, columnIndex, type, 0));
-            } else {
-                throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
-//                int repeatCount = group.getFieldRepetitionCount(fieldIndex);
-//                for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
-//                    output.add(resolveComplex(group.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
-//                }
-//                output.add(resolveComplex(group.getGroup(columnIndex, 0), type.asGroupType(), 0));
-            }
-
+    // Set schema from context if null
+    // TODO: Fix the bridge interface so the schema is set before get/setFields is called
+    //       Then validateSchema can be done during initialize phase
+    private void validateSchema() {
+        if (schema == null) {
+            schema = (MessageType)context.getMetadata();
+            if (schema == null)
+                throw new RuntimeException("No schema detected in request context");
+            groupFactory = new SimpleGroupFactory(schema);
         }
-        return output;
     }
 
     private OneField resolveComplex(Group g, GroupType groupType, int level) {
@@ -263,7 +259,6 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                 field.val = jsonArray;
             }
         }
-
         return field;
     }
 

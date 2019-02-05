@@ -1,4 +1,4 @@
-package org.greenplum.pxf.service.io;
+package org.greenplum.pxf.api.io;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -21,7 +21,6 @@ package org.greenplum.pxf.service.io;
 
 
 import org.apache.commons.logging.Log;
-import org.greenplum.pxf.api.io.DataType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

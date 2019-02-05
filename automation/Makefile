@@ -65,19 +65,17 @@ symlink_pxf_jars:
 		touch $(PXF_HOME)/tmp/pxf-extras.jar; \
 	fi
 
-test: symlink_pxf_jars sync_cloud_configs
+test: clean-logs symlink_pxf_jars sync_cloud_configs
 	$(MVN) $(MAVEN_TEST_OPTS) ${MAVEN_DEBUG_OPTS} test
 
-clean:
+clean: clean-logs
 	$(MVN) $(MAVEN_TEST_OPTS) clean
-	rm -rf $(PXF_HOME)/tmp
+	@rm -rf $(PXF_HOME)/tmp
 
 clean-logs:
-	rm -rf automation_logs/*
-	rm -rf tincrepo/main/log/*
-	rm -rf run-results/*
-	find tincrepo/main/pxf/. -type d -name "output" -exec rm -rf {} +
-	find tincrepo/main/pxf/. -type f -name "*segment_logs" -exec rm -rf {} +
+	@rm -rf automation_logs/* tincrepo/main/log/* run-results/*
+	@find tincrepo/main/pxf/. -type d -name "output" -exec rm -rf {} +
+	@find tincrepo/main/pxf/. -type f -name "*segment_logs" -exec rm -rf {} +
 
 dev: symlink_pxf_jars
 	$(MVN) $(MAVEN_TEST_OPTS) package -DskipTests=true

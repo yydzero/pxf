@@ -320,10 +320,13 @@ jobs:
     params:
       SCALE: {{perf-scale}}
       BENCHMARK_ADL: {{perf-benchmark-adl}}
+      BENCHMARK_HADOOP: {{perf-benchmark-hadoop}}
       BENCHMARK_S3: {{perf-benchmark-s3}}
+      BENCHMARK_S3_EXTENSION: {{perf-benchmark-s3-extension}}
       BENCHMARK_GCS: {{perf-benchmark-gcs}}
       BENCHMARK_GPHDFS: {{perf-benchmark-gphdfs}}
       BENCHMARK_WASB: {{perf-benchmark-wasb}}
+      BENCHMARK_CONCURRENCY: {{perf-benchmark-concurrency}}
       ADL_ACCOUNT: {{adl-account}}
       ADL_CLIENT_ID: {{adl-client-id}}
       ADL_CREDENTIAL: {{adl-credential}}
@@ -334,4 +337,5 @@ jobs:
       GOOGLE_CREDENTIALS: {{data-gpdb-ud-google-json-key}}
       WASB_ACCOUNT_NAME: {{wasb-account-name}}
       WASB_ACCOUNT_KEY: {{wasb-account-key}}
+      SLEEP_BEFORE_DESTROY_IN_SEC: {{perf-sleep-before-destroy}}
       TARGET_OS: centos

@@ -342,7 +342,7 @@ function doInit()
 {
 	instanceExists
     if (( $? == 0 )); then
-		echo ERROR: instance already exists in ${instance_root}, nothing to do...
+		echo Instance already exists. Cleanup ${instance_root}/pxf-service if you wish to re-initialize.
 		return 0
 	fi
 
