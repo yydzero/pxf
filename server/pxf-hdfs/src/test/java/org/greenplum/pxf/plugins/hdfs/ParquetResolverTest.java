@@ -5,12 +5,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.parquet.column.page.PageReadStore;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.NanoTime;
+import org.apache.parquet.example.data.simple.SimpleGroup;
 import org.apache.parquet.example.data.simple.convert.GroupRecordConverter;
 import org.apache.parquet.format.converter.ParquetMetadataConverter;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.io.ColumnIOFactory;
 import org.apache.parquet.io.MessageColumnIO;
 import org.apache.parquet.io.RecordReader;
+import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.pig.convert.DecimalUtils;
 import org.apache.parquet.schema.*;
 import org.greenplum.pxf.api.OneField;
@@ -53,7 +55,7 @@ public class ParquetResolverTest {
 
     @Test
     public void testSetFields_Primitive() throws IOException {
-        schema = getParquetSchemaForPrimitiveTypes(false);
+        schema = getParquetSchemaForPrimitiveTypes(Type.Repetition.OPTIONAL, false);
         // schema has changed, set metadata again
         context.setMetadata(schema);
         resolver.initialize(context);
@@ -107,7 +109,7 @@ public class ParquetResolverTest {
 
     @Test
     public void testSetFields_Primitive_Nulls() throws IOException {
-        schema = getParquetSchemaForPrimitiveTypes(false);
+        schema = getParquetSchemaForPrimitiveTypes(Type.Repetition.OPTIONAL,false);
         // schema has changed, set metadata again
         context.setMetadata(schema);
         resolver.initialize(context);
@@ -150,7 +152,7 @@ public class ParquetResolverTest {
 
     @Test
     public void testGetFields_Primitive() throws IOException {
-        schema = getParquetSchemaForPrimitiveTypes(true);
+        schema = getParquetSchemaForPrimitiveTypes(Type.Repetition.OPTIONAL,true);
         // schema has changed, set metadata again
         context.setMetadata(schema);
         resolver.initialize(context);
@@ -232,6 +234,99 @@ public class ParquetResolverTest {
 
     }
 
+    @Test
+    public void testGetFields_Primitive_Repeated_Synthetic() throws IOException {
+        // this test does not read the actual Parquet file, but rather construct Group object synthetically
+        schema = getParquetSchemaForPrimitiveTypes(Type.Repetition.REPEATED,true);
+        // schema has changed, set metadata again
+        context.setMetadata(schema);
+        resolver.initialize(context);
+
+        Group group = new SimpleGroup(schema);
+
+        /*
+                    "t1    TEXT",
+            "t2    TEXT",
+            "num1  INTEGER",
+            "dub1  DOUBLE PRECISION",
+            "dec1  NUMERIC",
+            "tm    TIMESTAMP",
+            "r     REAL",
+            "bg    BIGINT",
+            "b     BOOLEAN",
+            "tn    SMALLINT",
+            "sml   SMALLINT",
+            "vc1   VARCHAR(5)",
+            "c1    CHAR(3)",
+            "bin   BYTEA"
+    };
+
+SELECT t1, t2, num1, dub1, dec1, tm, r, bg, b, tn, sml, vc1, c1, bin FROM parquet_view ORDER BY t1;
+          t1          |  t2  | num1 | dub1 |             dec1             |         tm          |  r   |    bg    | b | tn | sml  |  vc1  | c1  | bin
+----------------------+------+------+------+------------------------------+---------------------+------+----------+---+----+------+-------+-----+-----
+ row1                 | s_6  |    1 |    6 |         1.234560000000000000 | 2013-07-13 21:00:05 |  7.7 | 23456789 | f |  1 |   10 | abcd  | abc | 1
+         */
+        group.add(0, "row1-1");
+        group.add(0, "row1-2");
+
+        // leave column 1 (t2) unset as part fo the test
+
+        group.add(2, 1);
+        group.add(2, 2);
+        group.add(2, 3);
+
+        group.add(3, 6.0d);
+        group.add(3, -16.34d);
+
+        BigDecimal value = new BigDecimal((String) "12345678.9012345987654321");
+        byte fillByte = (byte) (value.signum() < 0 ? 0xFF : 0x00);
+        byte[] unscaled = value.unscaledValue().toByteArray();
+        byte[] bytes = new byte[16];
+        int offset = bytes.length - unscaled.length;
+        for (int i = 0; i < bytes.length; i += 1) {
+                bytes[i] = (i < offset) ? fillByte : unscaled[i - offset];
+        }
+        group.add(4, Binary.fromReusedByteArray(bytes));
+
+        group.add(5, ParquetTypeConverter.getBinary(1549317584246L));
+        group.add(5, ParquetTypeConverter.getBinary(-123456789L));
+
+        List<Group> groups = new ArrayList<>();
+        groups.add(group);
+        List<OneField> fields = assertRow(groups, 0, 14);
+        //s1 : "row1" : TEXT
+        assertField(fields, 0, "[\"row1-1\",\"row1-2\"]", DataType.TEXT);
+        assertField(fields, 1, "[]", DataType.TEXT);
+        assertField(fields, 2, "[1,2,3]", DataType.TEXT);
+        assertField(fields, 3, "[6.0,-16.34]", DataType.TEXT);
+        assertField(fields, 4, "[123456.789012345987654321]", DataType.TEXT); // scale fixed to 18 in schema
+        //assertField(fields, 5, "[1549317584246,-123456789]", DataType.TEXT);
+//        assertField(fields, 6, 7.7f, DataType.REAL);
+//        assertField(fields, 7, 23456789l, DataType.BIGINT);
+//        assertField(fields, 8, false, DataType.BOOLEAN);
+//        assertField(fields, 9, (short) 1, DataType.SMALLINT);
+//        assertField(fields, 10, (short) 10, DataType.SMALLINT);
+//        assertField(fields, 11, "abcd", DataType.TEXT);
+//        assertField(fields, 12, "abc", DataType.TEXT);
+//        assertField(fields, 13, new byte[]{(byte) 49}, DataType.BYTEA); // 49 is the ascii code for '1'
+
+    }
+
+    @Test
+    public void testGetFields_Primitive_RepeatedInt() throws IOException {
+        List<Type> columns = new ArrayList<>();
+        columns.add(new PrimitiveType(Type.Repetition.REPEATED, PrimitiveTypeName.INT32, "repeatedInt"));
+        schema = new MessageType("TestProtobuf.RepeatedIntMessage", columns);
+        context.setMetadata(schema);
+        resolver.initialize(context);
+
+        List<Group> groups = readParquetFile("old-repeated-int.parquet", 1);
+        List<OneField> fields = assertRow(groups, 0, 1);
+        assertEquals(DataType.TEXT.getOID(), fields.get(0).type);
+        assertEquals("[1,2,3]", fields.get(0).val);
+
+    }
+
     private List<OneField> assertRow(List<Group> groups, int desiredRow, int numFields) {
         OneRow row = new OneRow(groups.get(desiredRow)); // get row
         List<OneField> fields = resolver.getFields(row);
@@ -249,26 +344,26 @@ public class ParquetResolverTest {
 
     }
 
-    private MessageType getParquetSchemaForPrimitiveTypes(boolean readCase) {
+    private MessageType getParquetSchemaForPrimitiveTypes(Type.Repetition repetition, boolean readCase) {
         List<Type> fields = new ArrayList<>();
 
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "s1", OriginalType.UTF8));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "s2", OriginalType.UTF8));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT32, "n1", null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.DOUBLE, "d1", null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 16, "dc1", OriginalType.DECIMAL, new DecimalMetadata(38, 18), null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT96, "tm", null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.FLOAT, "f", null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT64, "bg", null));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BOOLEAN, "b", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.BINARY, "s1", OriginalType.UTF8));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.BINARY, "s2", OriginalType.UTF8));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.INT32, "n1", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.DOUBLE, "d1", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY, 16, "dc1", OriginalType.DECIMAL, new DecimalMetadata(38, 18), null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.INT96, "tm", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.FLOAT, "f", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.INT64, "bg", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.BOOLEAN, "b", null));
 
         // GPDB only has int16 and not int8 type, so for write tiny numbers int8 are still treated as shorts in16
         OriginalType tinyType = readCase ? OriginalType.INT_8 : OriginalType.INT_16;
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT32, "tn", tinyType));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.INT32, "sml", OriginalType.INT_16));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "vc1", OriginalType.UTF8));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "c1", OriginalType.UTF8));
-        fields.add(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveTypeName.BINARY, "bin", null));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.INT32, "tn", tinyType));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.INT32, "sml", OriginalType.INT_16));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.BINARY, "vc1", OriginalType.UTF8));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.BINARY, "c1", OriginalType.UTF8));
+        fields.add(new PrimitiveType(repetition, PrimitiveTypeName.BINARY, "bin", null));
 
         return new MessageType("hive_schema", fields);
     }

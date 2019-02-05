@@ -14,6 +14,9 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 
+/**
+ * Converter for Parquet types and values into PXF data types and values.
+ */
 public enum ParquetTypeConverter {
 
     BINARY {
@@ -63,10 +66,11 @@ public enum ParquetTypeConverter {
         @Override
         public Object getValue(Group group, int columnIndex, int repeatIndex, Type type) {
             Integer result = group.getInteger(columnIndex, repeatIndex);
-            Short shortResult = Short.valueOf(result.shortValue());
-            return (getDataType(type) == DataType.SMALLINT) ?
-                    shortResult :
-                    result;
+            if (getDataType(type) == DataType.SMALLINT) {
+                return Short.valueOf(result.shortValue());
+            } else {
+                return result;
+            }
         }
 
         @Override
@@ -123,7 +127,10 @@ public enum ParquetTypeConverter {
         @Override
         public void addValueToJsonArray(Group group, int columnIndex, int repeatIndex, Type type, ArrayNode jsonNode) {
             Timestamp timestamp = (Timestamp) getValue(group, columnIndex, repeatIndex, type);
-            jsonNode.add(timestamp.getTime()); // TODO: How to properly serialize timestamp into JSON?
+            long seconds = timestamp.getTime() / 1000;
+            int micros = timestamp.getNanos() / 1000;
+            double timeInMicros = seconds + micros / 1000000d;
+            jsonNode.add(timeInMicros); // microsecond precision
         }
     },
 
@@ -191,7 +198,7 @@ public enum ParquetTypeConverter {
 
 
     // Convert parquet byte array to java timestamp
-    private static Timestamp bytesToTimestamp(byte[] bytes) {
+    public static Timestamp bytesToTimestamp(byte[] bytes) {
         long timeOfDayNanos = ByteBuffer.wrap(new byte[]{
                 bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0]}).getLong();
         int julianDays = (ByteBuffer.wrap(new byte[]{bytes[11], bytes[10], bytes[9], bytes[8]})).getInt();

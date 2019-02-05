@@ -23,13 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.parquet.example.data.Group;
-import org.apache.parquet.example.data.simple.NanoTime;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
-import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
@@ -41,8 +39,6 @@ import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -54,9 +50,7 @@ import static org.apache.parquet.schema.Type.Repetition.REPEATED;
 
 public class ParquetResolver extends BasePlugin implements Resolver {
 
-    private static final int JULIAN_EPOCH_OFFSET_DAYS = 2440588;
     private static final int SECOND_IN_MILLIS = 1000;
-    private static final long MILLIS_IN_DAY = 24 * 3600 * 1000;
     private static final String COLLECTION_DELIM = ",";
     private static final String MAPKEY_DELIM = ":";
     private String collectionDelim;
@@ -66,7 +60,6 @@ public class ParquetResolver extends BasePlugin implements Resolver {
     private MessageType schema;
     private SimpleGroupFactory groupFactory;
     private ObjectMapper mapper = new ObjectMapper();
-//    private List<OneField> output;
 
     @Override
     public void initialize(RequestContext requestContext) {
@@ -78,95 +71,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                 : context.getOption("COLLECTION_DELIM");
         mapkeyDelim = context.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
                 : context.getOption("MAPKEY_DELIM");
-//        output = new ArrayList<>(schema.getFieldCount());
     }
-
-//    private void setType() {
-//        for (int fieldIndex = 0; fieldIndex < schema.getFieldCount(); fieldIndex++) {
-//
-//            Type type = schema.getType(fieldIndex);
-//            OriginalType originalType = type.getOriginalType();
-//            PrimitiveType primitiveType = type.asPrimitiveType();
-//            OneField field = new OneField();
-//
-//            switch (schema.getType(fieldIndex).asPrimitiveType().getPrimitiveTypeName()) {
-//                case BINARY:
-//                    if (originalType == null) {
-//                        field.type = DataType.BYTEA.getOID();
-//                    } else if (originalType == OriginalType.DATE) { // DATE type
-//                        field.type = DataType.DATE.getOID();
-//                    } else if (originalType == OriginalType.TIMESTAMP_MILLIS) { // TIMESTAMP type
-//                        field.type = DataType.TIMESTAMP.getOID();
-//                    } else {
-//                        field.type = DataType.TEXT.getOID();
-//                    break;
-//                }
-//                case INT32:
-//                    if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
-//                        field.type = DataType.SMALLINT.getOID();
-//                    } else {
-//                        field.type = DataType.INTEGER.getOID();
-//                    }
-//                    break;
-//                case INT64:
-//                    field.type = DataType.BIGINT.getOID();
-//                    break;
-//                case DOUBLE:
-//                    field.type = DataType.FLOAT8.getOID();
-//                    break;
-//                case INT96:
-//                    field.type = DataType.TIMESTAMP.getOID();
-//                    break;
-//                case FLOAT:
-//                    field.type = DataType.REAL.getOID();
-//                    break;
-//                case FIXED_LEN_BYTE_ARRAY:
-//                    field.type = DataType.NUMERIC.getOID();
-//                    break;
-//                case BOOLEAN:
-//                    field.type = DataType.BOOLEAN.getOID();
-//                    break;
-//                default:
-//                    throw new UnsupportedTypeException("Type " + primitiveType.getPrimitiveTypeName()
-//                            + "is not supported");
-//            }
-//            output.add(field);
-//        }
-//    }
-//
-//    private Object getPrimitiveScalarValue(Group group, int columnIndex, int repeatIndex, PrimitiveType primitiveType, OriginalType originalType, int repetitionCount) {
-//        if (repetitionCount == 0)
-//            return null;
-//        switch (primitiveType.getPrimitiveTypeName()) {
-//            case BINARY:
-//                if (originalType == null) {
-//                    return group.getBinary(columnIndex, repeatIndex).getBytes();
-//                }
-//                return group.getString(columnIndex, repeatIndex);
-//            case INT32:
-//                if (originalType == OriginalType.INT_8 || originalType == OriginalType.INT_16) {
-//                    return (short) group.getInteger(columnIndex, repeatIndex);
-//                }
-//                return group.getInteger(columnIndex, repeatIndex);
-//            case INT64:
-//                return group.getLong(columnIndex, repeatIndex);
-//            case DOUBLE:
-//                return group.getDouble(columnIndex, repeatIndex);
-//            case INT96:
-//                return bytesToTimestamp(group.getInt96(columnIndex, repeatIndex).getBytes());
-//            case FLOAT:
-//                return group.getFloat(columnIndex, repeatIndex);
-//            case FIXED_LEN_BYTE_ARRAY:
-//                int scale = primitiveType.getDecimalMetadata().getScale();
-//                return new BigDecimal(new BigInteger(group.getBinary(columnIndex, repeatIndex).getBytes()), scale);
-//            case BOOLEAN:
-//                return group.getBoolean(columnIndex, repeatIndex);
-//            default:
-//                throw new UnsupportedTypeException("Type " + primitiveType.getPrimitiveTypeName()
-//                        + "is not supported");
-//        }
-//    }
-
 
     /**
      * Constructs and sets the fields of a {@link OneRow}.
@@ -244,23 +149,16 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 
         for (int columnIndex = 0; columnIndex < schema.getFieldCount(); columnIndex++) {
 
-//            Type parquetType = schema.getType(fieldIndex);
-//            if (parquetType.getRepetition() == REPEATED) {
-//                // process repeated types (primitive or complex)
-//            } else {
-//                // process scalar types (primitive or complex)
-//            }
-
-
             Type type = schema.getType(columnIndex);
             if (schema.getType(columnIndex).isPrimitive()) {
                 output.add(resolvePrimitive(group, columnIndex, type, 0));
             } else {
+                throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
 //                int repeatCount = group.getFieldRepetitionCount(fieldIndex);
 //                for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
 //                    output.add(resolveComplex(group.getGroup(fieldIndex, repeatIndex), type.asGroupType()));
 //                }
-                output.add(resolveComplex(group.getGroup(columnIndex, 0), type.asGroupType(), 0));
+//                output.add(resolveComplex(group.getGroup(columnIndex, 0), type.asGroupType(), 0));
             }
 
         }
@@ -271,8 +169,6 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 
         level++;
         ObjectNode node = mapper.createObjectNode();
-
-
 
         List<Type> types = groupType.getFields();
         OneField result = new OneField();
@@ -288,15 +184,14 @@ public class ParquetResolver extends BasePlugin implements Resolver {
             int repeatCount = g.getFieldRepetitionCount(fieldIndex);
 
             // primitive ? --> cal our method, get either value or json back, hook to key
-            //"foo" : 123
-            //"froo": [123, 567]
+
             Object value = resolvePrimitive(g, fieldIndex, type, level).val;
             //node.put(type.getName(), )
 
 
             for (int repeatIndex = 0; repeatIndex < repeatCount; repeatIndex++) {
                 if (type.isPrimitive()) {
-                    if(type.getOriginalType() != null) {
+                    if (type.getOriginalType() != null) {
                         // we have a primitive that is part of key, value pair
                         // TODO: create JsonNode
                         //field.val = type.getName() + mapkeyDelim + g.getValueToString(fieldIndex, repeatIndex);
@@ -311,7 +206,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
             }
         }
 
-        if(fieldCount == 1 && types.get(0).isPrimitive()) {
+        if (fieldCount == 1 && types.get(0).isPrimitive()) {
             // Primitive type within List
             result.val = fieldList.get(0).val;
         } else if (OriginalType.LIST == groupType.getOriginalType()) {
