@@ -31,25 +31,33 @@ function readable_external_table_text_query() {
     local name=${1}
     local path=${2}
     local delimiter=${3:-'|'}
-    psql -c "CREATE READABLE EXTERNAL TABLE lineitem_${name}_read (LIKE lineitem) LOCATION('${path}') FORMAT 'CSV' (DELIMITER '${delimiter}')"
+    local sql="CREATE READABLE EXTERNAL TABLE lineitem_${name}_read (LIKE lineitem) LOCATION('${path}') FORMAT 'CSV' (DELIMITER '${delimiter}')"
+    echo ${sql}
+    psql -c "${sql}"
 }
 
 function writable_external_table_text_query() {
     local name=${1}
     local path=${2}
-    psql -c "CREATE WRITABLE EXTERNAL TABLE lineitem_${name}_write (LIKE lineitem) LOCATION('${path}') FORMAT 'CSV' DISTRIBUTED BY (l_partkey)"
+    local sql="CREATE WRITABLE EXTERNAL TABLE lineitem_${name}_write (LIKE lineitem) LOCATION('${path}') FORMAT 'CSV' DISTRIBUTED BY (l_partkey)"
+    echo ${sql}
+    psql -c "${sql}"
 }
 
 function readable_external_table_parquet_query() {
     local name=${1}
     local path=${2}
-    psql -c "CREATE READABLE EXTERNAL TABLE lineitem_${name}_read_parquet (LIKE lineitem) LOCATION('${path}') FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import') ENCODING 'UTF8'"
+    local sql="CREATE READABLE EXTERNAL TABLE lineitem_${name}_read_parquet (LIKE lineitem) LOCATION('${path}') FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import') ENCODING 'UTF8'"
+    echo ${sql}
+    psql -c "${sql}"
 }
 
 function writable_external_table_parquet_query() {
     local name=${1}
     local path=${2}
-    psql -c "CREATE WRITABLE EXTERNAL TABLE lineitem_${name}_write_parquet (LIKE lineitem) LOCATION('${path}') FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export') DISTRIBUTED BY (l_partkey)"
+    local sql="CREATE WRITABLE EXTERNAL TABLE lineitem_${name}_write_parquet (LIKE lineitem) LOCATION('${path}') FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export') DISTRIBUTED BY (l_partkey)"
+    echo ${sql}
+    psql -c "${sql}"
 }
 
 ###########################################
@@ -69,7 +77,7 @@ function setup_sshd() {
 }
 
 function write_header() {
-    echo -ne "\n\n############################################\n# ${1}\n############################################\n"
+    echo -ne "\n############################################\n# ${1}\n############################################"
 }
 
 function write_sub_header() {
@@ -397,7 +405,6 @@ function main() {
     setup_sshd
     remote_access_to_gpdb
     install_gpdb_binary
-
     install_pxf_server
 
     echo "Running ${SCALE}G test with UUID ${UUID}"
