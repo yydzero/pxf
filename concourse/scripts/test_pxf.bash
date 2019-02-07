@@ -9,6 +9,8 @@ export GPHOME=${GPHOME:-"/usr/local/greenplum-db-devel"}
 export PXF_HOME="${GPHOME}/pxf"
 export JAVA_HOME="${JAVA_HOME}"
 export JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8
+export HADOOP_HEAPSIZE=512
+export YARN_HEAPSIZE=512
 if [[ "${HADOOP_CLIENT}" == "MAPR" ]]; then
 	export GPHD_ROOT=/opt/mapr
 else
