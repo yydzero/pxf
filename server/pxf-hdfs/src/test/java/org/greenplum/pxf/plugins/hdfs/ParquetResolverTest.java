@@ -192,7 +192,7 @@ public class ParquetResolverTest {
         assertField(fields, 2, 1, DataType.INTEGER);
         assertField(fields, 3, 6.0d, DataType.FLOAT8);
         assertField(fields, 4, BigDecimal.valueOf(1234560000000000000L, 18), DataType.NUMERIC);
-        assertField(fields, 5, java.sql.Timestamp.valueOf(ZonedDateTime.parse("2013-07-13T21:00:05-07:00").toLocalDateTime()), DataType.TIMESTAMP);
+        assertField(fields, 5, java.sql.Timestamp.from(ZonedDateTime.parse("2013-07-13T21:00:05-07:00").toInstant()), DataType.TIMESTAMP);
         assertField(fields, 6, 7.7f, DataType.REAL);
         assertField(fields, 7, 23456789l, DataType.BIGINT);
         assertField(fields, 8, false, DataType.BOOLEAN);

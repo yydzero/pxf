@@ -46,10 +46,6 @@ public class OneField {
         this.val = val;
     }
 
-    public void populate(DataType type, Object value) {
-        this.type = type.getOID();
-        this.val = value;
-    }
     @Override
     public String toString() {
         return val == null ? null : val.toString();
