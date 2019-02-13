@@ -1,9 +1,9 @@
 #!/bin/bash -l
 
-set -eo pipefail
-
 GPHOME="/usr/local/greenplum-db-devel"
 SSH_OPTS="-i cluster_env_files/private_key.pem -o StrictHostKeyChecking=no"
+GPHD_ROOT="/singlecluster"
+NO_OF_FILES=10000
 
 function setup_gpadmin_user() {
 
@@ -26,13 +26,16 @@ function setup_sshd() {
     /bin/cp -f cluster_env_files/private_key.pem /root/.ssh/id_rsa
     /bin/cp -f cluster_env_files/public_key.pem /root/.ssh/id_rsa.pub
     /bin/cp -f cluster_env_files/public_key.openssh /root/.ssh/authorized_keys
+    echo "##########################################################"
+    cat /root/.ssh/id_rsa
+    echo "##########################################################"
     sed 's/edw0/hadoop/' cluster_env_files/etc_hostfile >> /etc/hosts
 }
 
 function configure_hdfs() {
 
-    sed -i -e 's|hdfs://0.0.0.0:8020|hdfs://hadoop:8020|' /etc/hadoop/conf/core-site.xml /etc/hbase/conf/hbase-site.xml
-    sed -i -e "s/>tez/>mr/g" /etc/hive/conf/hive-site.xml
+    sed -i -e 's|hdfs://0.0.0.0:8020|hdfs://hadoop:8020|' ${GPHD_ROOT}/hadoop/etc/hadoop/core-site.xml ${GPHD_ROOT}/hbase/conf/hbase-site.xml
+	sed -i -e "s/>tez/>mr/g" ${GPHD_ROOT}/hive/conf/hive-site.xml
 }
 
 function remote_access_to_gpdb() {
@@ -56,7 +59,7 @@ function ssh_access_to_hadoop() {
 
 function run_multinode_smoke_test() {
 
-    hdfs dfs -mkdir -p /tmp
+    /singlecluster/bin/hdfs dfs -mkdir -p /tmp
     mkdir -p /tmp/pxf_test
 
     echo "Number of files = ${NO_OF_FILES}"
@@ -68,19 +71,18 @@ function run_multinode_smoke_test() {
 	EOF
     done
 
-    hdfs dfs -copyFromLocal /tmp/pxf_test/ /tmp
-    hdfs dfs -chown -R gpadmin:gpadmin /tmp/pxf_test
-    echo "Found $(hdfs dfs -ls /tmp/pxf_test | grep pxf_test | wc -l) items in /tmp/pxf_test"
+    /singlecluster/bin/hdfs dfs -copyFromLocal /tmp/pxf_test/ /tmp
+    /singlecluster/bin/hdfs dfs -chown -R gpadmin:gpadmin /tmp/pxf_test
+    echo "Found $(/singlecluster/bin/hdfs dfs -ls /tmp/pxf_test | grep pxf_test | wc -l) items in /tmp/pxf_test"
     expected_output=$((3 * ${NO_OF_FILES}))
     time ssh ${SSH_OPTS} gpadmin@mdw "source ${GPHOME}/greenplum_path.sh
 	psql -d template1 -c \"
 	CREATE EXTERNAL TABLE pxf_multifile_test (b TEXT) LOCATION ('pxf://tmp/pxf_test?PROFILE=HdfsTextSimple') FORMAT 'CSV';\"
 	num_rows=\$(psql -d template1 -t -c \"SELECT COUNT(*) FROM pxf_multifile_test;\" | head -1)
-	if [ \${num_rows} == ${expected_output} ] ; then
+	if [[ \"\${num_rows}\" == \"${expected_output}\" ]]; then
 		echo \"Received expected output\"
 	else
 		echo \"Error. Expected output ${expected_output} does not match actual \${num_rows}\"
-		exit 1
 	fi
 	"
 }
@@ -115,12 +117,11 @@ function close_ssh_tunnels() {
 
 function run_pxf_automation() {
 
-    hdfs dfs -chown gpadmin:gpadmin /tmp
+    /singlecluster/bin/hdfs dfs -chown gpadmin:gpadmin /tmp
     sed -i 's/sutFile=default.xml/sutFile=MultiNodesCluster.xml/g' pxf_src/pxf_automation/jsystem.properties
     chown -R gpadmin:gpadmin /home/gpadmin pxf_src/pxf_automation
 
     cat > /home/gpadmin/run_pxf_automation_test.sh <<-EOF
-	set -exo pipefail
 
 	export GPHOME=/usr/local/greenplum-db-devel
 	export PXF_HOME=\${GPHOME}/pxf
@@ -130,14 +131,23 @@ function run_pxf_automation() {
 	source \${GPHOME}/greenplum_path.sh
 
 	cd pxf_src/pxf_automation
-	make GROUP=gpdb
+	make GROUP=gpdb >> /tmp/pxf_automation.out
 
 	exit 0
 	EOF
 
 	chown gpadmin:gpadmin /home/gpadmin/run_pxf_automation_test.sh
 	chmod a+x /home/gpadmin/run_pxf_automation_test.sh
-	su gpadmin -c "bash /home/gpadmin/run_pxf_automation_test.sh"
+	source /usr/local/greenplum-db-devel/greenplum_path.sh
+	while true
+	do
+	    gpssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
+	    echo "Running PXF Automation"
+	    su gpadmin -c "bash /home/gpadmin/run_pxf_automation_test.sh"
+	    gpssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
+	    echo "Sleeping for 15 minutes"
+	    sleep 900 # Sleep for 15 min
+	done
 }
 
 function _main() {

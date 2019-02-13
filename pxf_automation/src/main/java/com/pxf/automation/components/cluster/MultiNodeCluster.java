@@ -79,6 +79,9 @@ public class MultiNodeCluster extends PhdCluster {
 
     @Override
     public void restart(EnumClusterServices service) throws Exception {
+        if (true) {
+            return;
+        }
         handleOperation("restart", service);
     }
 

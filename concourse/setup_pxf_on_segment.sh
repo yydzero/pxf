@@ -48,8 +48,8 @@ function _main() {
 	chown -R gpadmin:gpadmin ${GPHOME}/pxf
 
 	setup_hadoop_client ${1}
-	add_jdbc_jar_to_pxf_public_classpath
 	start_pxf_server
+	jstat -gc -t $(pgrep -f tomcat) 1000 > /tmp/jstat_pxf_1sec.out &
 }
 
 _main "$@"

@@ -26,7 +26,6 @@ function setup_pxf {
     scp ${SSH_OPTS} /singlecluster/hadoop/etc/hadoop/{core,hdfs,mapred}-site.xml centos@${segment}:
     scp ${SSH_OPTS} /singlecluster/hive/conf/hive-site.xml centos@${segment}:
     scp ${SSH_OPTS} /singlecluster/hbase/conf/hbase-site.xml centos@${segment}:
-    scp ${SSH_OPTS} /singlecluster/jdbc/postgresql-jdbc*.jar centos@${segment}:
     scp ${SSH_OPTS} cluster_env_files/etc_hostfile centos@${segment}:
     ssh ${SSH_OPTS} centos@${segment} "sudo bash -c \"\
         cd /home/centos && IMPERSONATION=${IMPERSONATION} PXF_JVM_OPTS='${PXF_JVM_OPTS}' ./setup_pxf_on_segment.sh ${hadoop_ip}
