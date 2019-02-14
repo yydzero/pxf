@@ -12,4 +12,52 @@
         <name>fs.s3a.fast.upload</name>
         <value>true</value>
     </property>
+
+    <!-- The properties below are optional, uncomment if needed for you use case -->
+
+    <!-- SERVER SIDE ENCRYPTION:
+         for details see: https://hadoop.apache.org/docs/r3.0.3/hadoop-aws/tools/hadoop-aws/encryption.html -->
+
+    <!-- SSE-S3 encryption with Amazon S3-Managed Encryption Keys, applied to all buckets
+         required ONLY when writing files to S3 (inserting into writable external tables with PXF) -->
+    <!--
+    <property>
+        <name>fs.s3a.server-side-encryption-algorithm</name>
+        <value>AES256</value>
+    </property>
+    -->
+
+    <!-- SSE-KMS encryption with Amazon S3-KMS Managed Encryption Keys, applied to all buckets
+         required ONLY when writing files to S3 (inserting into writable external tables with PXF) -->
+    <!--
+    <property>
+        <name>fs.s3a.server-side-encryption-algorithm</name>
+        <value>SSE-KMS</value>
+    </property>
+    -->
+
+    <!-- Custom key ARN for SSE-KMS. If not specified, a default key defined in the Amazon KMS will be used
+         example: arn:aws:kms:us-west-2:123456789012:key/1a23b456-7890-12cc-d345-6ef7890g12f3 -->
+    <!--
+    <property>
+        <name>fs.s3a.server-side-encryption.key</name>
+        <value>YOUR_AWS_SSE_KMS_KEY_ARN</value>
+    </property>
+    -->
+
+    <!-- To set encryption differently for different buckets, use one or more bucket-specific properties below -->
+    <!--
+    <property>
+        <name>fs.s3a.bucket.YOUR_BUCKET_NAME.server-side-encryption-algorithm</name>
+        <value>AES256</value>
+    </property>
+    <property>
+        <name>fs.s3a.bucket.YOUR_BUCKET_NAME.server-side-encryption-algorithm</name>
+        <value>SSE-KMS</value>
+    </property>
+    <property>
+        <name>fs.s3a.bucket.YOUR_BUCKET_NAME.server-side-encryption.key</name>
+        <value>YOUR_AWS_SSE_KMS_KEY_ARN</value>
+    </property>
+    -->
 </configuration>
