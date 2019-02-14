@@ -38,7 +38,7 @@ function install_hadoop_single_cluster() {
     tar -xzf pxf_tarball/pxf.tar.gz -C /tmp
     cp /tmp/pxf/lib/pxf-hbase-*.jar /singlecluster/hbase/lib
     scp ${SSH_OPTS} cluster_env_files/etc_hostfile centos@edw0:
-    scp ${SSH_OPTS} -rq /singlecluster centos@edw0:
+    scp ${SSH_OPTS} -rq /singlecluster centos@edw0:/data/gpdata
     scp ${SSH_OPTS} pxf_src/concourse/setup_hadoop_single_cluster.sh centos@edw0:
 
     ssh ${SSH_OPTS} centos@edw0 "sudo bash -c \"\

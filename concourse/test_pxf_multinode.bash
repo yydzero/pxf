@@ -138,13 +138,12 @@ function run_pxf_automation() {
 
 	chown gpadmin:gpadmin /home/gpadmin/run_pxf_automation_test.sh
 	chmod a+x /home/gpadmin/run_pxf_automation_test.sh
-	source /usr/local/greenplum-db-devel/greenplum_path.sh
 	while true
 	do
-	    gpssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
+	    ssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
 	    echo "Running PXF Automation"
 	    su gpadmin -c "bash /home/gpadmin/run_pxf_automation_test.sh"
-	    gpssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
+	    ssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
 	    echo "Sleeping for 15 minutes"
 	    sleep 900 # Sleep for 15 min
 	done

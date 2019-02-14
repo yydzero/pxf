@@ -2,7 +2,7 @@
 
 set -exo pipefail
 
-export GPHD_ROOT="/home/centos/singlecluster"
+export GPHD_ROOT="/data/gpdata/singlecluster"
 
 sed -i 's/edw0/hadoop/' /etc/hosts
 sed -i -e "s/>tez/>mr/g" -e "s/localhost/${1}/g" ${GPHD_ROOT}/hive/conf/hive-site.xml
