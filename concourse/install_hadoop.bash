@@ -10,7 +10,7 @@ function install_hadoop_client {
     local segment=${1}
     scp -r ${SSH_OPTS} hdp.repo centos@${segment}:~
     ssh ${SSH_OPTS} centos@${segment} "
-        sudo yum install -y -d 1 java-1.8.0-openjdk-devel &&
+        sudo yum install -y -d 1 java-1.8.0-openjdk-devel uuid &&
 	    echo 'export JAVA_HOME=/usr/lib/jvm/jre' | sudo tee -a ~gpadmin/.bash_profile &&
 	    echo 'export JAVA_HOME=/usr/lib/jvm/jre' | sudo tee -a ~centos/.bash_profile &&
 	    sudo mv /home/centos/hdp.repo /etc/yum.repos.d &&
@@ -38,6 +38,7 @@ function install_hadoop_single_cluster() {
     tar -xzf pxf_tarball/pxf.tar.gz -C /tmp
     cp /tmp/pxf/lib/pxf-hbase-*.jar /singlecluster/hbase/lib
     scp ${SSH_OPTS} cluster_env_files/etc_hostfile centos@edw0:
+    ssh ${SSH_OPTS} centos@edw0 "sudo chown -R centos:centos /data"
     scp ${SSH_OPTS} -rq /singlecluster centos@edw0:/data/gpdata
     scp ${SSH_OPTS} pxf_src/concourse/setup_hadoop_single_cluster.sh centos@edw0:
 

@@ -18,7 +18,7 @@ function start_pxf_server() {
 
 	#Check if some other process is listening on 5888
 	netstat -tlpna | grep 5888 || true
-	su gpadmin -c "source ~gpadmin/.bash_profile && ./bin/pxf init && ./bin/pxf start"
+	su gpadmin -c "source ~gpadmin/.bash_profile && export PXF_DEBUG=true && ./bin/pxf init && ./bin/pxf start"
 	popd > /dev/null
 }
 

@@ -34,7 +34,7 @@ function setup_sshd() {
 
 function configure_hdfs() {
 
-    sed -i -e 's|hdfs://0.0.0.0:8020|hdfs://hadoop:8020|' ${GPHD_ROOT}/hadoop/etc/hadoop/core-site.xml ${GPHD_ROOT}/hbase/conf/hbase-site.xml
+    sed -i -e 's|hdfs://0.0.0.0:8020|hdfs://hadoop:8020|' ${GPHD_ROOT}/hadoop/etc/hadoop/core-site.xml ${GPHD_ROOT}/hbase/conf/hbase-site.xml ${GPHD_ROOT}/hbase/conf/hive-site.xml
 	sed -i -e "s/>tez/>mr/g" ${GPHD_ROOT}/hive/conf/hive-site.xml
 }
 
@@ -138,13 +138,20 @@ function run_pxf_automation() {
 
 	chown gpadmin:gpadmin /home/gpadmin/run_pxf_automation_test.sh
 	chmod a+x /home/gpadmin/run_pxf_automation_test.sh
+
+    local i=0
+    local uuid=$(uuid)
 	while true
 	do
 	    ssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
-	    echo "Running PXF Automation"
+	    echo "Running PXF Automation - Run #$i"
 	    su gpadmin -c "bash /home/gpadmin/run_pxf_automation_test.sh"
-	    ssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out"
+	    ssh ${SSH_OPTS} sdw1 "tail /tmp/jstat_pxf_1sec.out &&
+	    echo \"jmap -dump:live,format=b,file=bug_repro.$i.hprof \$(pgrep -f tomcat)\"
+	    jmap -dump:live,format=b,file=bug_repro.$i.hprof \$(pgrep -f tomcat) &&
+	    gsutil cp bug_repro.$i.hprof gs://ud-tmp/heap_dumps/${uuid}/"
 	    echo "Sleeping for 15 minutes"
+	    i=$(($i + 1))
 	    sleep 900 # Sleep for 15 min
 	done
 }
