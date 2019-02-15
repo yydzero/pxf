@@ -14,6 +14,7 @@ function start_pxf_server() {
 	sed -i -e "s|^export PXF_JVM_OPTS=.*$|export PXF_JVM_OPTS=\"${PXF_JVM_OPTS}\"|g" ${PXF_HOME}/conf/pxf-env.sh
 	echo "---------------------PXF environment -------------------------"
 	cat ${PXF_HOME}/conf/pxf-env.sh
+	echo "log4j.logger.org.apache.hawq.pxf=DEBUG" >> ${PXF_HOME}/conf/pxf-log4j.properties
 	echo "--------------------------------------------------------------"
 
 	#Check if some other process is listening on 5888
