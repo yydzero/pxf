@@ -36,7 +36,7 @@ function run_pxf_smoke_secure() {
 		exit 1
 	fi
 
-	exit 0
+	exit 1
 	EOF
 
 	cat > /tmp/test.txt <<-EOF
