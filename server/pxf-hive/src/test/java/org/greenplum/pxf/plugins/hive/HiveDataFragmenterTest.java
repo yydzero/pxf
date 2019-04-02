@@ -138,7 +138,7 @@ public class HiveDataFragmenterTest {
                 new ColumnDescriptor("textColumn", 25, 3, "text", null, true);
         String filterColumnName = columnDescriptor.columnName();
         int filterColumnIndex = columnDescriptor.columnIndex();
-        HiveFilterBuilder builder = new HiveFilterBuilder(null);
+        HiveFilterBuilder builder = new HiveFilterBuilder();
         when(requestContext.getColumn(filterColumnIndex)).thenReturn(columnDescriptor);
 
         // Mock private field partitionkeyTypes
@@ -280,7 +280,7 @@ public class HiveDataFragmenterTest {
         String prefix = "";
         StringBuilder localFilterString = new StringBuilder();
         boolean result;
-        HiveFilterBuilder builder = new HiveFilterBuilder(null);
+        HiveFilterBuilder builder = new HiveFilterBuilder();
 
         bFilter = (BasicFilter) builder.getFilterObject(filterString);
         result = (Boolean) method.invoke(fragmenter, new Object[]{bFilter, localFilterString, prefix});

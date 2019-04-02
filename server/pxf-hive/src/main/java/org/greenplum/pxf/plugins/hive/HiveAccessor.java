@@ -231,7 +231,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
         }
 
         String filterStr = context.getFilterString();
-        HiveFilterBuilder eval = new HiveFilterBuilder(context);
+        HiveFilterBuilder eval = new HiveFilterBuilder();
         Object filter = eval.getFilterObject(filterStr);
 
         boolean returnData = isFiltered(partitions, filter);

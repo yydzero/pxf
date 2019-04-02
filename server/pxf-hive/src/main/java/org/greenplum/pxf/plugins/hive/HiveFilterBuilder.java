@@ -38,16 +38,6 @@ import java.util.List;
  * partition filtering.
  */
 public class HiveFilterBuilder implements FilterParser.FilterBuilder {
-    private RequestContext requestContext;
-
-    /**
-     * Constructs a HiveFilterBuilder object.
-     *
-     * @param input input data containing filter string
-     */
-    public HiveFilterBuilder(RequestContext input) {
-        requestContext = input;
-    }
 
     /**
      * Translates a filterString into a {@link BasicFilter} or a

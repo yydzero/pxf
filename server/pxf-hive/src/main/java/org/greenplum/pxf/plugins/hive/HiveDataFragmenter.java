@@ -349,7 +349,7 @@ public class HiveDataFragmenter extends HdfsDataFragmenter {
             LOG.debug("Filter string input : " + context.getFilterString());
         }
 
-        HiveFilterBuilder eval = new HiveFilterBuilder(context);
+        HiveFilterBuilder eval = new HiveFilterBuilder();
         Object filter = eval.getFilterObject(filterInput);
 
         if (filter instanceof LogicalFilter) {

@@ -35,6 +35,7 @@ import org.greenplum.pxf.api.StatsAccessor;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.Utilities;
+import org.greenplum.pxf.plugins.hive.utilities.HiveUtilities;
 
 import java.sql.Date;
 import java.util.ArrayList;
@@ -116,119 +117,12 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
      * JobConf object
      */
     private void addFilters() throws Exception {
-        if (!context.hasFilter()) {
-            return;
+        SearchArgument sarg = HiveUtilities.buildSearchArgument(context);
+        if (sarg != null) {
+            jobConf.set(SARG_PUSHDOWN, sarg.toKryo());
         }
-
-        /* Predicate pushdown configuration */
-        String filterStr = context.getFilterString();
-        HiveFilterBuilder eval = new HiveFilterBuilder(context);
-        Object filter = eval.getFilterObject(filterStr);
-        SearchArgument.Builder filterBuilder = SearchArgumentFactory.newBuilder();
-
-        /*
-         * If there is only a single filter it will be of type Basic Filter
-         * need special case logic to make sure to still wrap the filter in a
-         * startAnd() & end() block
-         */
-        if (filter instanceof LogicalFilter) {
-            if (!buildExpression(filterBuilder, Arrays.asList(filter))) {
-                return;
-            }
-        }
-        else {
-            filterBuilder.startAnd();
-            if(!buildArgument(filterBuilder, filter)) {
-                return;
-            }
-            filterBuilder.end();
-        }
-        SearchArgument sarg = filterBuilder.build();
-        jobConf.set(SARG_PUSHDOWN, sarg.toKryo());
     }
 
-    private boolean buildExpression(SearchArgument.Builder builder, List<Object> filterList) {
-        for (Object f : filterList) {
-            if (f instanceof LogicalFilter) {
-                switch(((LogicalFilter) f).getOperator()) {
-                    case HDOP_OR:
-                        builder.startOr();
-                        break;
-                    case HDOP_AND:
-                        builder.startAnd();
-                        break;
-                    case HDOP_NOT:
-                        builder.startNot();
-                        break;
-                }
-                if (buildExpression(builder, ((LogicalFilter) f).getFilterList())) {
-                    builder.end();
-                } else {
-                    return false;
-                }
-            } else {
-                if (!buildArgument(builder, f)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private boolean buildArgument(SearchArgument.Builder builder, Object filterObj) {
-        /* The below functions will not be compatible and requires update  with Hive 2.0 APIs */
-        BasicFilter filter = (BasicFilter) filterObj;
-        int filterColumnIndex = filter.getColumn().index();
-        // filter value might be null for unary operations
-        Object filterValue = filter.getConstant() == null ? null : filter.getConstant().constant();
-        ColumnDescriptor filterColumn = context.getColumn(filterColumnIndex);
-        String filterColumnName = filterColumn.columnName();
-
-        /* Need to convert java.sql.Date to Hive's DateWritable Format */
-        if (filterValue instanceof Date)
-            filterValue= new DateWritable((Date) filterValue);
-
-        switch(filter.getOperation()) {
-            case HDOP_LT:
-                builder.lessThan(filterColumnName, filterValue);
-                break;
-            case HDOP_GT:
-                builder.startNot().lessThanEquals(filterColumnName, filterValue).end();
-                break;
-            case HDOP_LE:
-                builder.lessThanEquals(filterColumnName, filterValue);
-                break;
-            case HDOP_GE:
-                builder.startNot().lessThanEquals(filterColumnName, filterValue).end();
-                break;
-            case HDOP_EQ:
-                builder.equals(filterColumnName, filterValue);
-                break;
-            case HDOP_NE:
-                builder.startNot().equals(filterColumnName, filterValue).end();
-                break;
-            case HDOP_IS_NULL:
-                builder.isNull(filterColumnName);
-                break;
-            case HDOP_IS_NOT_NULL:
-                builder.startNot().isNull(filterColumnName).end();
-                break;
-            case HDOP_IN:
-                if (filterValue instanceof List) {
-                    @SuppressWarnings("unchecked")
-                    List<Object> l = (List<Object>)filterValue;
-                    builder.in(filterColumnName, l.toArray());
-                } else {
-                    throw new IllegalArgumentException("filterValue should be instace of List for HDOP_IN operation");
-                }
-                break;
-            default: {
-                LOG.debug("Filter push-down is not supported for " + filter.getOperation() + "operation.");
-                return false;
-            }
-        }
-        return true;
-    }
 
     /**
      * Fetches file-level statistics from an ORC file.
