@@ -97,7 +97,6 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
      * so only these columns will be returned.
      */
     private void addColumns() throws Exception {
-
         List<Integer> colIds = new ArrayList<Integer>();
         List<String> colNames = new ArrayList<String>();
         for(ColumnDescriptor col: context.getTupleDescription()) {
@@ -122,7 +121,6 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
             jobConf.set(SARG_PUSHDOWN, sarg.toKryo());
         }
     }
-
 
     /**
      * Fetches file-level statistics from an ORC file.

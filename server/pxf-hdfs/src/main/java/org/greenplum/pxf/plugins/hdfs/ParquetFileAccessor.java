@@ -98,12 +98,16 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     @Override
     public boolean openForRead() throws IOException {
         MessageType schema, readSchema;
-
+        MetadataFilter filter = null;
         file = new Path(context.getDataSource());
-        FileSplit fileSplit = HdfsUtilities.parseFileSplit(context);
-        // Create reader for a given split, read a range in file
-        MetadataFilter filter = ParquetMetadataConverter.range(
-                fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength());
+        FileSplit fileSplit = null;//HdfsUtilities.parseFileSplit(context);
+        if (fileSplit == null) {
+            filter = ParquetMetadataConverter.NO_FILTER;
+        } else {
+            // Create reader for a given split, read a range in file
+            filter = ParquetMetadataConverter.range(
+                    fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength());
+        }
         fileReader = new ParquetFileReader(configuration, file, filter);
         try {
             ParquetMetadata metadata = fileReader.getFooter();
