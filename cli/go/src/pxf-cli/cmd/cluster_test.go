@@ -2,9 +2,10 @@ package cmd_test
 
 import (
 	"fmt"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"pxf-cli/cmd"
 	"pxf-cli/pxf"
+
+	"github.com/greenplum-db/gp-common-go-libs/operating"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
 	. "github.com/onsi/ginkgo"
@@ -20,10 +21,16 @@ var _ = Describe("GetHostlist", func() {
 		})
 	})
 
-	Context("When the command is not init", func() {
+	Context("When the command is start or stop", func() {
 		It("Hostlist includes only segment hosts", func() {
 			Expect(cmd.GetHostList(pxf.Start)).To(Equal(cluster.ON_HOSTS))
 			Expect(cmd.GetHostList(pxf.Stop)).To(Equal(cluster.ON_HOSTS))
+		})
+	})
+
+	Context("When the command is sync", func() {
+		It("Hostlist includes master to segment hosts", func() {
+			Expect(cmd.GetHostList(pxf.Sync)).To(Equal(cluster.ON_MASTER_TO_HOSTS))
 		})
 	})
 })
@@ -121,6 +128,7 @@ var _ = Describe("GenerateOutput", func() {
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 		})
+
 		Context("Before the command returns", func() {
 			cmd.SetCluster(globalCluster)
 			hostList := map[string]int{"sdw1": 1, "sdw2": 2}
@@ -145,6 +153,7 @@ var _ = Describe("GenerateOutput", func() {
 				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.StatusMessage[pxf.Sync], 2)))
 			})
 		})
+
 		Context("When we see messages in Stderr, but NumErrors is 0", func() {
 			It("Reports all hosts were successful", func() {
 				clusterOutput = &cluster.RemoteOutput{
@@ -176,6 +185,7 @@ stderr line two...`
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 		})
+
 		Context("When NumErrors is non-zero, but Stderr is empty", func() {
 			It("Reports Stdout in error message", func() {
 				clusterOutput = &cluster.RemoteOutput{

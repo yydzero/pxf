@@ -415,7 +415,9 @@ function doSync()
 
 function doCluster()
 {
-	GPHOME=${GPHOME:-"${PXF_HOME}/.."} "$parent_script_dir/bin/pxf-cli" "$@"
+    source <(grep 'export PXF_CONF=' "$default_env_script")
+    [[ $PXF_CONF == NOT_INITIALIZED ]] && unset PXF_CONF
+    GPHOME=${GPHOME:-"${PXF_HOME}/.."} "$parent_script_dir/bin/pxf-cli" "$@"
 }
 
 pxf_script_command=$1

@@ -2,8 +2,10 @@ package pxf
 
 import (
 	"errors"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
+	"fmt"
 	"os"
+
+	"github.com/greenplum-db/gp-common-go-libs/cluster"
 )
 
 type CliInputs struct {
@@ -57,7 +59,7 @@ func makeValidCliInputs(cmd Command) (*CliInputs, error) {
 		return nil, err
 	}
 	pxfConf := ""
-	if cmd == Init {
+	if cmd == Init || cmd == Sync {
 		pxfConf, err = validateEnvVar(PxfConf)
 		if err != nil {
 			return nil, err
@@ -77,21 +79,30 @@ func validateEnvVar(envVar EnvVar) (string, error) {
 	return envVarValue, nil
 }
 
-func RemoteCommandToRunOnSegments(command Command) (string, error) {
+func CommandFunc(command Command, c *cluster.Cluster) (func(int) string, error) {
 	inputs, err := makeValidCliInputs(command)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	pxfCommand := ""
-	if inputs.PxfConf != "" {
-		pxfCommand += "PXF_CONF=" + inputs.PxfConf + " "
+	switch command {
+	case Start, Stop, Init:
+		pxfCommand := ""
+		if inputs.PxfConf != "" {
+			pxfCommand += "PXF_CONF=" + inputs.PxfConf + " "
+		}
+		pxfCommand += inputs.Gphome + "/pxf/bin/pxf" + " " + string(inputs.Cmd)
+		return func(_ int) string { return pxfCommand }, nil
+	case Sync:
+		return func(contentId int) string {
+			return fmt.Sprintf(
+				"rsync -az -e 'ssh -o StrictHostKeyChecking=no' '%s/conf' '%s/lib' '%s/servers' '%s:%s'",
+				inputs.PxfConf,
+				inputs.PxfConf,
+				inputs.PxfConf,
+				c.GetHostForContent(contentId),
+				inputs.PxfConf)
+		}, nil
+	default:
+		return nil, fmt.Errorf("%s is not a valid pxf command", command)
 	}
-	pxfCommand += inputs.Gphome + "/pxf/bin/pxf" + " " + string(inputs.Cmd)
-
-	if command == Sync {
-		hostname, _ := operating.System.Hostname()
-		pxfCommand += " " + hostname
-	}
-
-	return pxfCommand, nil
 }
