@@ -44,7 +44,7 @@ install: build
 	cp ${GOPATH}/bin/pxf-cli ${PXF_HOME}/bin
 
 test: build
-	ginkgo pxf cmd end_to_end
+	ginkgo pxf cmd end_to_end operating
 
 clean:
 	go clean -i

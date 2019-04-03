@@ -2,8 +2,9 @@ package pxf
 
 import (
 	"errors"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"os"
+
+	"pxf-cli/operating"
 )
 
 type CliInputs struct {
@@ -89,7 +90,7 @@ func RemoteCommandToRunOnSegments(command Command) (string, error) {
 	pxfCommand += inputs.Gphome + "/pxf/bin/pxf" + " " + string(inputs.Cmd)
 
 	if command == Sync {
-		hostname, _ := operating.System.Hostname()
+		hostname, _ := operating.SystemHostname()
 		pxfCommand += " " + hostname
 	}
 

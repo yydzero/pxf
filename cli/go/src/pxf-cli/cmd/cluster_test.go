@@ -2,9 +2,10 @@ package cmd_test
 
 import (
 	"fmt"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"pxf-cli/cmd"
 	"pxf-cli/pxf"
+
+	"github.com/greenplum-db/gp-common-go-libs/operating"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
 	. "github.com/onsi/ginkgo"

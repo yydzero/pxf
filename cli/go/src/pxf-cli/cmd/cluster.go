@@ -3,8 +3,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"os"
+	"pxf-cli/operating"
 	"pxf-cli/pxf"
 	"strings"
 
@@ -89,7 +89,7 @@ func GenerateHostList(cluster *cluster.Cluster) (map[string]int, error) {
 	hostSegMap := make(map[string]int, 0)
 	for contentID, seg := range cluster.Segments {
 		if contentID == -1 {
-			master, _ := operating.System.Hostname()
+			master, _ := operating.SystemHostname()
 			if seg.Hostname != master {
 				return nil, errors.New("ERROR: pxf cluster commands should only be run from Greenplum master")
 			}
