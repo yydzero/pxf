@@ -101,7 +101,7 @@ func GenerateHostList() (map[string]int, error) {
 }
 
 func GenerateStatusReport() string {
-	cmdMsg := fmt.Sprintf(globalCommand.Messages("status"), len(segHostList))
+	cmdMsg := fmt.Sprintf(globalCommand.Messages(pxf.Status), len(segHostList))
 	gplog.Info(cmdMsg)
 	return cmdMsg
 }
@@ -110,7 +110,7 @@ func GenerateOutput(remoteOut *cluster.RemoteOutput) error {
 	numHosts := len(remoteOut.Stderrs)
 	numErrors := remoteOut.NumErrors
 	if numErrors == 0 {
-		gplog.Info(globalCommand.Messages("success"), numHosts-numErrors, numHosts)
+		gplog.Info(globalCommand.Messages(pxf.Success), numHosts-numErrors, numHosts)
 		return nil
 	}
 	response := ""
@@ -133,7 +133,7 @@ func GenerateOutput(remoteOut *cluster.RemoteOutput) error {
 		}
 		response += fmt.Sprintf("%s ==> %s\n", host, errorMessage)
 	}
-	gplog.Info("ERROR: "+globalCommand.Messages("error"), numErrors, numHosts)
+	gplog.Info("ERROR: "+globalCommand.Messages(pxf.Error), numErrors, numHosts)
 	gplog.Error("%s", response)
 	return errors.New(response)
 }

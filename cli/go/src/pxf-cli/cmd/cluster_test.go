@@ -54,25 +54,25 @@ var _ = Describe("GenerateOutput", func() {
 			It("Reports all hosts initialized successfully", func() {
 				cmd.SetCommand(&pxf.Init)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Init.Messages("success"), 3, 3)))
+				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Init.Messages(pxf.Success), 3, 3)))
 			})
 
 			It("Reports all hosts started successfully", func() {
 				cmd.SetCommand(&pxf.Start)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Start.Messages("success"), 3, 3)))
+				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Start.Messages(pxf.Success), 3, 3)))
 			})
 
 			It("Reports all hosts stopped successfully", func() {
 				cmd.SetCommand(&pxf.Stop)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages("success"), 3, 3)))
+				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages(pxf.Success), 3, 3)))
 			})
 
 			It("Reports all hosts synced successfully", func() {
 				cmd.SetCommand(&pxf.Sync)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Sync.Messages("success"), 3, 3)))
+				Expect(testStdout).To(gbytes.Say(fmt.Sprintf(pxf.Sync.Messages(pxf.Success), 3, 3)))
 			})
 		})
 
@@ -90,28 +90,28 @@ var _ = Describe("GenerateOutput", func() {
 			It("Reports the number of hosts that failed to initialize", func() {
 				cmd.SetCommand(&pxf.Init)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Init.Messages("error"), 1, 3)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Init.Messages(pxf.Error), 1, 3)))
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 
 			It("Reports the number of hosts that failed to start", func() {
 				cmd.SetCommand(&pxf.Start)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Start.Messages("error"), 1, 3)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Start.Messages(pxf.Error), 1, 3)))
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 
 			It("Reports the number of hosts that failed to stop", func() {
 				cmd.SetCommand(&pxf.Stop)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages("error"), 1, 3)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages(pxf.Error), 1, 3)))
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 
 			It("Reports the number of hosts that failed to sync", func() {
 				cmd.SetCommand(&pxf.Sync)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Sync.Messages("error"), 1, 3)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Sync.Messages(pxf.Error), 1, 3)))
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 		})
@@ -123,25 +123,25 @@ var _ = Describe("GenerateOutput", func() {
 			It("Reports the number of hosts that will be initialized", func() {
 				cmd.SetCommand(&pxf.Init)
 				_ = cmd.GenerateStatusReport()
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Init.Messages("status"), 2)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Init.Messages(pxf.Status), 2)))
 			})
 
 			It("Reports the number of hosts will be started", func() {
 				cmd.SetCommand(&pxf.Start)
 				_ = cmd.GenerateStatusReport()
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Start.Messages("status"), 2)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Start.Messages(pxf.Status), 2)))
 			})
 
 			It("Reports the number of hosts that will be stopped", func() {
 				cmd.SetCommand(&pxf.Stop)
 				_ = cmd.GenerateStatusReport()
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages("status"), 2)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages(pxf.Status), 2)))
 			})
 
 			It("Reports the number of hosts that will be synced", func() {
 				cmd.SetCommand(&pxf.Sync)
 				_ = cmd.GenerateStatusReport()
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Sync.Messages("status"), 2)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Sync.Messages(pxf.Status), 2)))
 			})
 		})
 
@@ -174,7 +174,7 @@ stderr line three`
 stderr line two...`
 				cmd.SetCommand(&pxf.Stop)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages("error"), 1, 3)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages(pxf.Error), 1, 3)))
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 		})
@@ -190,7 +190,7 @@ stderr line two...`
 				expectedError := "sdw2 ==> something wrong on sdw2\nstderr line2..."
 				cmd.SetCommand(&pxf.Stop)
 				_ = cmd.GenerateOutput(clusterOutput)
-				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages("error"), 1, 3)))
+				Expect(testStdout).Should(gbytes.Say(fmt.Sprintf(pxf.Stop.Messages(pxf.Error), 1, 3)))
 				Expect(testStderr).Should(gbytes.Say(expectedError))
 			})
 		})

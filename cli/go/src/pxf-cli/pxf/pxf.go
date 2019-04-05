@@ -21,21 +21,29 @@ const (
 	PxfConf EnvVar = "PXF_CONF"
 )
 
+type MessageType int
+
+const (
+	Success MessageType = iota
+	Status
+	Error
+)
+
 type Command interface {
 	WhereToRun() int
-	Messages(string) string
+	Messages(MessageType) string
 	GetFunctionToExecute() (func(int) string, error)
 }
 
 type SimpleCommand struct {
 	commandName string
-	messages    map[string]string
+	messages    map[MessageType]string
 	whereToRun  int
 }
 
 type SyncCommand struct {
 	commandName string
-	messages    map[string]string
+	messages    map[MessageType]string
 	whereToRun  int
 	cluster     *cluster.Cluster
 }
@@ -48,11 +56,11 @@ func (c *SyncCommand) WhereToRun() int {
 	return c.whereToRun
 }
 
-func (c *SimpleCommand) Messages(messageType string) string {
+func (c *SimpleCommand) Messages(messageType MessageType) string {
 	return c.messages[messageType]
 }
 
-func (c *SyncCommand) Messages(messageType string) string {
+func (c *SyncCommand) Messages(messageType MessageType) string {
 	return c.messages[messageType]
 }
 
@@ -98,37 +106,37 @@ func (c *SyncCommand) GetFunctionToExecute() (func(int) string, error) {
 var (
 	Init = SimpleCommand{
 		commandName: "init",
-		messages: map[string]string{
-			"success": "PXF initialized successfully on %d out of %d hosts\n",
-			"status":  "Initializing PXF on master and %d segment hosts...\n",
-			"error":   "PXF failed to initialize on %d out of %d hosts\n",
+		messages: map[MessageType]string{
+			Success: "PXF initialized successfully on %d out of %d hosts\n",
+			Status:  "Initializing PXF on master and %d segment hosts...\n",
+			Error:   "PXF failed to initialize on %d out of %d hosts\n",
 		},
 		whereToRun: cluster.ON_HOSTS_AND_MASTER,
 	}
 	Start = SimpleCommand{
 		commandName: "start",
-		messages: map[string]string{
-			"success": "PXF started successfully on %d out of %d hosts\n",
-			"status":  "Starting PXF on %d segment hosts...\n",
-			"error":   "PXF failed to start on %d out of %d hosts\n",
+		messages: map[MessageType]string{
+			Success: "PXF started successfully on %d out of %d hosts\n",
+			Status:  "Starting PXF on %d segment hosts...\n",
+			Error:   "PXF failed to start on %d out of %d hosts\n",
 		},
 		whereToRun: cluster.ON_HOSTS,
 	}
 	Stop = SimpleCommand{
 		commandName: "stop",
-		messages: map[string]string{
-			"success": "PXF stopped successfully on %d out of %d hosts\n",
-			"status":  "Stopping PXF on %d segment hosts...\n",
-			"error":   "PXF failed to stop on %d out of %d hosts\n",
+		messages: map[MessageType]string{
+			Success: "PXF stopped successfully on %d out of %d hosts\n",
+			Status:  "Stopping PXF on %d segment hosts...\n",
+			Error:   "PXF failed to stop on %d out of %d hosts\n",
 		},
 		whereToRun: cluster.ON_HOSTS,
 	}
 	Sync = SyncCommand{
 		commandName: "sync",
-		messages: map[string]string{
-			"success": "PXF configs synced successfully on %d out of %d hosts\n",
-			"status":  "Syncing PXF configuration files to %d hosts...\n",
-			"error":   "PXF configs failed to sync on %d out of %d hosts\n",
+		messages: map[MessageType]string{
+			Success: "PXF configs synced successfully on %d out of %d hosts\n",
+			Status:  "Syncing PXF configuration files to %d hosts...\n",
+			Error:   "PXF configs failed to sync on %d out of %d hosts\n",
 		},
 		whereToRun: cluster.ON_MASTER_TO_HOSTS,
 		cluster:    nil,
