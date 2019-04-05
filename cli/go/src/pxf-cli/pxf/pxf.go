@@ -8,12 +8,6 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
 )
 
-type CliInputs struct {
-	Gphome  string
-	PxfConf string
-	Cmd     string
-}
-
 type EnvVar string
 
 const (
@@ -33,19 +27,30 @@ type Command interface {
 	WhereToRun() int
 	Messages(MessageType) string
 	GetFunctionToExecute() (func(int) string, error)
+	RequiredEnvVars() []EnvVar
 }
 
 type SimpleCommand struct {
-	commandName string
-	messages    map[MessageType]string
-	whereToRun  int
+	commandName     string
+	messages        map[MessageType]string
+	whereToRun      int
+	requiredEnvVars []EnvVar
 }
 
 type SyncCommand struct {
-	commandName string
-	messages    map[MessageType]string
-	whereToRun  int
-	cluster     *cluster.Cluster
+	commandName     string
+	messages        map[MessageType]string
+	whereToRun      int
+	requiredEnvVars []EnvVar
+	cluster         *cluster.Cluster
+}
+
+func (c *SimpleCommand) RequiredEnvVars() []EnvVar {
+	return c.requiredEnvVars
+}
+
+func (c *SyncCommand) RequiredEnvVars() []EnvVar {
+	return c.requiredEnvVars
 }
 
 func (c *SimpleCommand) WhereToRun() int {
@@ -65,16 +70,16 @@ func (c *SyncCommand) Messages(messageType MessageType) string {
 }
 
 func (c *SimpleCommand) GetFunctionToExecute() (func(int) string, error) {
-	inputs, err := makeValidCliInputs(c.commandName)
+	inputs, err := makeValidCliInputs(c)
 	if err != nil {
 		return nil, err
 	}
 
 	pxfCommand := ""
-	if inputs.PxfConf != "" {
-		pxfCommand += "PXF_CONF=" + inputs.PxfConf + " "
+	if inputs[PxfConf] != "" {
+		pxfCommand += "PXF_CONF=" + inputs[PxfConf] + " "
 	}
-	pxfCommand += inputs.Gphome + "/pxf/bin/pxf" + " " + c.commandName
+	pxfCommand += inputs[Gphome] + "/pxf/bin/pxf" + " " + c.commandName
 	return func(_ int) string { return pxfCommand }, nil
 }
 
@@ -87,7 +92,7 @@ func (c *SyncCommand) GetFunctionToExecute() (func(int) string, error) {
 		return nil, errors.New("Cluster object must be set with SetCluster to use SyncCommand")
 	}
 
-	pxfConf, err := validateEnvVar(PxfConf)
+	inputs, err := makeValidCliInputs(c)
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +100,11 @@ func (c *SyncCommand) GetFunctionToExecute() (func(int) string, error) {
 	return func(contentId int) string {
 		return fmt.Sprintf(
 			"rsync -az -e 'ssh -o StrictHostKeyChecking=no' '%s/conf' '%s/lib' '%s/servers' '%s:%s'",
-			pxfConf,
-			pxfConf,
-			pxfConf,
+			inputs[PxfConf],
+			inputs[PxfConf],
+			inputs[PxfConf],
 			c.cluster.GetHostForContent(contentId),
-			pxfConf)
+			inputs[PxfConf])
 	}, nil
 }
 
@@ -111,7 +116,8 @@ var (
 			Status:  "Initializing PXF on master and %d segment hosts...\n",
 			Error:   "PXF failed to initialize on %d out of %d hosts\n",
 		},
-		whereToRun: cluster.ON_HOSTS_AND_MASTER,
+		requiredEnvVars: []EnvVar{Gphome, PxfConf},
+		whereToRun:      cluster.ON_HOSTS_AND_MASTER,
 	}
 	Start = SimpleCommand{
 		commandName: "start",
@@ -120,7 +126,8 @@ var (
 			Status:  "Starting PXF on %d segment hosts...\n",
 			Error:   "PXF failed to start on %d out of %d hosts\n",
 		},
-		whereToRun: cluster.ON_HOSTS,
+		requiredEnvVars: []EnvVar{Gphome},
+		whereToRun:      cluster.ON_HOSTS,
 	}
 	Stop = SimpleCommand{
 		commandName: "stop",
@@ -129,7 +136,8 @@ var (
 			Status:  "Stopping PXF on %d segment hosts...\n",
 			Error:   "PXF failed to stop on %d out of %d hosts\n",
 		},
-		whereToRun: cluster.ON_HOSTS,
+		requiredEnvVars: []EnvVar{Gphome},
+		whereToRun:      cluster.ON_HOSTS,
 	}
 	Sync = SyncCommand{
 		commandName: "sync",
@@ -138,24 +146,22 @@ var (
 			Status:  "Syncing PXF configuration files to %d hosts...\n",
 			Error:   "PXF configs failed to sync on %d out of %d hosts\n",
 		},
-		whereToRun: cluster.ON_MASTER_TO_HOSTS,
-		cluster:    nil,
+		requiredEnvVars: []EnvVar{PxfConf},
+		whereToRun:      cluster.ON_MASTER_TO_HOSTS,
+		cluster:         nil,
 	}
 )
 
-func makeValidCliInputs(c string) (*CliInputs, error) {
-	gphome, err := validateEnvVar(Gphome)
-	if err != nil {
-		return nil, err
-	}
-	pxfConf := ""
-	if c == Init.commandName || c == Sync.commandName {
-		pxfConf, err = validateEnvVar(PxfConf)
+func makeValidCliInputs(c Command) (map[EnvVar]string, error) {
+	envVars := make(map[EnvVar]string)
+	for _, e := range c.RequiredEnvVars() {
+		val, err := validateEnvVar(e)
 		if err != nil {
 			return nil, err
 		}
+		envVars[e] = val
 	}
-	return &CliInputs{Cmd: c, Gphome: gphome, PxfConf: pxfConf}, nil
+	return envVars, nil
 }
 
 func validateEnvVar(envVar EnvVar) (string, error) {
