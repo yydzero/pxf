@@ -26,7 +26,8 @@ var (
 		Short: "Initialize the local PXF server instance",
 		Run: func(cmd *cobra.Command, args []string) {
 			doSetup()
-			err := clusterRun(pxf.Init)
+			globalCommand = &pxf.Init
+			err := clusterRun()
 			exitWithReturnCode(err)
 		},
 	}
@@ -36,7 +37,8 @@ var (
 		Short: "Start the local PXF server instance",
 		Run: func(cmd *cobra.Command, args []string) {
 			doSetup()
-			err := clusterRun(pxf.Start)
+			globalCommand = &pxf.Start
+			err := clusterRun()
 			exitWithReturnCode(err)
 		},
 	}
@@ -46,7 +48,8 @@ var (
 		Short: "Stop the local PXF server instance",
 		Run: func(cmd *cobra.Command, args []string) {
 			doSetup()
-			err := clusterRun(pxf.Stop)
+			globalCommand = &pxf.Stop
+			err := clusterRun()
 			exitWithReturnCode(err)
 		},
 	}
@@ -56,12 +59,15 @@ var (
 		Short: "Sync PXF configs from master to all segment hosts",
 		Run: func(cmd *cobra.Command, args []string) {
 			doSetup()
-			err := clusterRun(pxf.Sync)
+			globalCommand = &pxf.Sync
+			pxf.SetCluster(globalCluster)
+			err := clusterRun()
 			exitWithReturnCode(err)
 		},
 	}
 
-	segHostList map[string]int
+	segHostList   map[string]int
+	globalCommand pxf.Command
 )
 
 func init() {
@@ -79,20 +85,9 @@ func exitWithReturnCode(err error) {
 	os.Exit(0)
 }
 
-func GetHostList(command pxf.Command) int {
-	switch command {
-	case pxf.Sync:
-		return cluster.ON_MASTER_TO_HOSTS
-	case pxf.Init:
-		return cluster.ON_HOSTS_AND_MASTER
-	default:
-		return cluster.ON_HOSTS
-	}
-}
-
-func GenerateHostList(cluster *cluster.Cluster) (map[string]int, error) {
+func GenerateHostList() (map[string]int, error) {
 	hostSegMap := make(map[string]int, 0)
-	for contentID, seg := range cluster.Segments {
+	for contentID, seg := range globalCluster.Segments {
 		if contentID == -1 {
 			master, _ := operating.System.Hostname()
 			if seg.Hostname != master {
@@ -105,17 +100,17 @@ func GenerateHostList(cluster *cluster.Cluster) (map[string]int, error) {
 	return hostSegMap, nil
 }
 
-func GenerateStatusReport(command pxf.Command) string {
-	cmdMsg := fmt.Sprintf(pxf.StatusMessage[command], len(segHostList))
+func GenerateStatusReport() string {
+	cmdMsg := fmt.Sprintf(globalCommand.Messages("status"), len(segHostList))
 	gplog.Info(cmdMsg)
 	return cmdMsg
 }
 
-func GenerateOutput(command pxf.Command, remoteOut *cluster.RemoteOutput) error {
+func GenerateOutput(remoteOut *cluster.RemoteOutput) error {
 	numHosts := len(remoteOut.Stderrs)
 	numErrors := remoteOut.NumErrors
 	if numErrors == 0 {
-		gplog.Info(pxf.SuccessMessage[command], numHosts-numErrors, numHosts)
+		gplog.Info(globalCommand.Messages("success"), numHosts-numErrors, numHosts)
 		return nil
 	}
 	response := ""
@@ -138,7 +133,7 @@ func GenerateOutput(command pxf.Command, remoteOut *cluster.RemoteOutput) error 
 		}
 		response += fmt.Sprintf("%s ==> %s\n", host, errorMessage)
 	}
-	gplog.Info("ERROR: "+pxf.ErrorMessage[command], numErrors, numHosts)
+	gplog.Info("ERROR: "+globalCommand.Messages("error"), numErrors, numHosts)
 	gplog.Error("%s", response)
 	return errors.New(response)
 }
@@ -153,25 +148,26 @@ func doSetup() {
 	}
 	segConfigs := cluster.MustGetSegmentConfiguration(connectionPool)
 	globalCluster = cluster.NewCluster(segConfigs)
-	segHostList, err = GenerateHostList(globalCluster)
+	segHostList, err = GenerateHostList()
 	if err != nil {
 		gplog.Error(err.Error())
 		os.Exit(1)
 	}
 }
 
-func clusterRun(command pxf.Command) error {
+func clusterRun() error {
 	defer connectionPool.Close()
-	remoteCommand, err := pxf.CommandFunc(command, globalCluster)
+	function, err := globalCommand.GetFunctionToExecute()
 	if err != nil {
 		gplog.Error(fmt.Sprintf("Error: %s", err))
 		return err
 	}
 
-	cmdMsg := GenerateStatusReport(command)
+	cmdMsg := GenerateStatusReport()
 	remoteOut := globalCluster.GenerateAndExecuteCommand(
 		cmdMsg,
-		remoteCommand,
-		GetHostList(command))
-	return GenerateOutput(command, remoteOut)
+		function,
+		globalCommand.WhereToRun(),
+	)
+	return GenerateOutput(remoteOut)
 }

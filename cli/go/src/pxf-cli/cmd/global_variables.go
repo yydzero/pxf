@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"pxf-cli/pxf"
+
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
 	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 )
@@ -17,6 +19,10 @@ func SetConnection(conn *dbconn.DBConn) {
 
 func SetCluster(cluster *cluster.Cluster) {
 	globalCluster = cluster
+}
+
+func SetCommand(command pxf.Command) {
+	globalCommand = command
 }
 
 func SetSegConfigs(sCs []cluster.SegConfig) {
