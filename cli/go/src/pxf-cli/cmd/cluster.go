@@ -60,14 +60,13 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			doSetup()
 			globalCommand = &pxf.Sync
-			pxf.SetCluster(globalCluster)
 			err := clusterRun()
 			exitWithReturnCode(err)
 		},
 	}
 
 	segHostList   map[string]int
-	globalCommand pxf.Command
+	globalCommand *pxf.Command
 )
 
 func init() {
@@ -100,17 +99,17 @@ func GenerateHostList() (map[string]int, error) {
 	return hostSegMap, nil
 }
 
-func GenerateStatusReport() string {
-	cmdMsg := fmt.Sprintf(globalCommand.Messages(pxf.Status), len(segHostList))
+func GenerateStatusReport(command *pxf.Command) string {
+	cmdMsg := fmt.Sprintf(command.Messages(pxf.Status), len(segHostList))
 	gplog.Info(cmdMsg)
 	return cmdMsg
 }
 
-func GenerateOutput(remoteOut *cluster.RemoteOutput) error {
+func GenerateOutput(command *pxf.Command, remoteOut *cluster.RemoteOutput) error {
 	numHosts := len(remoteOut.Stderrs)
 	numErrors := remoteOut.NumErrors
 	if numErrors == 0 {
-		gplog.Info(globalCommand.Messages(pxf.Success), numHosts-numErrors, numHosts)
+		gplog.Info(command.Messages(pxf.Success), numHosts-numErrors, numHosts)
 		return nil
 	}
 	response := ""
@@ -133,7 +132,7 @@ func GenerateOutput(remoteOut *cluster.RemoteOutput) error {
 		}
 		response += fmt.Sprintf("%s ==> %s\n", host, errorMessage)
 	}
-	gplog.Info("ERROR: "+globalCommand.Messages(pxf.Error), numErrors, numHosts)
+	gplog.Info("ERROR: "+command.Messages(pxf.Error), numErrors, numHosts)
 	gplog.Error("%s", response)
 	return errors.New(response)
 }
@@ -155,19 +154,25 @@ func doSetup() {
 	}
 }
 
+func adaptContentIDToHostname(f func(string) string) func(int) string {
+	return func(contentId int) string {
+		return f(globalCluster.GetHostForContent(contentId))
+	}
+}
+
 func clusterRun() error {
 	defer connectionPool.Close()
-	function, err := globalCommand.GetFunctionToExecute()
+	f, err := globalCommand.GetFunctionToExecute()
 	if err != nil {
 		gplog.Error(fmt.Sprintf("Error: %s", err))
 		return err
 	}
 
-	cmdMsg := GenerateStatusReport()
+	cmdMsg := GenerateStatusReport(globalCommand)
 	remoteOut := globalCluster.GenerateAndExecuteCommand(
 		cmdMsg,
-		function,
+		adaptContentIDToHostname(f),
 		globalCommand.WhereToRun(),
 	)
-	return GenerateOutput(remoteOut)
+	return GenerateOutput(globalCommand, remoteOut)
 }

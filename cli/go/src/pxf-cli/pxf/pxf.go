@@ -23,93 +23,54 @@ const (
 	Error
 )
 
-type Command interface {
-	WhereToRun() int
-	Messages(MessageType) string
-	GetFunctionToExecute() (func(int) string, error)
-	RequiredEnvVars() []EnvVar
-}
-
-type SimpleCommand struct {
+type Command struct {
 	commandName     string
 	messages        map[MessageType]string
 	whereToRun      int
 	requiredEnvVars []EnvVar
 }
 
-type SyncCommand struct {
-	commandName     string
-	messages        map[MessageType]string
-	whereToRun      int
-	requiredEnvVars []EnvVar
-	cluster         *cluster.Cluster
-}
-
-func (c *SimpleCommand) RequiredEnvVars() []EnvVar {
+func (c *Command) RequiredEnvVars() []EnvVar {
 	return c.requiredEnvVars
 }
 
-func (c *SyncCommand) RequiredEnvVars() []EnvVar {
-	return c.requiredEnvVars
-}
-
-func (c *SimpleCommand) WhereToRun() int {
+func (c *Command) WhereToRun() int {
 	return c.whereToRun
 }
 
-func (c *SyncCommand) WhereToRun() int {
-	return c.whereToRun
-}
-
-func (c *SimpleCommand) Messages(messageType MessageType) string {
+func (c *Command) Messages(messageType MessageType) string {
 	return c.messages[messageType]
 }
 
-func (c *SyncCommand) Messages(messageType MessageType) string {
-	return c.messages[messageType]
-}
-
-func (c *SimpleCommand) GetFunctionToExecute() (func(int) string, error) {
+func (c *Command) GetFunctionToExecute() (func(string) string, error) {
 	inputs, err := makeValidCliInputs(c)
 	if err != nil {
 		return nil, err
 	}
 
-	pxfCommand := ""
-	if inputs[PxfConf] != "" {
-		pxfCommand += "PXF_CONF=" + inputs[PxfConf] + " "
+	switch c.commandName {
+	case "sync":
+		return func(hostname string) string {
+			return fmt.Sprintf(
+				"rsync -az -e 'ssh -o StrictHostKeyChecking=no' '%s/conf' '%s/lib' '%s/servers' '%s:%s'",
+				inputs[PxfConf],
+				inputs[PxfConf],
+				inputs[PxfConf],
+				hostname,
+				inputs[PxfConf])
+		}, nil
+	default:
+		pxfCommand := ""
+		if inputs[PxfConf] != "" {
+			pxfCommand += "PXF_CONF=" + inputs[PxfConf] + " "
+		}
+		pxfCommand += inputs[Gphome] + "/pxf/bin/pxf" + " " + c.commandName
+		return func(_ string) string { return pxfCommand }, nil
 	}
-	pxfCommand += inputs[Gphome] + "/pxf/bin/pxf" + " " + c.commandName
-	return func(_ int) string { return pxfCommand }, nil
-}
-
-func SetCluster(c *cluster.Cluster) {
-	Sync.cluster = c
-}
-
-func (c *SyncCommand) GetFunctionToExecute() (func(int) string, error) {
-	if c.cluster == nil {
-		return nil, errors.New("Cluster object must be set with SetCluster to use SyncCommand")
-	}
-
-	inputs, err := makeValidCliInputs(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return func(contentId int) string {
-		return fmt.Sprintf(
-			"rsync -az -e 'ssh -o StrictHostKeyChecking=no' '%s/conf' '%s/lib' '%s/servers' '%s:%s'",
-			inputs[PxfConf],
-			inputs[PxfConf],
-			inputs[PxfConf],
-			c.cluster.GetHostForContent(contentId),
-			inputs[PxfConf])
-	}, nil
 }
 
 var (
-	Init = SimpleCommand{
+	Init = Command{
 		commandName: "init",
 		messages: map[MessageType]string{
 			Success: "PXF initialized successfully on %d out of %d hosts\n",
@@ -119,7 +80,7 @@ var (
 		requiredEnvVars: []EnvVar{Gphome, PxfConf},
 		whereToRun:      cluster.ON_HOSTS_AND_MASTER,
 	}
-	Start = SimpleCommand{
+	Start = Command{
 		commandName: "start",
 		messages: map[MessageType]string{
 			Success: "PXF started successfully on %d out of %d hosts\n",
@@ -129,7 +90,7 @@ var (
 		requiredEnvVars: []EnvVar{Gphome},
 		whereToRun:      cluster.ON_HOSTS,
 	}
-	Stop = SimpleCommand{
+	Stop = Command{
 		commandName: "stop",
 		messages: map[MessageType]string{
 			Success: "PXF stopped successfully on %d out of %d hosts\n",
@@ -139,7 +100,7 @@ var (
 		requiredEnvVars: []EnvVar{Gphome},
 		whereToRun:      cluster.ON_HOSTS,
 	}
-	Sync = SyncCommand{
+	Sync = Command{
 		commandName: "sync",
 		messages: map[MessageType]string{
 			Success: "PXF configs synced successfully on %d out of %d hosts\n",
@@ -148,11 +109,10 @@ var (
 		},
 		requiredEnvVars: []EnvVar{PxfConf},
 		whereToRun:      cluster.ON_MASTER_TO_HOSTS,
-		cluster:         nil,
 	}
 )
 
-func makeValidCliInputs(c Command) (map[EnvVar]string, error) {
+func makeValidCliInputs(c *Command) (map[EnvVar]string, error) {
 	envVars := make(map[EnvVar]string)
 	for _, e := range c.RequiredEnvVars() {
 		val, err := validateEnvVar(e)
