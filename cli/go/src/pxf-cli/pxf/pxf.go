@@ -24,14 +24,14 @@ const (
 )
 
 type Command struct {
-	commandName     string
-	messages        map[MessageType]string
-	whereToRun      int
-	requiredEnvVars []EnvVar
+	commandName string
+	messages    map[MessageType]string
+	whereToRun  int
+	envVars     []EnvVar
 }
 
-func (c *Command) RequiredEnvVars() []EnvVar {
-	return c.requiredEnvVars
+func (c *Command) requiredEnvVars() []EnvVar {
+	return c.envVars
 }
 
 func (c *Command) WhereToRun() int {
@@ -77,8 +77,8 @@ var (
 			Status:  "Initializing PXF on master and %d segment hosts...\n",
 			Error:   "PXF failed to initialize on %d out of %d hosts\n",
 		},
-		requiredEnvVars: []EnvVar{Gphome, PxfConf},
-		whereToRun:      cluster.ON_HOSTS_AND_MASTER,
+		envVars:    []EnvVar{Gphome, PxfConf},
+		whereToRun: cluster.ON_HOSTS_AND_MASTER,
 	}
 	Start = Command{
 		commandName: "start",
@@ -87,8 +87,8 @@ var (
 			Status:  "Starting PXF on %d segment hosts...\n",
 			Error:   "PXF failed to start on %d out of %d hosts\n",
 		},
-		requiredEnvVars: []EnvVar{Gphome},
-		whereToRun:      cluster.ON_HOSTS,
+		envVars:    []EnvVar{Gphome},
+		whereToRun: cluster.ON_HOSTS,
 	}
 	Stop = Command{
 		commandName: "stop",
@@ -97,8 +97,8 @@ var (
 			Status:  "Stopping PXF on %d segment hosts...\n",
 			Error:   "PXF failed to stop on %d out of %d hosts\n",
 		},
-		requiredEnvVars: []EnvVar{Gphome},
-		whereToRun:      cluster.ON_HOSTS,
+		envVars:    []EnvVar{Gphome},
+		whereToRun: cluster.ON_HOSTS,
 	}
 	Sync = Command{
 		commandName: "sync",
@@ -107,14 +107,14 @@ var (
 			Status:  "Syncing PXF configuration files to %d hosts...\n",
 			Error:   "PXF configs failed to sync on %d out of %d hosts\n",
 		},
-		requiredEnvVars: []EnvVar{PxfConf},
-		whereToRun:      cluster.ON_MASTER_TO_HOSTS,
+		envVars:    []EnvVar{PxfConf},
+		whereToRun: cluster.ON_MASTER_TO_HOSTS,
 	}
 )
 
 func makeValidCliInputs(c *Command) (map[EnvVar]string, error) {
 	envVars := make(map[EnvVar]string)
-	for _, e := range c.RequiredEnvVars() {
+	for _, e := range c.requiredEnvVars() {
 		val, err := validateEnvVar(e)
 		if err != nil {
 			return nil, err
