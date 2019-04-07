@@ -99,7 +99,8 @@ function get_environment()
     if [[ ! -f ${default_env_script} ]]; then
         fail "Failed to find ${default_env_script}"
     fi
-    source ${default_env_script}
+    # shellcheck source=/Users/pivotal/workspace/pxf/server/pxf-service/src/scripts/pxf-env-default.sh
+    source "$default_env_script"
 
     # validate JAVA_HOME
     if [[ ! -x ${JAVA_HOME}/bin/java ]]; then
@@ -415,8 +416,8 @@ function doSync()
 
 function doCluster()
 {
-    source <(grep 'export PXF_CONF=' "$default_env_script")
-    [[ $PXF_CONF == NOT_INITIALIZED ]] && unset PXF_CONF
+    pxf_cluster_command=$2
+    get_environment
     GPHOME=${GPHOME:-"${PXF_HOME}/.."} "$parent_script_dir/bin/pxf-cli" "$@"
 }
 
