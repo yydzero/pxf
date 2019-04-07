@@ -17,7 +17,7 @@
 # under the License.
 
 #
-# pxf-service	start/stop/initialize/status the PXF instance
+# pxf-service    start/stop/initialize/status the PXF instance
 #
 
 parent_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
@@ -41,7 +41,7 @@ SED_OPTS+=(-e)
 
 function validate_user()
 {
-	# make sure current user is not root
+    # make sure current user is not root
     if (( $EUID == 0 )); then
         fail "Cannot run as root user"
     fi
@@ -49,23 +49,23 @@ function validate_user()
 
 function confirm_with_user()
 {
-	echo "*****************************************************************************"
-	echo "* PXF_CONF variable is not defined, using default location"
-	echo "* Using ${PXF_CONF} for user configurations"
-	echo "* WARNING: using this directory is not recommended for production deployments"
-	echo "*****************************************************************************"
+    echo "*****************************************************************************"
+    echo "* PXF_CONF variable is not defined, using default location"
+    echo "* Using ${PXF_CONF} for user configurations"
+    echo "* WARNING: using this directory is not recommended for production deployments"
+    echo "*****************************************************************************"
 
-	read -p "Do you want to proceed? [Y]: " answer
-	answer=${answer:-"Y"}
-	case ${answer:0:1} in
-		y|Y )
-			echo "Proceeding with the initialization"
-		;;
-		* )
-			echo "Initialization aborted"
-			exit 1
-		;;
-	esac
+    read -p "Do you want to proceed? [Y]: " answer
+    answer=${answer:-"Y"}
+    case ${answer:0:1} in
+        y|Y )
+            echo "Proceeding with the initialization"
+        ;;
+        * )
+            echo "Initialization aborted"
+            exit 1
+        ;;
+    esac
 }
 
 function update_pxf_conf()
@@ -203,12 +203,12 @@ function checkWebapp()
 # non zero otherwise
 function instanceExists()
 {
-	if [[ ! -d ${instance_root}/${instance_name} ]]; then
-		return 1
-	fi
+    if [[ ! -d ${instance_root}/${instance_name} ]]; then
+        return 1
+    fi
 
-	${instance_root}/${instance_name}/bin/catalina.sh version > /dev/null 2>&1
-	return $?
+    ${instance_root}/${instance_name}/bin/catalina.sh version > /dev/null 2>&1
+    return $?
 }
 
 function commandWebapp()
@@ -240,7 +240,7 @@ function createLogsDir()
 
 function createRunDir()
 {
-	echo "Creating PXF runtime directory ${PXF_RUNDIR} ..."
+    echo "Creating PXF runtime directory ${PXF_RUNDIR} ..."
     mkdir -p ${PXF_RUNDIR}
     chmod 700 ${PXF_RUNDIR}
 }
@@ -300,7 +300,7 @@ function validate_system()
     # validate curl
     which curl &> /dev/null
     if (( $? != 0 )); then
-		fail "curl is not installed, please install"
+        fail "curl is not installed, please install"
     fi
 }
 
@@ -317,10 +317,10 @@ function printUsage()
 
 # doHelp handles the help command
 doHelp() {
-	local normal=$(tput sgr0)
-	local bold=$(tput bold)
-	local tab=$(printf '\t')
-	printUsage
+    local normal=$(tput sgr0)
+    local bold=$(tput bold)
+    local tab=$(printf '\t')
+    printUsage
 	cat <<-EOF
 
 	${bold}List of commands${normal}:
@@ -338,26 +338,26 @@ doHelp() {
 	  -h, --help    show command help
 	  -y            answer yes, use default PXF_CONF=\$HOME/pxf user configuration directory
 	EOF
-	exit 0
+    exit 0
 }
 
 # doInit handles the init command
 function doInit()
 {
-	instanceExists
+    instanceExists
     if (( $? == 0 )); then
-		echo Instance already exists. Cleanup ${instance_root}/pxf-service if you wish to re-initialize.
-		return 1
-	fi
+        echo Instance already exists. Cleanup ${instance_root}/pxf-service if you wish to re-initialize.
+        return 1
+    fi
 
-	update_pxf_conf
-	get_environment
-	generatePrivateClasspath || return 1
-	generateUserConfigs || return 1
-	createInstance || return 1
-	deployWebapp || return 1
-	createLogsDir || return 1
-	createRunDir  || return 1
+    update_pxf_conf
+    get_environment
+    generatePrivateClasspath || return 1
+    generateUserConfigs || return 1
+    createInstance || return 1
+    deployWebapp || return 1
+    createLogsDir || return 1
+    createRunDir  || return 1
 }
 
 #
@@ -402,15 +402,15 @@ function doStatus()
 function doSync()
 {
     local source_host=$1
-	if [[ -z ${source_host} ]]; then
+    if [[ -z ${source_host} ]]; then
         fail "PXF config source host must be set to use this option"
-	fi
+    fi
     instanceExists
     if (( $? != 0 )); then
         fail "Can't find PXF instance, maybe call init?"
     fi
     get_environment
-    rsync -az -e "ssh -o StrictHostKeyChecking=no" ${source_host}:${PXF_CONF}/{conf,lib,servers} ${PXF_CONF}
+    rsync -az -e "ssh -o StrictHostKeyChecking=no" "${source_host}:${PXF_CONF}/"{conf,lib,servers} "${PXF_CONF}"
 }
 
 function doCluster()
@@ -428,42 +428,42 @@ validate_user
 validate_system
 
 case "${pxf_script_command}" in
-	'init' )
-		if [[ $2 == -y || $2 == -Y ]]; then
-			silent=true
-		fi
-		doInit
-		;;
-	'start' )
-		doStart
-		;;
-	'stop' )
-		doStop
-		;;
-	'restart' )
-		doStop
-		sleep 1s
-		doStart
-		;;
-	'status' )
-		doStatus
-		;;
-	'sync' )
-		doSync $2
-		;;
-	'help' | '-h' | '--help' )
-		doHelp
-		;;
-	'version' | '--version' | '-v' )
-		doCluster --version
-		;;
-	'cluster' )
-		doCluster "$@"
-		;;
-	* )
-		printUsage
-		exit 2
-		;;
+    'init' )
+        if [[ $2 == -y || $2 == -Y ]]; then
+            silent=true
+        fi
+        doInit
+        ;;
+    'start' )
+        doStart
+        ;;
+    'stop' )
+        doStop
+        ;;
+    'restart' )
+        doStop
+        sleep 1s
+        doStart
+        ;;
+    'status' )
+        doStatus
+        ;;
+    'sync' )
+        doSync "$2"
+        ;;
+    'help' | '-h' | '--help' )
+        doHelp
+        ;;
+    'version' | '--version' | '-v' )
+        doCluster --version
+        ;;
+    'cluster' )
+        doCluster "$@"
+        ;;
+    * )
+        printUsage
+        exit 2
+        ;;
 esac
 
 exit $?
