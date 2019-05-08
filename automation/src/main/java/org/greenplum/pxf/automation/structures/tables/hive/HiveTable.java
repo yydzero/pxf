@@ -26,6 +26,7 @@ public class HiveTable extends Table {
 	private List<List<String>> tableProperties;
 	private boolean storeAsDirectories;
 	private String serde;
+	private static final String WAREHOUSE_DIR = "/hive/warehouse/";
 
 	public HiveTable(String name, String[] fields) {
 		super(name, fields);
@@ -191,6 +192,10 @@ public class HiveTable extends Table {
 
 	public void setTableProperties(List<List<String>> tableProperties) {
 		this.tableProperties = tableProperties;
+	}
+
+	public String getlocation() {
+		return WAREHOUSE_DIR + getName();
 	}
 
 	private void addTablePropertiesToString(StringBuilder sb){

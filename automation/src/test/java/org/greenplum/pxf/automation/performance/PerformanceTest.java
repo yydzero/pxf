@@ -27,12 +27,12 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 500;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 1;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
 
-    private static final int SAMPLES_NUMBER = 50;
+    private static final int SAMPLES_NUMBER = 1;
 
     //Values for filters
     private static final String FILTER_50_PERCENT_RANGE = StringUtils.repeat(
@@ -61,11 +61,13 @@ public class PerformanceTest extends BaseFeature {
     HiveTable hiveTextPerfTable = null;
     HiveTable hiveOrcPerfTable = null;
     HiveTable hiveRcPerfTable = null;
+    HiveTable hiveParquetPerfTable = null;
 
     ReadableExternalTable gpdbTextHiveProfile = null;
     ReadableExternalTable gpdbTextHiveTextProfile = null;
     ReadableExternalTable gpdbOrcHiveProfile = null;
     ReadableExternalTable gpdbRcHiveProfile = null;
+    ReadableExternalTable gpdbParquetProfile = null;
 
     Table gpdbNativeTable = null;
 
@@ -83,7 +85,7 @@ public class PerformanceTest extends BaseFeature {
         prepareOrcData();
         prepareRcData();
         prepareNativeGpdbData();
-
+        prepareParquetData();
     }
 
     private void prepareTextData() throws Exception {
@@ -170,9 +172,26 @@ public class PerformanceTest extends BaseFeature {
 
     private void prepareNativeGpdbData() throws Exception {
         gpdbNativeTable = new Table("perf_test", getColumnTypeGpdb());
+        gpdbNativeTable.setDistributionFields(new String[]{"int0"});
         gpdb.createTableAndVerify(gpdbNativeTable);
 
-        gpdb.insertData(gpdbTextHiveProfile, gpdbNativeTable);
+        gpdb.copyData(gpdbTextHiveProfile, gpdbNativeTable);
+    }
+
+    private void prepareParquetData() throws Exception {
+        hiveParquetPerfTable = TableFactory.getHiveByRowCommaTable("perf_test_parquet",
+                getColumnTypeHive());
+        hiveParquetPerfTable.setStoredAs("PARQUET");
+        hive.createTableAndVerify(hiveParquetPerfTable);
+
+        hive.insertData(hiveTextPerfTable, hiveParquetPerfTable);
+
+        gpdbParquetProfile = TableFactory.getPxfParquetReadableTable(
+                "perf_parquet_profile", getColumnTypeGpdb(), hiveParquetPerfTable.getlocation());
+        gpdbParquetProfile.setProfile(EnumPxfDefaultProfiles.Parquet.toString());
+        gpdbParquetProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbParquetProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbParquetProfile);
     }
 
     @Override
@@ -183,11 +202,13 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(hiveTextPerfTable);
         allTables.add(hiveOrcPerfTable);
         allTables.add(hiveRcPerfTable);
+        allTables.add(hiveParquetPerfTable);
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
         allTables.add(gpdbRcHiveProfile);
         allTables.add(gpdbNativeTable);
+        allTables.add(gpdbParquetProfile);
     }
 
     @Test(groups = "performance")
