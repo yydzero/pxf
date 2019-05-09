@@ -63,12 +63,15 @@ public class PerformanceTest extends BaseFeature {
     HiveTable hiveParquetPerfTable = null;
     HiveTable hiveJsonPerfTable = null;
 
+    ReadableExternalTable gpdbTextProfile = null;
+    ReadableExternalTable gpdbTextMultiProfile = null;
     ReadableExternalTable gpdbTextHiveProfile = null;
     ReadableExternalTable gpdbTextHiveTextProfile = null;
     ReadableExternalTable gpdbOrcHiveProfile = null;
     ReadableExternalTable gpdbRcHiveProfile = null;
     ReadableExternalTable gpdbParquetProfile = null;
     ReadableExternalTable gpdbJsonProfile = null;
+    ReadableExternalTable gpdbJdbcProfile = null;
 
     Table gpdbNativeTable = null;
 
@@ -87,6 +90,7 @@ public class PerformanceTest extends BaseFeature {
         prepareRcData();
         prepareParquetData();
         //prepareJsonData();
+        prepareJdbcData();
         prepareNativeGpdbData();
     }
 
@@ -106,12 +110,28 @@ public class PerformanceTest extends BaseFeature {
         hiveTextPerfTable.setDataPattern(dp);
         hiveTextPerfTable.setStoredAs("TEXTFILE");
         hive.createTableAndVerify(hiveTextPerfTable);
+
+        // Prepare Hdfs data
         long linesNumGenerated = DataUtils.generateAndLoadData(
                 hiveTextPerfTable, hdfs);
-
         String filePath = hdfs.getWorkingDirectory() + "/"
                 + hiveTextPerfTable.getName();
 
+        // Prepare hdfs simple text table
+        gpdbTextProfile = new ReadableExternalTable("perf_text_profile", getColumnTypeGpdb(),
+                filePath, "TEXT");
+        gpdbTextProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextSimple.toString());
+        gpdbTextProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextProfile.setPort(pxfPort);
+
+        // Prepare hdfs multi text table
+        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
+                filePath, "TEXT");
+        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextMultiProfile.setPort(pxfPort);
+
+        // Prepare Hive table
         hive.loadData(hiveTextPerfTable, filePath, false);
 
         gpdbTextHiveProfile = TableFactory.getPxfHiveReadableTable(
@@ -122,6 +142,7 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextHiveProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextHiveProfile);
 
+        // Prepare Hive text table
         gpdbTextHiveTextProfile = TableFactory.getPxfHiveTextReadableTable(
                 "perf_text_hive_text_profile", getColumnTypeGpdb(),
                 hiveTextPerfTable, true);
@@ -205,6 +226,19 @@ public class PerformanceTest extends BaseFeature {
         gpdb.createTableAndVerify(gpdbJsonProfile);
     }
 
+    private void prepareJdbcData() throws Exception {
+        gpdbJdbcProfile = TableFactory.getPxfJdbcReadableTable(
+                "perf_jdbc_profile",
+                getColumnTypeGpdb(),
+                gpdbNativeTable.getName(),
+                "org.postgresql.Driver",
+                "jdbc:postgresql://"+ gpdb.getMasterHost() + ":" + gpdb.getPort() + "/pxfautomation",
+                gpdb.getUserName());
+        gpdbJdbcProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbJdbcProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbJdbcProfile);
+    }
+
     private void prepareNativeGpdbData() throws Exception {
         gpdbNativeTable = new Table("perf_test", getColumnTypeGpdb());
         gpdbNativeTable.setDistributionFields(new String[]{"int0"});
@@ -217,6 +251,8 @@ public class PerformanceTest extends BaseFeature {
     protected void beforeClass() throws Exception {
         prepareData();
         allTables = new ArrayList<>();
+        allTables.add(gpdbTextProfile);
+        allTables.add(gpdbTextMultiProfile);
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
@@ -224,6 +260,7 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbNativeTable);
         allTables.add(gpdbParquetProfile);
         //allTables.add(gpdbJsonProfile);
+        allTables.add(gpdbJdbcProfile);
     }
 
     @Test(groups = "performance")
