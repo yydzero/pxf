@@ -20,7 +20,6 @@ import org.greenplum.pxf.automation.components.common.DbSystemObject;
 import org.greenplum.pxf.automation.components.hive.Hive;
 import org.greenplum.pxf.automation.enums.EnumPxfDefaultProfiles;
 import org.greenplum.pxf.automation.utils.data.DataUtils;
-import org.greenplum.pxf.automation.utils.jsystem.report.ReportUtils;
 import org.greenplum.pxf.automation.features.BaseFeature;
 
 @Test(groups = "performance")
@@ -405,34 +404,20 @@ public class PerformanceTest extends BaseFeature {
 
     private void printPerformanceReportPerTable(String queryType, String query,
             Table table, long avgTime) throws Exception {
-
         DbSystemObject db = getDbForTable(table);
-
         String tableInfo = getTableInfo(table);
-        ReportUtils.startLevel(null, getClass(), "PERFORMANCE RESULTS FOR: "
-                + tableInfo);
-
-        ReportUtils.report(null, getClass(), "Query type: " + queryType);
-        ReportUtils.report(null, getClass(), "Query: " + query);
-        ReportUtils.report(null, getClass(), "Db engine: " + db.getClass());
-        ReportUtils.report(null, getClass(), "AVERAGE TIME: " + avgTime
-                + " MILLISECONDS");
-        ReportUtils.report(null, getClass(), "");
-
-        ReportUtils.stopLevel(null);
+        System.out.println("PERFORMANCE RESULTS FOR: " + tableInfo);
+        System.out.println("Query type: " + queryType);
+        System.out.println("Query: " + query);
+        System.out.println("Db engine: " + db.getClass());
+        System.out.println("AVERAGE TIME: " + avgTime + " MILLISECONDS");
     }
 
-    private void printPerformanceReport() throws Exception {
-        ReportUtils.startLevel(null, getClass(), "PERFORMANCE RESULTS");
-        ReportUtils.report(null, getClass(),
-                "Initial data size in text format: "
-                        + GENERATE_TEXT_DATA_SIZE_MB + " Mb");
-        ReportUtils.report(null, getClass(), "String column width: "
-                + GENERATE_COLUMN_MAX_WIDTH);
-        ReportUtils.report(null, getClass(),
-                "Number of samples per each query: " + SAMPLES_NUMBER);
-        ReportUtils.report(null, getClass(), "");
-        ReportUtils.stopLevel(null);
+    private void printPerformanceReport() {
+        System.out.println("PERFORMANCE RESULTS");
+        System.out.println("Initial data size in text format: " + GENERATE_TEXT_DATA_SIZE_MB + " Mb");
+        System.out.println("String column width: " + GENERATE_COLUMN_MAX_WIDTH);
+        System.out.println("Number of samples per each query: " + SAMPLES_NUMBER);
     }
 
     private long measureAverageQueryTime(String query, DbSystemObject db)
