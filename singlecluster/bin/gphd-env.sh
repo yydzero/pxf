@@ -50,6 +50,7 @@ export TEZ_CONF=${TEZ_ROOT}/conf
 export RANGER_CONF=${RANGER_ROOT}/conf
 
 export TEZ_JARS=$(echo "$TEZ_ROOT"/*.jar | tr ' ' ':'):$(echo "$TEZ_ROOT"/lib/*.jar | tr ' ' ':')
+export HIVE_AUX_JARS=$(echo "$HIVE_ROOT"/hcatalog/share/hcatalog/hive-hcatalog-core*.jar)
 
 function cluster_initialized()
 {

@@ -27,34 +27,34 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 1;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 400;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
-    private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
+    private static final int GENERATE_TEXT_COLUMNS_NUMBER = 1;
 
-    private static final int SAMPLES_NUMBER = 1;
+    private static final int SAMPLES_NUMBER = 2;
 
     //Values for filters
     private static final String FILTER_50_PERCENT_RANGE = StringUtils.repeat(
             "Z", GENERATE_COLUMN_MAX_WIDTH); // Select 50% range
     private static final String FILTER_10_PERCENT_RANGE = StringUtils.repeat(
             "F", GENERATE_COLUMN_MAX_WIDTH); // Select 10% range
-    private static final String FILTER_2_PERCENT_RANGE = StringUtils.repeat(
-            "B", GENERATE_COLUMN_MAX_WIDTH); // Select 2% range
+    private static final String FILTER_1_PERCENT_RANGE = StringUtils.repeat(
+            "A", GENERATE_COLUMN_MAX_WIDTH); // Select 1% range
 
     //Use cases
     private static final String COUNT_WITHOUT_FILTER = "Count total number of rows in table";
     private static final String COUNT_50_PERCENT = "Count number of rows in table 50% range";
     private static final String COUNT_10_PERCENT = "Count number of rows in table 10% range";
-    private static final String COUNT_2_PERCENT = "Count number of rows in table 2% range";
+    private static final String COUNT_1_PERCENT = "Count number of rows in table 1% range";
     private static final String SELECT_WITHOUT_FILTER_ALL_COLUMNS = "Select all rows, all columns";
     private static final String SELECT_50_PERCENT_ALL_COLUMNS = "Select 50% rows, all columns";
     private static final String SELECT_10_PERCENT_ALL_COLUMNS = "Select 10% rows, all columns";
-    private static final String SELECT_2_PERCENT_ALL_COLUMNS = "Select 2% rows, all columns";
+    private static final String SELECT_1_PERCENT_ALL_COLUMNS = "Select 1% rows, all columns";
     private static final String SELECT_WITHOUT_FILTER_ONE_COLUMN = "Select all rows, one column";
     private static final String SELECT_50_PERCENT_ONE_COLUMN = "Select 50% rows, one column";
     private static final String SELECT_10_PERCENT_ONE_COLUMN = "Select 10% rows, one column";
-    private static final String SELECT_2_PERCENT_ONE_COLUMN = "Select 2% rows, one column";
+    private static final String SELECT_1_PERCENT_ONE_COLUMN = "Select 1% rows, one column";
 
     Hive hive;
 
@@ -62,12 +62,14 @@ public class PerformanceTest extends BaseFeature {
     HiveTable hiveOrcPerfTable = null;
     HiveTable hiveRcPerfTable = null;
     HiveTable hiveParquetPerfTable = null;
+    HiveTable hiveJsonPerfTable = null;
 
     ReadableExternalTable gpdbTextHiveProfile = null;
     ReadableExternalTable gpdbTextHiveTextProfile = null;
     ReadableExternalTable gpdbOrcHiveProfile = null;
     ReadableExternalTable gpdbRcHiveProfile = null;
     ReadableExternalTable gpdbParquetProfile = null;
+    ReadableExternalTable gpdbJsonProfile = null;
 
     Table gpdbNativeTable = null;
 
@@ -84,8 +86,9 @@ public class PerformanceTest extends BaseFeature {
         prepareTextData();
         prepareOrcData();
         prepareRcData();
-        prepareNativeGpdbData();
         prepareParquetData();
+        //prepareJsonData();
+        prepareNativeGpdbData();
     }
 
     private void prepareTextData() throws Exception {
@@ -170,14 +173,6 @@ public class PerformanceTest extends BaseFeature {
         gpdb.createTableAndVerify(gpdbRcHiveProfile);
     }
 
-    private void prepareNativeGpdbData() throws Exception {
-        gpdbNativeTable = new Table("perf_test", getColumnTypeGpdb());
-        gpdbNativeTable.setDistributionFields(new String[]{"int0"});
-        gpdb.createTableAndVerify(gpdbNativeTable);
-
-        gpdb.copyData(gpdbTextHiveProfile, gpdbNativeTable);
-    }
-
     private void prepareParquetData() throws Exception {
         hiveParquetPerfTable = TableFactory.getHiveByRowCommaTable("perf_test_parquet",
                 getColumnTypeHive());
@@ -194,21 +189,42 @@ public class PerformanceTest extends BaseFeature {
         gpdb.createTableAndVerify(gpdbParquetProfile);
     }
 
+    private void prepareJsonData() throws Exception {
+        hiveJsonPerfTable = new HiveTable("perf_test_json", getColumnTypeHive());
+        hiveJsonPerfTable.setFormat("ROW");
+        hiveJsonPerfTable.setSerde("org.apache.hive.hcatalog.data.JsonSerDe");
+        hiveJsonPerfTable.setStoredAs("TEXTFILE");
+        hive.createTableAndVerify(hiveJsonPerfTable);
+
+        hive.insertData(hiveTextPerfTable, hiveJsonPerfTable);
+
+        gpdbJsonProfile = TableFactory.getPxfJsonReadableTable(
+                "perf_json_profile", getColumnTypeGpdb(), hiveJsonPerfTable.getlocation());
+        gpdbJsonProfile.setProfile(EnumPxfDefaultProfiles.JSON.toString());
+        gpdbJsonProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbJsonProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbJsonProfile);
+    }
+
+    private void prepareNativeGpdbData() throws Exception {
+        gpdbNativeTable = new Table("perf_test", getColumnTypeGpdb());
+        gpdbNativeTable.setDistributionFields(new String[]{"int0"});
+        gpdb.createTableAndVerify(gpdbNativeTable);
+
+        gpdb.copyData(gpdbTextHiveProfile, gpdbNativeTable);
+    }
+
     @Override
     protected void beforeClass() throws Exception {
         prepareData();
-        allTables = new ArrayList<Table>();
-
-        allTables.add(hiveTextPerfTable);
-        allTables.add(hiveOrcPerfTable);
-        allTables.add(hiveRcPerfTable);
-        allTables.add(hiveParquetPerfTable);
+        allTables = new ArrayList<>();
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
         allTables.add(gpdbRcHiveProfile);
         allTables.add(gpdbNativeTable);
         allTables.add(gpdbParquetProfile);
+        //allTables.add(gpdbJsonProfile);
     }
 
     @Test(groups = "performance")
@@ -233,10 +249,10 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testCount2PercentRange() throws Exception {
+    public void testCount1PercentRange() throws Exception {
 
         runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-                + FILTER_2_PERCENT_RANGE + "'", COUNT_2_PERCENT, allTables);
+                + FILTER_1_PERCENT_RANGE + "'", COUNT_1_PERCENT, allTables);
     }
 
     @Test(groups = "performance")
@@ -263,10 +279,10 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testSelect2PercentRowsAllColumns() throws Exception {
+    public void testSelect1PercentRowsAllColumns() throws Exception {
 
         runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-                + FILTER_2_PERCENT_RANGE + "'", SELECT_2_PERCENT_ALL_COLUMNS,
+                + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
                 allTables);
     }
 
@@ -294,10 +310,10 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testSelect2PercentRowsOneColumn() throws Exception {
+    public void testSelect1PercentRowsOneColumn() throws Exception {
 
         runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-                + FILTER_2_PERCENT_RANGE + "'", SELECT_2_PERCENT_ONE_COLUMN,
+                + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
                 allTables);
     }
 

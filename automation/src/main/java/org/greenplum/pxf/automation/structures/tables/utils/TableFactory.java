@@ -330,6 +330,29 @@ public abstract class TableFactory {
     }
 
     /**
+     * Prepares PXF Readable External Table for Json data
+     *
+     * @param tableName external table name
+     * @param fields for external table
+     * @param hiveTable to direct to
+     * @param useProfile true to use Profile or false to use Fragmenter Accessor
+     *            Resolver
+     * @return PXF Readable External Table using "JSON" profile
+     */
+    public static ReadableExternalTable getPxfJsonReadableTable(String tableName,
+                                                                   String[] fields,
+                                                                   String path) {
+
+        ReadableExternalTable exTable = new ReadableExternalTable(tableName,
+                fields, path, "CUSTOM");
+
+        exTable.setProfile(EnumPxfDefaultProfiles.JSON.toString());
+        exTable.setFormatter("pxfwritable_import");
+
+        return exTable;
+    }
+
+    /**
      * Generates Hive Table in specified Hive schema using row format and comma delimiter
      *
      * @param name table name
