@@ -90,8 +90,8 @@ public class PerformanceTest extends BaseFeature {
         prepareRcData();
         prepareParquetData();
         //prepareJsonData();
-        prepareJdbcData();
         prepareNativeGpdbData();
+        prepareJdbcData();
     }
 
     private void prepareTextData() throws Exception {
