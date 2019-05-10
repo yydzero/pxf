@@ -123,6 +123,7 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextSimple.toString());
         gpdbTextProfile.setHost(/* pxfHost */"127.0.0.1");
         gpdbTextProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextProfile);
 
         // Prepare hdfs multi text table
         gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
@@ -130,6 +131,7 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
         gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
         gpdbTextMultiProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextMultiProfile);
 
         // Prepare Hive table
         hive.loadData(hiveTextPerfTable, filePath, false);
