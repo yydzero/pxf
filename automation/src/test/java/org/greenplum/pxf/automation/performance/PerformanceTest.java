@@ -117,22 +117,6 @@ public class PerformanceTest extends BaseFeature {
         String filePath = hdfs.getWorkingDirectory() + "/"
                 + hiveTextPerfTable.getName();
 
-        // Prepare hdfs simple text table
-        gpdbTextProfile = new ReadableExternalTable("perf_text_profile", getColumnTypeGpdb(),
-                filePath, "TEXT");
-        gpdbTextProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextSimple.toString());
-        gpdbTextProfile.setHost(/* pxfHost */"127.0.0.1");
-        gpdbTextProfile.setPort(pxfPort);
-        gpdb.createTableAndVerify(gpdbTextProfile);
-
-        // Prepare hdfs multi text table
-        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
-                filePath, "TEXT");
-        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
-        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
-        gpdbTextMultiProfile.setPort(pxfPort);
-        gpdb.createTableAndVerify(gpdbTextMultiProfile);
-
         // Prepare Hive table
         hive.loadData(hiveTextPerfTable, filePath, false);
 
@@ -154,6 +138,24 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextHiveTextProfile.setPort(pxfPort);
         gpdbTextHiveTextProfile.setDelimiter(",");
         gpdb.createTableAndVerify(gpdbTextHiveTextProfile);
+
+        // Prepare hdfs simple text table
+        gpdbTextProfile = new ReadableExternalTable("perf_text_profile", getColumnTypeGpdb(),
+                hiveTextPerfTable.getlocation(), "TEXT");
+        gpdbTextProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextSimple.toString());
+        gpdbTextProfile.setDelimiter(",");
+        gpdbTextProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextProfile);
+
+        // Prepare hdfs multi text table
+        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
+                hiveTextPerfTable.getlocation(), "TEXT");
+        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+        gpdbTextMultiProfile.setDelimiter(",");
+        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextMultiProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextMultiProfile);
 
     }
 
