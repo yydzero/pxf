@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import listeners.CustomAutomationLogger;
 import org.apache.commons.lang.StringUtils;
 import org.greenplum.pxf.automation.structures.data.DataPattern;
 import org.greenplum.pxf.automation.structures.tables.basic.Table;
@@ -265,6 +266,9 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbParquetProfile);
         //allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
+
+        // Print performance results to stdout
+        CustomAutomationLogger.revertStdoutStream();
     }
 
     @Test(groups = "performance")

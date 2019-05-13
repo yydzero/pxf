@@ -101,6 +101,7 @@ public class JdbcAccessor extends JdbcBasePlugin implements Accessor {
             return true;
         }
 
+
         Connection connection = super.getConnection();
         SQLQueryBuilder sqlQueryBuilder = new SQLQueryBuilder(context, connection.getMetaData(), getQueryText());
 
