@@ -266,9 +266,6 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbParquetProfile);
         //allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
-
-        // Print performance results to stdout
-        CustomAutomationLogger.revertStdoutStream();
     }
 
     @Test(groups = "performance")
@@ -363,6 +360,9 @@ public class PerformanceTest extends BaseFeature {
 
     private void runAndReportQueries(String queryTemplate, String queryType,
             List<Table> tables) throws Exception {
+
+        // Print performance results to stdout
+        CustomAutomationLogger.revertStdoutStream();
 
         SortedMap<Long, Table> results = new TreeMap<Long, Table>();
 
