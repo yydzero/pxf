@@ -277,6 +277,9 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbParquetProfile);
 //        allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
+
+        CustomAutomationLogger.revertStdoutStream();
+        printPerformanceReport();
     }
 
     @Test(groups = "performance")
@@ -380,18 +383,12 @@ public class PerformanceTest extends BaseFeature {
             results.put(avgTime, table);
         }
 
-        // Print performance results to stdout
-        CustomAutomationLogger.revertStdoutStream();
-
-        printPerformanceReport();
-
         for (Entry<Long, Table> entry : results.entrySet()) {
             String query = String.format(queryTemplate, entry.getValue()
                     .getName());
             printPerformanceReportPerTable(queryType, query, entry.getValue(),
                     entry.getKey());
         }
-
     }
 
     private List<String> getColumnTypeDataPattern() {
@@ -462,18 +459,21 @@ public class PerformanceTest extends BaseFeature {
             Table table, long avgTime) throws Exception {
         DbSystemObject db = getDbForTable(table);
         String tableInfo = getTableInfo(table);
-        System.out.println("PERFORMANCE RESULTS FOR: " + tableInfo);
+        System.out.println("\nPERFORMANCE RESULTS FOR: " + tableInfo);
+        System.out.println("-----------------------------------------------------------------");
         System.out.println("Query type: " + queryType);
         System.out.println("Query: " + query);
-        System.out.println("Db engine: " + db.getClass());
         System.out.println("AVERAGE TIME: " + avgTime + " MILLISECONDS");
+        System.out.println("-----------------------------------------------------------------");
     }
 
     private void printPerformanceReport() {
-        System.out.println("PERFORMANCE RESULTS");
+        System.out.println("\nPERFORMANCE RESULTS");
+        System.out.println("-------------------");
         System.out.println("Initial data size in text format: " + GENERATE_TEXT_DATA_SIZE_MB + " Mb");
         System.out.println("String column width: " + GENERATE_COLUMN_MAX_WIDTH);
         System.out.println("Number of samples per each query: " + SAMPLES_NUMBER);
+        System.out.println("-------------------");
     }
 
     private long measureAverageQueryTime(String query, DbSystemObject db)
