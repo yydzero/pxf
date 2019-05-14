@@ -2,9 +2,8 @@ package org.greenplum.pxf.automation.performance;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map.Entry;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 import listeners.CustomAutomationLogger;
 import org.apache.commons.lang.StringUtils;
@@ -66,6 +65,7 @@ public class PerformanceTest extends BaseFeature {
 
     ReadableExternalTable gpdbTextProfile = null;
     ReadableExternalTable gpdbTextMultiProfile = null;
+    ReadableExternalTable gpdbTextFileAsRowProfile = null;
     ReadableExternalTable gpdbTextHiveProfile = null;
     ReadableExternalTable gpdbTextHiveTextProfile = null;
     ReadableExternalTable gpdbOrcHiveProfile = null;
@@ -158,6 +158,16 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
         gpdbTextMultiProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextMultiProfile);
+
+        // Prepare hdfs multi text table with FILE_AS_ROW
+        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", getColumnTypeGpdb(),
+                hiveTextPerfTable.getlocation(), "CSV");
+        gpdbTextFileAsRowProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+        gpdbTextFileAsRowProfile.setDelimiter(",");
+        gpdbTextFileAsRowProfile.setUserParameters(new String[]{"FILE_AS_ROW=true"});
+        gpdbTextFileAsRowProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextFileAsRowProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextFileAsRowProfile);
 
     }
 
@@ -268,6 +278,7 @@ public class PerformanceTest extends BaseFeature {
         allTables = new ArrayList<>();
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextMultiProfile);
+        allTables.add(gpdbTextFileAsRowProfile);
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
@@ -375,7 +386,7 @@ public class PerformanceTest extends BaseFeature {
     private void runAndReportQueries(String queryTemplate, String queryType,
             List<Table> tables) throws Exception {
 
-        SortedMap<Long, Table> results = new TreeMap<Long, Table>();
+        Map<Long, Table> results = new LinkedHashMap<Long, Table>();
 
         for (Table table : tables) {
             String query = String.format(queryTemplate, table.getName());
@@ -384,7 +395,8 @@ public class PerformanceTest extends BaseFeature {
         }
 
         CustomAutomationLogger.revertStdoutStream();
-
+        System.out.println("\n" + queryType);
+        System.out.println("----------------------------------");
         for (Entry<Long, Table> entry : results.entrySet()) {
             String query = String.format(queryTemplate, entry.getValue()
                     .getName());
@@ -461,12 +473,8 @@ public class PerformanceTest extends BaseFeature {
             Table table, long avgTime) throws Exception {
         DbSystemObject db = getDbForTable(table);
         String tableInfo = getTableInfo(table);
-        System.out.println("\nPERFORMANCE RESULTS FOR: " + tableInfo);
-        System.out.println("-----------------------------------------------------------------");
-        System.out.println("Query type: " + queryType);
-        System.out.println("Query: " + query);
+        System.out.println("\nTABLE INFO:" + tableInfo);
         System.out.println("AVERAGE TIME: " + avgTime + " MILLISECONDS");
-        System.out.println("-----------------------------------------------------------------");
     }
 
     private void printPerformanceReport() {
@@ -475,7 +483,6 @@ public class PerformanceTest extends BaseFeature {
         System.out.println("Initial data size in text format: " + GENERATE_TEXT_DATA_SIZE_MB + " Mb");
         System.out.println("String column width: " + GENERATE_COLUMN_MAX_WIDTH);
         System.out.println("Number of samples per each query: " + SAMPLES_NUMBER);
-        System.out.println("-------------------");
     }
 
     private long measureAverageQueryTime(String query, DbSystemObject db)
