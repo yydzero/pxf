@@ -67,6 +67,7 @@ public class PerformanceTest extends BaseFeature {
     HiveTable hiveJsonPerfTable = null;
 
     ReadableExternalTable gpdbTextProfile = null;
+    ReadableExternalTable gpdbTextByLineProfile = null;
     ReadableExternalTable gpdbTextMultiProfile = null;
     ReadableExternalTable gpdbTextFileAsRowProfile = null;
     ReadableExternalTable gpdbTextHiveProfile = null;
@@ -153,6 +154,16 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextProfile.setHost(/* pxfHost */"127.0.0.1");
         gpdbTextProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextProfile);
+
+        // Prepare hdfs simple text table using linereader
+        gpdbTextByLineProfile = new ReadableExternalTable("perf_textline_profile", getColumnTypeGpdb(),
+                hiveTextPerfTable.getlocation(), "TEXT");
+        gpdbTextByLineProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextSimple.toString());
+        gpdbTextByLineProfile.setDelimiter(",");
+        gpdbTextByLineProfile.setUserParameters(new String[]{"LINEREADER=true"});
+        gpdbTextByLineProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextByLineProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextByLineProfile);
 
         // Prepare hdfs multi text table
         gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
@@ -281,6 +292,7 @@ public class PerformanceTest extends BaseFeature {
         prepareData();
         allTables = new ArrayList<>();
         allTables.add(gpdbTextProfile);
+        allTables.add(gpdbTextByLineProfile);
         allTables.add(gpdbTextMultiProfile);
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
