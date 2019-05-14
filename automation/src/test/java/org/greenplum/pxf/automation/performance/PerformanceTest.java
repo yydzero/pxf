@@ -401,8 +401,9 @@ public class PerformanceTest extends BaseFeature {
         }
 
         CustomAutomationLogger.revertStdoutStream();
-        System.out.println("\n" + queryType);
-        System.out.println("----------------------------------");
+        System.out.println("\n\n###################################");
+        System.out.println(queryType);
+        System.out.println("###################################");
         for (Entry<Long, Table> entry : results.entrySet()) {
             String query = String.format(queryTemplate, entry.getValue()
                     .getName());
@@ -465,7 +466,7 @@ public class PerformanceTest extends BaseFeature {
         if (table instanceof HiveTable)
             return "Hive table stored as " + ((HiveTable) table).getStoredAs();
         else if (table instanceof ReadableExternalTable)
-            return "External Gpdb table, using PXF with profile "
+            return "External Gpdb table " + table.getName() + ", with profile "
                     + ((ReadableExternalTable) table).getProfile();
         else if (table instanceof Table)
             return "Native Gpdb table";
@@ -484,8 +485,9 @@ public class PerformanceTest extends BaseFeature {
     }
 
     private void printPerformanceReport() {
-        System.out.println("\nPERFORMANCE RESULTS");
-        System.out.println("-------------------");
+        System.out.println("\n\n########################");
+        System.out.println("PERFORMANCE RESULTS");
+        System.out.println("########################");
         System.out.println("Initial data size in text format: " + GENERATE_TEXT_DATA_SIZE_MB + " Mb");
         System.out.println("String column width: " + GENERATE_COLUMN_MAX_WIDTH);
         System.out.println("Number of samples per each query: " + SAMPLES_NUMBER);
