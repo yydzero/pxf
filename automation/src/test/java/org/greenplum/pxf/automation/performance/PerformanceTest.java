@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import listeners.CustomAutomationLogger;
 import org.apache.commons.lang.StringUtils;
@@ -79,6 +81,7 @@ public class PerformanceTest extends BaseFeature {
     Table gpdbNativeTable = null;
 
     List<Table> allTables = null;
+    List<Table> noFilterTables = null;
 
     protected void prepareData() throws Exception {
         hive = (Hive) SystemManagerImpl.getInstance().getSystemObject("hive");
@@ -279,7 +282,6 @@ public class PerformanceTest extends BaseFeature {
         allTables = new ArrayList<>();
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextMultiProfile);
-        allTables.add(gpdbTextFileAsRowProfile);
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
@@ -290,6 +292,9 @@ public class PerformanceTest extends BaseFeature {
 //        allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
 
+        noFilterTables = new ArrayList<>();
+        noFilterTables.add(gpdbTextFileAsRowProfile);
+
         CustomAutomationLogger.revertStdoutStream();
         printPerformanceReport();
     }
@@ -298,7 +303,7 @@ public class PerformanceTest extends BaseFeature {
     public void testCountWithoutFilter() throws Exception {
 
         runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
-                allTables);
+                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
     }
 
     @Test(groups = "performance")
@@ -325,8 +330,8 @@ public class PerformanceTest extends BaseFeature {
     @Test(groups = "performance")
     public void testSelectAllRowsAllColumns() throws Exception {
 
-        runAndReportQueries("SELECT * FROM %s",
-                SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
+        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
+                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
     }
 
     @Test(groups = "performance")
@@ -474,7 +479,7 @@ public class PerformanceTest extends BaseFeature {
             Table table, long avgTime) throws Exception {
         DbSystemObject db = getDbForTable(table);
         String tableInfo = getTableInfo(table);
-        System.out.println("\nTABLE INFO:" + tableInfo);
+        System.out.println("\nTable Info: " + tableInfo);
         System.out.println("AVERAGE TIME: " + avgTime + " MILLISECONDS");
     }
 
