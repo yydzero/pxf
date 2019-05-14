@@ -161,7 +161,7 @@ public class PerformanceTest extends BaseFeature {
         gpdb.createTableAndVerify(gpdbTextMultiProfile);
 
         // Prepare hdfs multi text table with FILE_AS_ROW
-        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", getColumnTypeGpdb(),
+        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", new String[]{"data text"},
                 hiveTextPerfTable.getlocation(), "CSV");
         gpdbTextFileAsRowProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
         gpdbTextFileAsRowProfile.setDelimiter(",");
