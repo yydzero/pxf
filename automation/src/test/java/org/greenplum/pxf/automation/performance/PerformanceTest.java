@@ -383,6 +383,8 @@ public class PerformanceTest extends BaseFeature {
             results.put(avgTime, table);
         }
 
+        CustomAutomationLogger.revertStdoutStream();
+
         for (Entry<Long, Table> entry : results.entrySet()) {
             String query = String.format(queryTemplate, entry.getValue()
                     .getName());
