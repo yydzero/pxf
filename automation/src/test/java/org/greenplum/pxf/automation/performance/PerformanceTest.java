@@ -69,6 +69,7 @@ public class PerformanceTest extends BaseFeature {
     ReadableExternalTable gpdbTextHiveProfile = null;
     ReadableExternalTable gpdbTextHiveTextProfile = null;
     ReadableExternalTable gpdbOrcHiveProfile = null;
+    ReadableExternalTable gpdbOrcVectorizedHiveProfile = null;
     ReadableExternalTable gpdbRcHiveProfile = null;
     ReadableExternalTable gpdbParquetProfile = null;
     ReadableExternalTable gpdbJsonProfile = null;
@@ -90,7 +91,7 @@ public class PerformanceTest extends BaseFeature {
         prepareOrcData();
         prepareRcData();
         prepareParquetData();
-        //prepareJsonData();
+//        prepareJsonData();
         prepareNativeGpdbData();
         prepareJdbcData();
     }
@@ -178,6 +179,15 @@ public class PerformanceTest extends BaseFeature {
         gpdbOrcHiveProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbOrcHiveProfile);
 
+        gpdbOrcVectorizedHiveProfile = TableFactory.getPxfHiveReadableTable(
+                "perf_orc_vectorized_hive_profile", getColumnTypeGpdb(), hiveOrcPerfTable,
+                true);
+
+        gpdbOrcVectorizedHiveProfile.setProfile(EnumPxfDefaultProfiles.Hive.toString());
+        gpdbOrcVectorizedHiveProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbOrcVectorizedHiveProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbOrcVectorizedHiveProfile);
+
     }
 
     private void prepareRcData() throws Exception {
@@ -261,10 +271,11 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
+        allTables.add(gpdbOrcVectorizedHiveProfile);
         allTables.add(gpdbRcHiveProfile);
         allTables.add(gpdbNativeTable);
         allTables.add(gpdbParquetProfile);
-        //allTables.add(gpdbJsonProfile);
+//        allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
     }
 
@@ -361,9 +372,6 @@ public class PerformanceTest extends BaseFeature {
     private void runAndReportQueries(String queryTemplate, String queryType,
             List<Table> tables) throws Exception {
 
-        // Print performance results to stdout
-        CustomAutomationLogger.revertStdoutStream();
-
         SortedMap<Long, Table> results = new TreeMap<Long, Table>();
 
         for (Table table : tables) {
@@ -371,6 +379,9 @@ public class PerformanceTest extends BaseFeature {
             Long avgTime = measureAverageQueryTime(query, getDbForTable(table));
             results.put(avgTime, table);
         }
+
+        // Print performance results to stdout
+        CustomAutomationLogger.revertStdoutStream();
 
         printPerformanceReport();
 
