@@ -20,8 +20,6 @@ package org.greenplum.pxf.plugins.hdfs;
  */
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,7 +41,6 @@ import java.net.URI;
  * A PXF Accessor for reading delimited plain text records.
  */
 public class LineBreakAccessor extends HdfsSplittableDataAccessor {
-    private static final Log LOG = LogFactory.getLog(ChunkRecordReader.class.getName());
     private DataOutputStream dos;
     private FSDataOutputStream fsdos;
     private FileSystem fs;
