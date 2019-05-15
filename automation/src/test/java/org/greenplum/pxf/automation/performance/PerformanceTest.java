@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import listeners.CustomAutomationLogger;
 import org.apache.commons.lang.StringUtils;
+import org.greenplum.pxf.automation.enums.EnumPartitionType;
 import org.greenplum.pxf.automation.structures.data.DataPattern;
 import org.greenplum.pxf.automation.structures.tables.basic.Table;
 import org.greenplum.pxf.automation.structures.tables.hive.HiveTable;
@@ -78,6 +79,7 @@ public class PerformanceTest extends BaseFeature {
     ReadableExternalTable gpdbParquetProfile = null;
     ReadableExternalTable gpdbJsonProfile = null;
     ReadableExternalTable gpdbJdbcProfile = null;
+    ReadableExternalTable gpdbJdbcWithPartitionProfile = null;
 
     Table gpdbNativeTable = null;
 
@@ -277,6 +279,18 @@ public class PerformanceTest extends BaseFeature {
         gpdbJdbcProfile.setHost(/* pxfHost */"127.0.0.1");
         gpdbJdbcProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbJdbcProfile);
+
+        gpdbJdbcWithPartitionProfile = TableFactory.getPxfJdbcReadablePartitionedTable(
+                "perf_jdbc_withpartition_profile",
+                getColumnTypeGpdb(),
+                gpdbNativeTable.getName(),
+                "org.postgresql.Driver",
+                "jdbc:postgresql://"+ gpdb.getMasterHost() + ":" + gpdb.getPort() + "/pxfautomation",
+                0, "-2147480575:2147482993", "1000000000",
+                gpdb.getUserName(), EnumPartitionType.INT, null);
+        gpdbJdbcWithPartitionProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbJdbcWithPartitionProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbJdbcWithPartitionProfile);
     }
 
     private void prepareNativeGpdbData() throws Exception {
@@ -291,6 +305,7 @@ public class PerformanceTest extends BaseFeature {
     protected void beforeClass() throws Exception {
         prepareData();
         allTables = new ArrayList<>();
+        allTables.add(gpdbNativeTable);
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
         allTables.add(gpdbTextMultiProfile);
@@ -299,10 +314,10 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbOrcHiveProfile);
         allTables.add(gpdbOrcVectorizedHiveProfile);
         allTables.add(gpdbRcHiveProfile);
-        allTables.add(gpdbNativeTable);
         allTables.add(gpdbParquetProfile);
 //        allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
+        allTables.add(gpdbJdbcWithPartitionProfile);
 
         noFilterTables = new ArrayList<>();
         noFilterTables.add(gpdbTextFileAsRowProfile);
@@ -413,9 +428,9 @@ public class PerformanceTest extends BaseFeature {
         }
 
         CustomAutomationLogger.revertStdoutStream();
-        System.out.println("\n\n###################################");
+        System.out.println("\n\n======================================");
         System.out.println(queryType);
-        System.out.println("###################################");
+        System.out.println("======================================");
         for (Entry<Long, Table> entry : results.entrySet()) {
             String query = String.format(queryTemplate, entry.getValue()
                     .getName());
