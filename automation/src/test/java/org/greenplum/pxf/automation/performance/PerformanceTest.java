@@ -38,8 +38,6 @@ public class PerformanceTest extends BaseFeature {
     private static final int SAMPLES_NUMBER = 3;
 
     //Values for filters
-    private static final String FILTER_50_PERCENT_RANGE = StringUtils.repeat(
-            "Z", GENERATE_COLUMN_MAX_WIDTH); // Select 50% range
     private static final String FILTER_10_PERCENT_RANGE = StringUtils.repeat(
             "F", GENERATE_COLUMN_MAX_WIDTH); // Select 10% range
     private static final String FILTER_1_PERCENT_RANGE = StringUtils.repeat(
@@ -47,15 +45,12 @@ public class PerformanceTest extends BaseFeature {
 
     //Use cases
     private static final String COUNT_WITHOUT_FILTER = "Count total number of rows in table";
-    private static final String COUNT_50_PERCENT = "Count number of rows in table 50% range";
     private static final String COUNT_10_PERCENT = "Count number of rows in table 10% range";
     private static final String COUNT_1_PERCENT = "Count number of rows in table 1% range";
     private static final String SELECT_WITHOUT_FILTER_ALL_COLUMNS = "Select all rows, all columns";
-    private static final String SELECT_50_PERCENT_ALL_COLUMNS = "Select 50% rows, all columns";
     private static final String SELECT_10_PERCENT_ALL_COLUMNS = "Select 10% rows, all columns";
     private static final String SELECT_1_PERCENT_ALL_COLUMNS = "Select 1% rows, all columns";
     private static final String SELECT_WITHOUT_FILTER_ONE_COLUMN = "Select all rows, one column";
-    private static final String SELECT_50_PERCENT_ONE_COLUMN = "Select 50% rows, one column";
     private static final String SELECT_10_PERCENT_ONE_COLUMN = "Select 10% rows, one column";
     private static final String SELECT_1_PERCENT_ONE_COLUMN = "Select 1% rows, one column";
 
@@ -79,7 +74,8 @@ public class PerformanceTest extends BaseFeature {
     ReadableExternalTable gpdbParquetProfile = null;
     ReadableExternalTable gpdbJsonProfile = null;
     ReadableExternalTable gpdbJdbcProfile = null;
-    ReadableExternalTable gpdbJdbcWithPartitionProfile = null;
+    ReadableExternalTable gpdbJdbcManyPartitionsProfile = null;
+    ReadableExternalTable gpdbJdbcIdealPartitionsProfile = null;
 
     Table gpdbNativeTable = null;
 
@@ -96,7 +92,7 @@ public class PerformanceTest extends BaseFeature {
 
         prepareTextData();
         prepareOrcData();
-        prepareRcData();
+//        prepareRcData();
         prepareParquetData();
 //        prepareJsonData();
         prepareNativeGpdbData();
@@ -280,17 +276,29 @@ public class PerformanceTest extends BaseFeature {
         gpdbJdbcProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbJdbcProfile);
 
-        gpdbJdbcWithPartitionProfile = TableFactory.getPxfJdbcReadablePartitionedTable(
-                "perf_jdbc_withpartition_profile",
+        gpdbJdbcManyPartitionsProfile = TableFactory.getPxfJdbcReadablePartitionedTable(
+                "perf_jdbc_manypartitions_profile",
                 getColumnTypeGpdb(),
                 gpdbNativeTable.getName(),
                 "org.postgresql.Driver",
                 "jdbc:postgresql://"+ gpdb.getMasterHost() + ":" + gpdb.getPort() + "/pxfautomation",
-                0, "-2147480575:2147482993", "1000000000",
+                0, "-2147480575:2147482993", "100000000",
                 gpdb.getUserName(), EnumPartitionType.INT, null);
-        gpdbJdbcWithPartitionProfile.setHost(/* pxfHost */"127.0.0.1");
-        gpdbJdbcWithPartitionProfile.setPort(pxfPort);
-        gpdb.createTableAndVerify(gpdbJdbcWithPartitionProfile);
+        gpdbJdbcManyPartitionsProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbJdbcManyPartitionsProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbJdbcManyPartitionsProfile);
+
+        gpdbJdbcIdealPartitionsProfile = TableFactory.getPxfJdbcReadablePartitionedTable(
+                "perf_jdbc_segpartitions_profile",
+                getColumnTypeGpdb(),
+                gpdbNativeTable.getName(),
+                "org.postgresql.Driver",
+                "jdbc:postgresql://"+ gpdb.getMasterHost() + ":" + gpdb.getPort() + "/pxfautomation",
+                0, "-2147480575:2147482993", "1435000000",
+                gpdb.getUserName(), EnumPartitionType.INT, null);
+        gpdbJdbcIdealPartitionsProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbJdbcIdealPartitionsProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbJdbcIdealPartitionsProfile);
     }
 
     private void prepareNativeGpdbData() throws Exception {
@@ -313,11 +321,12 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
         allTables.add(gpdbOrcVectorizedHiveProfile);
-        allTables.add(gpdbRcHiveProfile);
+//        allTables.add(gpdbRcHiveProfile);
         allTables.add(gpdbParquetProfile);
 //        allTables.add(gpdbJsonProfile);
         allTables.add(gpdbJdbcProfile);
-        allTables.add(gpdbJdbcWithPartitionProfile);
+        allTables.add(gpdbJdbcManyPartitionsProfile);
+        allTables.add(gpdbJdbcIdealPartitionsProfile);
 
         noFilterTables = new ArrayList<>();
         noFilterTables.add(gpdbTextFileAsRowProfile);
@@ -331,13 +340,6 @@ public class PerformanceTest extends BaseFeature {
 
         runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
                 Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
-    }
-
-    @Test(groups = "performance")
-    public void testCount50PercentRange() throws Exception {
-
-        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-                + FILTER_50_PERCENT_RANGE + "'", COUNT_50_PERCENT, allTables);
     }
 
     @Test(groups = "performance")
@@ -362,14 +364,6 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testSelect50PercentRowsAllColumns() throws Exception {
-
-        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-                + FILTER_50_PERCENT_RANGE + "'", SELECT_50_PERCENT_ALL_COLUMNS,
-                allTables);
-    }
-
-    @Test(groups = "performance")
     public void testSelect10PercentRowsAllColumns() throws Exception {
 
         runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
@@ -390,14 +384,6 @@ public class PerformanceTest extends BaseFeature {
 
         runAndReportQueries("SELECT str0 FROM %s",
                 SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
-    }
-
-    @Test(groups = "performance")
-    public void testSelect50PercentRowsOneColumn() throws Exception {
-
-        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-                + FILTER_50_PERCENT_RANGE + "'", SELECT_50_PERCENT_ONE_COLUMN,
-                allTables);
     }
 
     @Test(groups = "performance")
