@@ -30,10 +30,10 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 4098;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 8192;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
-    private static final int GENERATE_INT_COLUMNS_NUMBER = 10;
-    private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
+    private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
+    private static final int GENERATE_TEXT_COLUMNS_NUMBER = 1;
 
     private static final int SAMPLES_NUMBER = 2;
 
@@ -45,7 +45,6 @@ public class PerformanceTest extends BaseFeature {
 
     //Use cases
     private static final String COUNT_WITHOUT_FILTER = "Count total number of rows in table";
-    private static final String COUNT_10_PERCENT = "Count number of rows in table 10% range";
     private static final String COUNT_1_PERCENT = "Count number of rows in table 1% range";
     private static final String SELECT_WITHOUT_FILTER_ALL_COLUMNS = "Select all rows, all columns";
     private static final String SELECT_10_PERCENT_ALL_COLUMNS = "Select 10% rows, all columns";
@@ -349,7 +348,7 @@ public class PerformanceTest extends BaseFeature {
                 + FILTER_1_PERCENT_RANGE + "'", COUNT_1_PERCENT, allTables);
     }
 
-    @Test(groups = "performance")
+    @Test(groups = "performance", enabled = false)
     public void testCount10PercentRange() throws Exception {
 
         runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
@@ -371,7 +370,7 @@ public class PerformanceTest extends BaseFeature {
                 allTables);
     }
 
-    @Test(groups = "performance")
+    @Test(groups = "performance", enabled = false)
     public void testSelect10PercentRowsAllColumns() throws Exception {
 
         runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
@@ -387,7 +386,7 @@ public class PerformanceTest extends BaseFeature {
                 allTables);
     }
 
-    @Test(groups = "performance")
+    @Test(groups = "performance", enabled = false)
     public void testSelect10PercentRowsOneColumn() throws Exception {
 
         runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
