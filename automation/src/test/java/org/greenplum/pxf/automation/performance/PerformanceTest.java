@@ -45,6 +45,7 @@ public class PerformanceTest extends BaseFeature {
 
     //Use cases
     private static final String COUNT_WITHOUT_FILTER = "Count total number of rows in table";
+    private static final String COUNT_10_PERCENT = "Count number of rows in table 10% range";
     private static final String COUNT_1_PERCENT = "Count number of rows in table 1% range";
     private static final String SELECT_WITHOUT_FILTER_ALL_COLUMNS = "Select all rows, all columns";
     private static final String SELECT_10_PERCENT_ALL_COLUMNS = "Select 10% rows, all columns";
