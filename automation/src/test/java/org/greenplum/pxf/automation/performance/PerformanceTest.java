@@ -30,12 +30,12 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 8192;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 10240;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 10;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
 
-    private static final int SAMPLES_NUMBER = 3;
+    private static final int SAMPLES_NUMBER = 2;
 
     //Values for filters
     private static final String FILTER_10_PERCENT_RANGE = StringUtils.repeat(
@@ -343,13 +343,6 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testCount10PercentRange() throws Exception {
-
-        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
-    }
-
-    @Test(groups = "performance")
     public void testCount1PercentRange() throws Exception {
 
         runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
@@ -357,10 +350,25 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
+    public void testCount10PercentRange() throws Exception {
+
+        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
+                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
+    }
+
+    @Test(groups = "performance")
     public void testSelectAllRowsAllColumns() throws Exception {
 
         runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
                 Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+    }
+
+    @Test(groups = "performance")
+    public void testSelect1PercentRowsAllColumns() throws Exception {
+
+        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
+                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
+                allTables);
     }
 
     @Test(groups = "performance")
@@ -372,18 +380,11 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testSelect1PercentRowsAllColumns() throws Exception {
+    public void testSelect1PercentRowsOneColumn() throws Exception {
 
-        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-                + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
+        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
+                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
                 allTables);
-    }
-
-    @Test(groups = "performance")
-    public void testSelectAllRowsOneColumn() throws Exception {
-
-        runAndReportQueries("SELECT str0 FROM %s",
-                SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
     }
 
     @Test(groups = "performance")
@@ -395,11 +396,10 @@ public class PerformanceTest extends BaseFeature {
     }
 
     @Test(groups = "performance")
-    public void testSelect1PercentRowsOneColumn() throws Exception {
+    public void testSelectAllRowsOneColumn() throws Exception {
 
-        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-                + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
-                allTables);
+        runAndReportQueries("SELECT str0 FROM %s",
+                SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
     }
 
     private void runAndReportQueries(String queryTemplate, String queryType,
