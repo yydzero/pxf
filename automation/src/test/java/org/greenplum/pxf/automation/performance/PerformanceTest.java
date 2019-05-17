@@ -30,7 +30,7 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 16384;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 32768;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
@@ -91,12 +91,12 @@ public class PerformanceTest extends BaseFeature {
         }
 
         prepareTextData();
-        prepareOrcData();
+//        prepareOrcData();
 //        prepareRcData();
-        prepareParquetData();
+//        prepareParquetData();
 //        prepareJsonData();
         prepareNativeGpdbData();
-        prepareJdbcData();
+//        prepareJdbcData();
     }
 
     private void prepareTextData() throws Exception {
@@ -133,16 +133,16 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextHiveProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextHiveProfile);
 
-        // Prepare Hive text table
-        gpdbTextHiveTextProfile = TableFactory.getPxfHiveTextReadableTable(
-                "perf_text_hive_text_profile", getColumnTypeGpdb(),
-                hiveTextPerfTable, true);
-        gpdbTextHiveTextProfile.setProfile(EnumPxfDefaultProfiles.HiveText
-                .toString());
-        gpdbTextHiveTextProfile.setHost(/* pxfHost */"127.0.0.1");
-        gpdbTextHiveTextProfile.setPort(pxfPort);
-        gpdbTextHiveTextProfile.setDelimiter(",");
-        gpdb.createTableAndVerify(gpdbTextHiveTextProfile);
+//        // Prepare Hive text table
+//        gpdbTextHiveTextProfile = TableFactory.getPxfHiveTextReadableTable(
+//                "perf_text_hive_text_profile", getColumnTypeGpdb(),
+//                hiveTextPerfTable, true);
+//        gpdbTextHiveTextProfile.setProfile(EnumPxfDefaultProfiles.HiveText
+//                .toString());
+//        gpdbTextHiveTextProfile.setHost(/* pxfHost */"127.0.0.1");
+//        gpdbTextHiveTextProfile.setPort(pxfPort);
+//        gpdbTextHiveTextProfile.setDelimiter(",");
+//        gpdb.createTableAndVerify(gpdbTextHiveTextProfile);
 
         // Prepare hdfs simple text table
         gpdbTextProfile = new ReadableExternalTable("perf_text_profile", getColumnTypeGpdb(),
@@ -317,16 +317,16 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
 //        allTables.add(gpdbTextMultiProfile);
-        allTables.add(gpdbTextHiveProfile);
-        allTables.add(gpdbTextHiveTextProfile);
-        allTables.add(gpdbOrcHiveProfile);
-        allTables.add(gpdbOrcVectorizedHiveProfile);
-//        allTables.add(gpdbRcHiveProfile);
-        allTables.add(gpdbParquetProfile);
-//        allTables.add(gpdbJsonProfile);
-        allTables.add(gpdbJdbcProfile);
-        allTables.add(gpdbJdbcManyPartitionsProfile);
-        allTables.add(gpdbJdbcIdealPartitionsProfile);
+//        allTables.add(gpdbTextHiveProfile);
+//        allTables.add(gpdbTextHiveTextProfile);
+//        allTables.add(gpdbOrcHiveProfile);
+//        allTables.add(gpdbOrcVectorizedHiveProfile);
+////        allTables.add(gpdbRcHiveProfile);
+//        allTables.add(gpdbParquetProfile);
+////        allTables.add(gpdbJsonProfile);
+//        allTables.add(gpdbJdbcProfile);
+//        allTables.add(gpdbJdbcManyPartitionsProfile);
+//        allTables.add(gpdbJdbcIdealPartitionsProfile);
 
 //        noFilterTables = new ArrayList<>();
 //        noFilterTables.add(gpdbTextFileAsRowProfile);
@@ -343,19 +343,19 @@ public class PerformanceTest extends BaseFeature {
         runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER, allTables);
     }
 
-    @Test(groups = "performance")
-    public void testCount1PercentRange() throws Exception {
-
-        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-                + FILTER_1_PERCENT_RANGE + "'", COUNT_1_PERCENT, allTables);
-    }
-
-    @Test(groups = "performance", enabled = false)
-    public void testCount10PercentRange() throws Exception {
-
-        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
-    }
+//    @Test(groups = "performance")
+//    public void testCount1PercentRange() throws Exception {
+//
+//        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
+//                + FILTER_1_PERCENT_RANGE + "'", COUNT_1_PERCENT, allTables);
+//    }
+//
+//    @Test(groups = "performance", enabled = false)
+//    public void testCount10PercentRange() throws Exception {
+//
+//        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
+//                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
+//    }
 
     @Test(groups = "performance")
     public void testSelectAllRowsAllColumns() throws Exception {
@@ -365,37 +365,37 @@ public class PerformanceTest extends BaseFeature {
         runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
     }
 
-    @Test(groups = "performance")
-    public void testSelect1PercentRowsAllColumns() throws Exception {
-
-        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
-                allTables);
-    }
-
-    @Test(groups = "performance", enabled = false)
-    public void testSelect10PercentRowsAllColumns() throws Exception {
-
-        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ALL_COLUMNS,
-                allTables);
-    }
-
-    @Test(groups = "performance")
-    public void testSelect1PercentRowsOneColumn() throws Exception {
-
-        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
-                allTables);
-    }
-
-    @Test(groups = "performance", enabled = false)
-    public void testSelect10PercentRowsOneColumn() throws Exception {
-
-        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ONE_COLUMN,
-                allTables);
-    }
+//    @Test(groups = "performance", enabled = false)
+//    public void testSelect1PercentRowsAllColumns() throws Exception {
+//
+//        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
+//                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
+//                allTables);
+//    }
+//
+//    @Test(groups = "performance", enabled = false)
+//    public void testSelect10PercentRowsAllColumns() throws Exception {
+//
+//        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
+//                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ALL_COLUMNS,
+//                allTables);
+//    }
+//
+//    @Test(groups = "performance")
+//    public void testSelect1PercentRowsOneColumn() throws Exception {
+//
+//        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
+//                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
+//                allTables);
+//    }
+//
+//    @Test(groups = "performance", enabled = false)
+//    public void testSelect10PercentRowsOneColumn() throws Exception {
+//
+//        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
+//                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ONE_COLUMN,
+//                allTables);
+//    }
 
     @Test(groups = "performance")
     public void testSelectAllRowsOneColumn() throws Exception {
