@@ -30,7 +30,7 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 2048;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 8192;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
@@ -172,15 +172,15 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextMultiProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextMultiProfile);
 
-        // Prepare hdfs multi text table with FILE_AS_ROW
-        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", new String[]{"data text"},
-                hiveTextPerfTable.getlocation(), "CSV");
-        gpdbTextFileAsRowProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
-        gpdbTextFileAsRowProfile.setDelimiter(",");
-        gpdbTextFileAsRowProfile.setUserParameters(new String[]{"FILE_AS_ROW=true"});
-        gpdbTextFileAsRowProfile.setHost(/* pxfHost */"127.0.0.1");
-        gpdbTextFileAsRowProfile.setPort(pxfPort);
-        gpdb.createTableAndVerify(gpdbTextFileAsRowProfile);
+//        // Prepare hdfs multi text table with FILE_AS_ROW
+//        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", new String[]{"data text"},
+//                hiveTextPerfTable.getlocation(), "CSV");
+//        gpdbTextFileAsRowProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+//        gpdbTextFileAsRowProfile.setDelimiter(",");
+//        gpdbTextFileAsRowProfile.setUserParameters(new String[]{"FILE_AS_ROW=true"});
+//        gpdbTextFileAsRowProfile.setHost(/* pxfHost */"127.0.0.1");
+//        gpdbTextFileAsRowProfile.setPort(pxfPort);
+//        gpdb.createTableAndVerify(gpdbTextFileAsRowProfile);
 
     }
 
@@ -328,8 +328,8 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbJdbcManyPartitionsProfile);
         allTables.add(gpdbJdbcIdealPartitionsProfile);
 
-        noFilterTables = new ArrayList<>();
-        noFilterTables.add(gpdbTextFileAsRowProfile);
+//        noFilterTables = new ArrayList<>();
+//        noFilterTables.add(gpdbTextFileAsRowProfile);
 
         CustomAutomationLogger.revertStdoutStream();
         printPerformanceReport();
@@ -338,8 +338,9 @@ public class PerformanceTest extends BaseFeature {
     @Test(groups = "performance")
     public void testCountWithoutFilter() throws Exception {
 
-        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
-                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+//        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
+//                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER, allTables);
     }
 
     @Test(groups = "performance")
@@ -359,8 +360,9 @@ public class PerformanceTest extends BaseFeature {
     @Test(groups = "performance")
     public void testSelectAllRowsAllColumns() throws Exception {
 
-        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
-                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+//        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
+//                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
     }
 
     @Test(groups = "performance")
