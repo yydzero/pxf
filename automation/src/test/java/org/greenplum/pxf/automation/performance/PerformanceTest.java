@@ -314,8 +314,9 @@ public class PerformanceTest extends BaseFeature {
         prepareData();
         allTables = new ArrayList<>();
         allTables.add(gpdbNativeTable);
-        allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
+        allTables.add(gpdbTextProfile);
+
 //        allTables.add(gpdbTextMultiProfile);
 //        allTables.add(gpdbTextHiveProfile);
 //        allTables.add(gpdbTextHiveTextProfile);
