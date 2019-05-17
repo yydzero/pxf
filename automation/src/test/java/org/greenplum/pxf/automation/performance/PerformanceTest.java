@@ -30,7 +30,7 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 8192;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 4098;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 10;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
