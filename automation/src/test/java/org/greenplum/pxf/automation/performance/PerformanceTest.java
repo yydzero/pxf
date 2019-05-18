@@ -30,7 +30,7 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 8192;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 16392;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
@@ -314,10 +314,9 @@ public class PerformanceTest extends BaseFeature {
         prepareData();
         allTables = new ArrayList<>();
         allTables.add(gpdbNativeTable);
-        allTables.add(gpdbTextByLineProfile);
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
-        allTables.add(gpdbTextProfile);
+
 
 //        allTables.add(gpdbTextMultiProfile);
 //        allTables.add(gpdbTextHiveProfile);
