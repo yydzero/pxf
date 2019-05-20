@@ -316,7 +316,8 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbNativeTable);
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
-
+        allTables.add(gpdbTextProfile);
+        allTables.add(gpdbTextByLineProfile);
 
 //        allTables.add(gpdbTextMultiProfile);
 //        allTables.add(gpdbTextHiveProfile);
@@ -359,13 +360,13 @@ public class PerformanceTest extends BaseFeature {
 //                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
 //    }
 
-    @Test(groups = "performance")
-    public void testSelectAllRowsAllColumns() throws Exception {
-
-//        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
-//                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
-        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
-    }
+//    @Test(groups = "performance")
+//    public void testSelectAllRowsAllColumns() throws Exception {
+//
+////        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
+////                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+//        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
+//    }
 
 //    @Test(groups = "performance", enabled = false)
 //    public void testSelect1PercentRowsAllColumns() throws Exception {
@@ -399,12 +400,12 @@ public class PerformanceTest extends BaseFeature {
 //                allTables);
 //    }
 
-    @Test(groups = "performance")
-    public void testSelectAllRowsOneColumn() throws Exception {
-
-        runAndReportQueries("SELECT str0 FROM %s",
-                SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
-    }
+//    @Test(groups = "performance")
+//    public void testSelectAllRowsOneColumn() throws Exception {
+//
+//        runAndReportQueries("SELECT str0 FROM %s",
+//                SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
+//    }
 
     private void runAndReportQueries(String queryTemplate, String queryType,
             List<Table> tables) throws Exception {
