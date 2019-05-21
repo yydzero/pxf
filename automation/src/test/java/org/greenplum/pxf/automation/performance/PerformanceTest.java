@@ -30,7 +30,7 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 4096;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 512;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
@@ -340,7 +340,6 @@ public class PerformanceTest extends BaseFeature {
 
         runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
                 Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
-        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER, allTables);
     }
 
     @Test(groups = "performance")
@@ -362,7 +361,6 @@ public class PerformanceTest extends BaseFeature {
 
         runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
                 Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
-        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
     }
 
     @Test(groups = "performance")
