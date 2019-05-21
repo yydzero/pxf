@@ -30,12 +30,13 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 16392;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 512;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
 
-    private static final int SAMPLES_NUMBER = 2;
+    private static final int WARMUP_COUNT = 1;
+    private static final int SAMPLES_COUNT = 2;
 
     //Values for filters
     private static final String FILTER_10_PERCENT_RANGE = StringUtils.repeat(
@@ -89,14 +90,13 @@ public class PerformanceTest extends BaseFeature {
             hdfs.setOwner("/" + hdfs.getWorkingDirectory(), hive.getUserName(),
                     hive.getUserName());
         }
-
         prepareTextData();
-//        prepareOrcData();
+        prepareOrcData();
 //        prepareRcData();
-//        prepareParquetData();
+        prepareParquetData();
 //        prepareJsonData();
         prepareNativeGpdbData();
-//        prepareJdbcData();
+        prepareJdbcData();
     }
 
     private void prepareTextData() throws Exception {
@@ -133,16 +133,16 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextHiveProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextHiveProfile);
 
-//        // Prepare Hive text table
-//        gpdbTextHiveTextProfile = TableFactory.getPxfHiveTextReadableTable(
-//                "perf_text_hive_text_profile", getColumnTypeGpdb(),
-//                hiveTextPerfTable, true);
-//        gpdbTextHiveTextProfile.setProfile(EnumPxfDefaultProfiles.HiveText
-//                .toString());
-//        gpdbTextHiveTextProfile.setHost(/* pxfHost */"127.0.0.1");
-//        gpdbTextHiveTextProfile.setPort(pxfPort);
-//        gpdbTextHiveTextProfile.setDelimiter(",");
-//        gpdb.createTableAndVerify(gpdbTextHiveTextProfile);
+        // Prepare Hive text table
+        gpdbTextHiveTextProfile = TableFactory.getPxfHiveTextReadableTable(
+                "perf_text_hive_text_profile", getColumnTypeGpdb(),
+                hiveTextPerfTable, true);
+        gpdbTextHiveTextProfile.setProfile(EnumPxfDefaultProfiles.HiveText
+                .toString());
+        gpdbTextHiveTextProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextHiveTextProfile.setPort(pxfPort);
+        gpdbTextHiveTextProfile.setDelimiter(",");
+        gpdb.createTableAndVerify(gpdbTextHiveTextProfile);
 
         // Prepare hdfs simple text table
         gpdbTextProfile = new ReadableExternalTable("perf_text_profile", getColumnTypeGpdb(),
@@ -163,24 +163,24 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextByLineProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextByLineProfile);
 
-//        // Prepare hdfs multi text table
-//        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
-//                hiveTextPerfTable.getlocation(), "TEXT");
-//        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
-//        gpdbTextMultiProfile.setDelimiter(",");
-//        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
-//        gpdbTextMultiProfile.setPort(pxfPort);
-//        gpdb.createTableAndVerify(gpdbTextMultiProfile);
+        // Prepare hdfs multi text table
+        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
+                hiveTextPerfTable.getlocation(), "TEXT");
+        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+        gpdbTextMultiProfile.setDelimiter(",");
+        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextMultiProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextMultiProfile);
 
-//        // Prepare hdfs multi text table with FILE_AS_ROW
-//        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", new String[]{"data text"},
-//                hiveTextPerfTable.getlocation(), "CSV");
-//        gpdbTextFileAsRowProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
-//        gpdbTextFileAsRowProfile.setDelimiter(",");
-//        gpdbTextFileAsRowProfile.setUserParameters(new String[]{"FILE_AS_ROW=true"});
-//        gpdbTextFileAsRowProfile.setHost(/* pxfHost */"127.0.0.1");
-//        gpdbTextFileAsRowProfile.setPort(pxfPort);
-//        gpdb.createTableAndVerify(gpdbTextFileAsRowProfile);
+        // Prepare hdfs multi text table with FILE_AS_ROW
+        gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", new String[]{"data text"},
+                hiveTextPerfTable.getlocation(), "CSV");
+        gpdbTextFileAsRowProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+        gpdbTextFileAsRowProfile.setDelimiter(",");
+        gpdbTextFileAsRowProfile.setUserParameters(new String[]{"FILE_AS_ROW=true"});
+        gpdbTextFileAsRowProfile.setHost(/* pxfHost */"127.0.0.1");
+        gpdbTextFileAsRowProfile.setPort(pxfPort);
+        gpdb.createTableAndVerify(gpdbTextFileAsRowProfile);
 
     }
 
@@ -316,23 +316,20 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbNativeTable);
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
-        allTables.add(gpdbTextProfile);
-        allTables.add(gpdbTextByLineProfile);
+        allTables.add(gpdbTextMultiProfile);
+        allTables.add(gpdbTextHiveProfile);
+        allTables.add(gpdbTextHiveTextProfile);
+        allTables.add(gpdbOrcHiveProfile);
+        allTables.add(gpdbOrcVectorizedHiveProfile);
+//        allTables.add(gpdbRcHiveProfile);
+        allTables.add(gpdbParquetProfile);
+//        allTables.add(gpdbJsonProfile);
+        allTables.add(gpdbJdbcProfile);
+        allTables.add(gpdbJdbcManyPartitionsProfile);
+        allTables.add(gpdbJdbcIdealPartitionsProfile);
 
-//        allTables.add(gpdbTextMultiProfile);
-//        allTables.add(gpdbTextHiveProfile);
-//        allTables.add(gpdbTextHiveTextProfile);
-//        allTables.add(gpdbOrcHiveProfile);
-//        allTables.add(gpdbOrcVectorizedHiveProfile);
-////        allTables.add(gpdbRcHiveProfile);
-//        allTables.add(gpdbParquetProfile);
-////        allTables.add(gpdbJsonProfile);
-//        allTables.add(gpdbJdbcProfile);
-//        allTables.add(gpdbJdbcManyPartitionsProfile);
-//        allTables.add(gpdbJdbcIdealPartitionsProfile);
-
-//        noFilterTables = new ArrayList<>();
-//        noFilterTables.add(gpdbTextFileAsRowProfile);
+        noFilterTables = new ArrayList<>();
+        noFilterTables.add(gpdbTextFileAsRowProfile);
 
         CustomAutomationLogger.revertStdoutStream();
         printPerformanceReport();
@@ -341,71 +338,71 @@ public class PerformanceTest extends BaseFeature {
     @Test(groups = "performance")
     public void testCountWithoutFilter() throws Exception {
 
-//        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
-//                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
+                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
         runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER, allTables);
     }
 
-//    @Test(groups = "performance")
-//    public void testCount1PercentRange() throws Exception {
-//
-//        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-//                + FILTER_1_PERCENT_RANGE + "'", COUNT_1_PERCENT, allTables);
-//    }
-//
-//    @Test(groups = "performance", enabled = false)
-//    public void testCount10PercentRange() throws Exception {
-//
-//        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
-//                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
-//    }
+    @Test(groups = "performance")
+    public void testCount1PercentRange() throws Exception {
 
-//    @Test(groups = "performance")
-//    public void testSelectAllRowsAllColumns() throws Exception {
-//
-////        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
-////                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
-//        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
-//    }
+        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
+                + FILTER_1_PERCENT_RANGE + "'", COUNT_1_PERCENT, allTables);
+    }
 
-//    @Test(groups = "performance", enabled = false)
-//    public void testSelect1PercentRowsAllColumns() throws Exception {
-//
-//        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-//                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
-//                allTables);
-//    }
-//
-//    @Test(groups = "performance", enabled = false)
-//    public void testSelect10PercentRowsAllColumns() throws Exception {
-//
-//        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
-//                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ALL_COLUMNS,
-//                allTables);
-//    }
-//
-//    @Test(groups = "performance")
-//    public void testSelect1PercentRowsOneColumn() throws Exception {
-//
-//        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-//                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
-//                allTables);
-//    }
-//
-//    @Test(groups = "performance", enabled = false)
-//    public void testSelect10PercentRowsOneColumn() throws Exception {
-//
-//        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
-//                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ONE_COLUMN,
-//                allTables);
-//    }
+    @Test(groups = "performance", enabled = false)
+    public void testCount10PercentRange() throws Exception {
 
-//    @Test(groups = "performance")
-//    public void testSelectAllRowsOneColumn() throws Exception {
-//
-//        runAndReportQueries("SELECT str0 FROM %s",
-//                SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
-//    }
+        runAndReportQueries("SELECT COUNT(*) FROM %s WHERE str0 < '"
+                + FILTER_10_PERCENT_RANGE + "'", COUNT_10_PERCENT, allTables);
+    }
+
+    @Test(groups = "performance")
+    public void testSelectAllRowsAllColumns() throws Exception {
+
+        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
+                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS, allTables);
+    }
+
+    @Test(groups = "performance")
+    public void testSelect1PercentRowsAllColumns() throws Exception {
+
+        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
+                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ALL_COLUMNS,
+                allTables);
+    }
+
+    @Test(groups = "performance", enabled = false)
+    public void testSelect10PercentRowsAllColumns() throws Exception {
+
+        runAndReportQueries("SELECT * FROM %s WHERE str0 < '"
+                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ALL_COLUMNS,
+                allTables);
+    }
+
+    @Test(groups = "performance")
+    public void testSelect1PercentRowsOneColumn() throws Exception {
+
+        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
+                        + FILTER_1_PERCENT_RANGE + "'", SELECT_1_PERCENT_ONE_COLUMN,
+                allTables);
+    }
+
+    @Test(groups = "performance", enabled = false)
+    public void testSelect10PercentRowsOneColumn() throws Exception {
+
+        runAndReportQueries("SELECT str0 FROM %s WHERE str0 < '"
+                + FILTER_10_PERCENT_RANGE + "'", SELECT_10_PERCENT_ONE_COLUMN,
+                allTables);
+    }
+
+    @Test(groups = "performance")
+    public void testSelectAllRowsOneColumn() throws Exception {
+
+        runAndReportQueries("SELECT str0 FROM %s",
+                SELECT_WITHOUT_FILTER_ONE_COLUMN, allTables);
+    }
 
     private void runAndReportQueries(String queryTemplate, String queryType,
             List<Table> tables) throws Exception {
@@ -508,16 +505,19 @@ public class PerformanceTest extends BaseFeature {
         System.out.println("########################");
         System.out.println("Initial data size in text format: " + GENERATE_TEXT_DATA_SIZE_MB + " Mb");
         System.out.println("String column width: " + GENERATE_COLUMN_MAX_WIDTH);
-        System.out.println("Number of samples per each query: " + SAMPLES_NUMBER);
+        System.out.println("Number of warmup iterations per query: " + WARMUP_COUNT);
+        System.out.println("Number of samples per query: " + SAMPLES_COUNT);
     }
 
     private long measureAverageQueryTime(String query, DbSystemObject db)
             throws Exception {
         long avgQueryTime = 0;
-        for (int i = 0; i < SAMPLES_NUMBER; i++)
+        for (int i = 0; i < WARMUP_COUNT; i++)
+            db.runQueryTiming(query);
+        for (int i = 0; i < SAMPLES_COUNT; i++)
             avgQueryTime += db.runQueryTiming(query);
 
-        avgQueryTime /= SAMPLES_NUMBER;
+        avgQueryTime /= SAMPLES_COUNT;
         return avgQueryTime;
     }
 }
