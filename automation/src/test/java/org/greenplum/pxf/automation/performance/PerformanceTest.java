@@ -30,7 +30,7 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 public class PerformanceTest extends BaseFeature {
 
     private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 512;
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 4096;
     private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
@@ -163,14 +163,14 @@ public class PerformanceTest extends BaseFeature {
         gpdbTextByLineProfile.setPort(pxfPort);
         gpdb.createTableAndVerify(gpdbTextByLineProfile);
 
-        // Prepare hdfs multi text table
-        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
-                hiveTextPerfTable.getlocation(), "TEXT");
-        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
-        gpdbTextMultiProfile.setDelimiter(",");
-        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
-        gpdbTextMultiProfile.setPort(pxfPort);
-        gpdb.createTableAndVerify(gpdbTextMultiProfile);
+//        // Prepare hdfs multi text table
+//        gpdbTextMultiProfile = new ReadableExternalTable("perf_textmulti_profile", getColumnTypeGpdb(),
+//                hiveTextPerfTable.getlocation(), "TEXT");
+//        gpdbTextMultiProfile.setProfile(EnumPxfDefaultProfiles.HdfsTextMulti.toString());
+//        gpdbTextMultiProfile.setDelimiter(",");
+//        gpdbTextMultiProfile.setHost(/* pxfHost */"127.0.0.1");
+//        gpdbTextMultiProfile.setPort(pxfPort);
+//        gpdb.createTableAndVerify(gpdbTextMultiProfile);
 
         // Prepare hdfs multi text table with FILE_AS_ROW
         gpdbTextFileAsRowProfile = new ReadableExternalTable("perf_text_fileasrow_profile", new String[]{"data text"},
@@ -316,7 +316,7 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbNativeTable);
         allTables.add(gpdbTextProfile);
         allTables.add(gpdbTextByLineProfile);
-        allTables.add(gpdbTextMultiProfile);
+//        allTables.add(gpdbTextMultiProfile);
         allTables.add(gpdbTextHiveProfile);
         allTables.add(gpdbTextHiveTextProfile);
         allTables.add(gpdbOrcHiveProfile);
@@ -328,8 +328,8 @@ public class PerformanceTest extends BaseFeature {
         allTables.add(gpdbJdbcManyPartitionsProfile);
         allTables.add(gpdbJdbcIdealPartitionsProfile);
 
-        noFilterTables = new ArrayList<>();
-        noFilterTables.add(gpdbTextFileAsRowProfile);
+//        noFilterTables = new ArrayList<>();
+//        noFilterTables.add(gpdbTextFileAsRowProfile);
 
         CustomAutomationLogger.revertStdoutStream();
         printPerformanceReport();
@@ -338,8 +338,10 @@ public class PerformanceTest extends BaseFeature {
     @Test(groups = "performance")
     public void testCountWithoutFilter() throws Exception {
 
+//        runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
+//                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
         runAndReportQueries("SELECT COUNT(*) FROM %s", COUNT_WITHOUT_FILTER,
-                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+                allTables);
     }
 
     @Test(groups = "performance")
@@ -359,8 +361,10 @@ public class PerformanceTest extends BaseFeature {
     @Test(groups = "performance")
     public void testSelectAllRowsAllColumns() throws Exception {
 
+//        runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
+//                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
         runAndReportQueries("SELECT * FROM %s", SELECT_WITHOUT_FILTER_ALL_COLUMNS,
-                Stream.concat(allTables.stream(), noFilterTables.stream()).collect(Collectors.toList()));
+                allTables);
     }
 
     @Test(groups = "performance")
