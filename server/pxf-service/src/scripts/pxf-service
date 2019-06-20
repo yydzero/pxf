@@ -317,6 +317,29 @@ doHelp() {
     exit 0
 }
 
+# doDestroy handles the destroy command
+function doDestroy()
+{
+    if doStatus >/dev/null; then
+        echo "PXF is running. Will stop..."
+        doStop || return 1
+    fi
+
+    echo "Cleaning ${PXF_HOME}/conf/pxf-private.classpath..."
+    rm -f "${PXF_HOME}/conf/pxf-private.classpath"
+    echo "Cleaning ${PXF_CONF}..."
+    rm -rf "$PXF_CONF" # do we really want to do this?
+    echo "Cleaning ${instance}..."
+    rm -rf "$instance"
+    echo "Cleaning ${PXF_RUNDIR}..."
+    rm -rf "$PXF_RUNDIR"
+
+    echo "Reverting changes to ${default_env_script}..."
+    sed "${SED_OPTS[@]}" "s|{PXF_CONF:=\"${PXF_CONF}\"}|{PXF_CONF:=NOT_INITIALIZED}|g" "$default_env_script"
+
+    echo "Finished cleaning PXF instance directories"
+}
+
 # doInit handles the init command
 function doInit()
 {
@@ -405,6 +428,9 @@ validate_user
 validate_system
 
 case $pxf_script_command in
+    'destroy')
+        doDestroy
+        ;;
     'init')
         if [[ $2 == -y || $2 == -Y ]]; then
             silent=true
