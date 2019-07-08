@@ -10,7 +10,7 @@ GPHD_ROOT="/singlecluster"
 
 function configure_local_hdfs() {
 
-	sed -i -e 's|hdfs://0.0.0.0:8020|hdfs://hadoop:8020|' \
+	sed -i -e 's|hdfs://0.0.0.0:8020|hdfs://localhost:8020|' \
 	${GPHD_ROOT}/hadoop/etc/hadoop/core-site.xml ${GPHD_ROOT}/hbase/conf/hbase-site.xml
 	sed -i -e "s/>tez/>mr/g" ${GPHD_ROOT}/hive/conf/hive-site.xml
 }
@@ -51,13 +51,15 @@ function open_ssh_tunnels() {
 	ssh-keyscan hadoop >> /root/.ssh/known_hosts
 	ssh -fNT -M -S /tmp/mdw5432 -L 5432:mdw:5432 gpadmin@mdw
 	ssh -fNT -M -S /tmp/hadoop2181 -L 2181:hadoop:2181 root@hadoop
+    ssh -fNT -M -S /tmp/hadoop8020 -L 8020:hadoop:8020 root@hadoop
 	ssh -S /tmp/mdw5432 -O check gpadmin@mdw
-	ssh -S /tmp/hadoop2181 -O check root@hadoop
+    ssh -S /tmp/hadoop2181 -O check root@hadoop
 }
 
 function close_ssh_tunnels() {
 	ssh -S /tmp/mdw5432 -O exit gpadmin@mdw
-	ssh -S /tmp/hadoop2181 -O exit root@hadoop
+    ssh -S /tmp/hadoop2181 -O exit root@hadoop
+    ssh -S /tmp/hadoop8020 -O exit root@hadoop
 }
 
 function update_pghba_conf() {
