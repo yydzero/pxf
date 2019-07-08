@@ -5,7 +5,7 @@ set -exo pipefail
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${CWDIR}/pxf_common.bash"
 
-SSH_OPTS="-i cluster_env_files/private_key.pem -o StrictHostKeyChecking=no"
+SSH_OPTS="-o StrictHostKeyChecking=no"
 GPHD_ROOT="/singlecluster"
 
 function configure_local_hdfs() {
