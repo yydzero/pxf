@@ -106,6 +106,9 @@ function remote_access_to_gpdb() {
 	cp cluster_env_files/.ssh/* /home/gpadmin/.ssh
 	cp cluster_env_files/private_key.pem /home/gpadmin/.ssh/id_rsa
 	cp cluster_env_files/public_key.openssh /home/gpadmin/.ssh/authorized_keys
+	sed -i 's/edw0/hadoop/' /home/gpadmin/.ssh/config
+	sed -i 's/edw0/hadoop/' ~/.ssh/config
+
 	{ ssh-keyscan localhost; ssh-keyscan 0.0.0.0; } >> /home/gpadmin/.ssh/known_hosts
 	ssh ${SSH_OPTS} gpadmin@mdw "source ${GPHOME}/greenplum_path.sh &&
 	  export MASTER_DATA_DIRECTORY=${MDD_VALUE} &&

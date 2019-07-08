@@ -177,8 +177,8 @@ EOF
 function _main() {
 
 	cp -R cluster_env_files/.ssh/* /root/.ssh
-	gpdb_nodes=$( < cluster_env_files/etc_hostfile grep -e "sdw\|mdw" | awk '{print $1}')
-	gpdb_segments=$( < cluster_env_files/etc_hostfile grep -e "sdw" | awk '{print $1}')
+	gpdb_nodes=$( < cluster_env_files/etc_hostfile grep -e "sdw\|mdw" | awk '{print $2}')
+	gpdb_segments=$( < cluster_env_files/etc_hostfile grep -e "sdw" | awk '{print $2}')
 	hadoop_ip=$( < cluster_env_files/etc_hostfile grep "edw0" | awk '{print $1}')
 
 	install_gpdb_binary
