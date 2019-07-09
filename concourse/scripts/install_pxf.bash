@@ -182,20 +182,22 @@ EOFF
 }
 
 function run_pxf_installer_scripts() {
-	ssh "${MASTER_HOSTNAME}" "bash -c \"\
-	source ${GPHOME}/greenplum_path.sh && \
-	export JAVA_HOME=/usr/lib/jvm/jre && \
-	export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1/ && \
-	gpconfig -c gp_hadoop_home -v '/usr/hdp/2.6.5.0-292' && \
-	gpconfig -c gp_hadoop_target_version -v 'hdp' && gpstop -u && \
-	gpscp -f ~gpadmin/hostfile_all -v -r ~gpadmin/pxf_tarball centos@=:/home/centos && \
-	gpscp -f ~gpadmin/hostfile_all -v ~gpadmin/{install_pxf_dependencies,configure_pxf,install_pxf}.sh centos@=:/home/centos && \
-	gpssh -f ~gpadmin/hostfile_all -v -u centos -s -e 'sudo /home/centos/install_pxf_dependencies.sh' && \
-	gpssh -f ~gpadmin/hostfile_all -v -u centos -s -e 'sudo /home/centos/install_pxf.sh' && \
-	PXF_CONF=${PXF_CONF_DIR} ${GPHOME}/pxf/bin/pxf cluster init && \
-	gpssh -f ~gpadmin/hostfile_all -v -u centos -s -e 'sudo /home/centos/configure_pxf.sh' && \
-	${GPHOME}/pxf/bin/pxf cluster start \
-	\""
+	ssh "$MASTER_HOSTNAME" "
+		source ${GPHOME}/greenplum_path.sh &&
+		export JAVA_HOME=/usr/lib/jvm/jre &&
+		export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1 &&
+		if gpstate | grep -E 'postgres \(Greenplum Database\)\s+5\.[0-9]+\.[0-9]'; then
+		  gpconfig -c gp_hadoop_home -v /usr/hdp/2.6.5.0-292 && gpconfig -c gp_hadoop_target_version -v hdp
+		fi
+		gpstop -u &&
+		gpscp -f ~gpadmin/hostfile_all -v -r ~gpadmin/pxf_tarball centos@=:/home/centos &&
+		gpscp -f ~gpadmin/hostfile_all -v ~gpadmin/{install_pxf_dependencies,configure_pxf,install_pxf}.sh centos@=:/home/centos &&
+		gpssh -f ~gpadmin/hostfile_all -v -u centos -s -e 'sudo /home/centos/install_pxf_dependencies.sh' &&
+		gpssh -f ~gpadmin/hostfile_all -v -u centos -s -e 'sudo /home/centos/install_pxf.sh' &&
+		PXF_CONF=${PXF_CONF_DIR} ${GPHOME}/pxf/bin/pxf cluster init &&
+		gpssh -f ~gpadmin/hostfile_all -v -u centos -s -e 'sudo /home/centos/configure_pxf.sh' &&
+		${GPHOME}/pxf/bin/pxf cluster start
+	"
 }
 
 function _main() {
