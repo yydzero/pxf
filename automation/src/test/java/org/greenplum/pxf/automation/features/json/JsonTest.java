@@ -76,8 +76,8 @@ public class JsonTest extends BaseFeature {
                 hdfsPath + FILENAME_MISMATCHED_TYPES + SUFFIX_JSON);
     }
 
-    @BeforeMethod(alwaysRun = true)
-    public void setUp() throws Exception {
+    @Override
+    public void beforeMethod() {
 
         // default external table with common settings
         exTable = new ReadableExternalTable("jsonSimple", null, "", "custom");
