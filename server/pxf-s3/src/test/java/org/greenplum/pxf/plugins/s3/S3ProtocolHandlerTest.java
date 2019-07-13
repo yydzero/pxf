@@ -9,8 +9,9 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.IntStream;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -24,34 +25,176 @@ public class S3ProtocolHandlerTest {
     private static final String DEFAULT_FRAGMENTER = "default-fragmenter";
     private static final String NOT_SUPPORTED = "ERROR";
 
-    private static String[] FORMATS = {"parquet", "text", "csv", "json", "avro"};
+    private static Map<String, String> EXPECTED_RESOLVER_TEXT_ON;
+    private static Map<String, String> EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT;
+    private static Map<String, String> EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT;
+    private static Map<String, String> EXPECTED_RESOLVER_TEXT_OFF;
+    private static Map<String, String> EXPECTED_RESOLVER_GPDB_WRITABLE_ON;
+    private static Map<String, String> EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO;
+    private static Map<String, String> EXPECTED_RESOLVER_GPDB_WRITABLE_OFF;
+    private static Map<String, String> EXPECTED_FRAGMENTER_TEXT_ON;
+    private static Map<String, String> EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT;
+    private static Map<String, String> EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT;
+    private static Map<String, String> EXPECTED_FRAGMENTER_TEXT_OFF;
+    private static Map<String, String> EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON;
+    private static Map<String, String> EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO;
+    private static Map<String, String> EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF;
+    private static Map<String, String> EXPECTED_ACCESSOR_TEXT_ON;
+    private static Map<String, String> EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT;
+    private static Map<String, String> EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT;
+    private static Map<String, String> EXPECTED_ACCESSOR_TEXT_OFF;
+    private static Map<String, String> EXPECTED_ACCESSOR_GPDB_WRITABLE_ON;
+    private static Map<String, String> EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO;
+    private static Map<String, String> EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF;
 
-    private static String[] EXPECTED_RESOLVER_TEXT_ON = {STRING_PASS_RESOLVER, STRING_PASS_RESOLVER, STRING_PASS_RESOLVER, STRING_PASS_RESOLVER, NOT_SUPPORTED};
-    private static String[] EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT = {STRING_PASS_RESOLVER, STRING_PASS_RESOLVER, STRING_PASS_RESOLVER, STRING_PASS_RESOLVER, DEFAULT_RESOLVER};
-    private static String[] EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT = {STRING_PASS_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER, STRING_PASS_RESOLVER, DEFAULT_RESOLVER};
-    private static String[] EXPECTED_RESOLVER_TEXT_OFF = {DEFAULT_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER};
+    static {
+        EXPECTED_RESOLVER_TEXT_ON = new HashMap<>();
+        EXPECTED_RESOLVER_TEXT_ON.put("text", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_ON.put("csv", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_ON.put("json", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_ON.put("parquet", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_ON.put("avro", NOT_SUPPORTED);
 
-    private static String[] EXPECTED_RESOLVER_GPDB_WRITABLE_ON = {NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED};
-    private static String[] EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO = {DEFAULT_RESOLVER, NOT_SUPPORTED, NOT_SUPPORTED, DEFAULT_RESOLVER, DEFAULT_RESOLVER};
-    private static String[] EXPECTED_RESOLVER_GPDB_WRITABLE_OFF = {DEFAULT_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER, DEFAULT_RESOLVER};
+        EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT = new HashMap<>();
+        EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT.put("text", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT.put("csv", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT.put("json", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT.put("parquet", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_BENEFIT.put("avro", DEFAULT_RESOLVER);
 
-    private static String[] EXPECTED_FRAGMENTER_TEXT_ON = {FILE_FRAGMENTER, FILE_FRAGMENTER, FILE_FRAGMENTER, FILE_FRAGMENTER, NOT_SUPPORTED};
-    private static String[] EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT = {FILE_FRAGMENTER, FILE_FRAGMENTER, FILE_FRAGMENTER, FILE_FRAGMENTER, DEFAULT_FRAGMENTER};
-    private static String[] EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT = {FILE_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, FILE_FRAGMENTER, DEFAULT_FRAGMENTER};
-    private static String[] EXPECTED_FRAGMENTER_TEXT_OFF = {DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER};
+        EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT = new HashMap<>();
+        EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT.put("text", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT.put("csv", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT.put("json", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT.put("parquet", STRING_PASS_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_AUTO_NO_BENEFIT.put("avro", DEFAULT_RESOLVER);
 
-    private static String[] EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON = {NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED};
-    private static String[] EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO = {DEFAULT_FRAGMENTER, NOT_SUPPORTED, NOT_SUPPORTED, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER};
-    private static String[] EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF = {DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER, DEFAULT_FRAGMENTER};
+        EXPECTED_RESOLVER_TEXT_OFF = new HashMap<>();
+        EXPECTED_RESOLVER_TEXT_OFF.put("text", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_OFF.put("csv", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_OFF.put("json", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_OFF.put("parquet", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_TEXT_OFF.put("avro", DEFAULT_RESOLVER);
 
-    private static String[] EXPECTED_ACCESSOR_TEXT_ON = {S3_ACCESSOR, S3_ACCESSOR, S3_ACCESSOR, S3_ACCESSOR, NOT_SUPPORTED};
-    private static String[] EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT = {S3_ACCESSOR, S3_ACCESSOR, S3_ACCESSOR, S3_ACCESSOR, DEFAULT_ACCESSOR};
-    private static String[] EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT = {S3_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, S3_ACCESSOR, DEFAULT_ACCESSOR};
-    private static String[] EXPECTED_ACCESSOR_TEXT_OFF = {DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR};
+        EXPECTED_RESOLVER_GPDB_WRITABLE_ON = new HashMap<>();
+        EXPECTED_RESOLVER_GPDB_WRITABLE_ON.put("text", NOT_SUPPORTED);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_ON.put("csv", NOT_SUPPORTED);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_ON.put("json", NOT_SUPPORTED);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_ON.put("parquet", NOT_SUPPORTED);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_ON.put("avro", NOT_SUPPORTED);
 
-    private static String[] EXPECTED_ACCESSOR_GPDB_WRITABLE_ON = {NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED, NOT_SUPPORTED};
-    private static String[] EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO = {DEFAULT_ACCESSOR, NOT_SUPPORTED, NOT_SUPPORTED, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR};
-    private static String[] EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF = {DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR, DEFAULT_ACCESSOR};
+        EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO = new HashMap<>();
+        EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO.put("text", NOT_SUPPORTED);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO.put("csv", NOT_SUPPORTED);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO.put("json", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO.put("parquet", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_AUTO.put("avro", DEFAULT_RESOLVER);
+
+        EXPECTED_RESOLVER_GPDB_WRITABLE_OFF = new HashMap<>();
+        EXPECTED_RESOLVER_GPDB_WRITABLE_OFF.put("text", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_OFF.put("csv", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_OFF.put("json", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_OFF.put("parquet", DEFAULT_RESOLVER);
+        EXPECTED_RESOLVER_GPDB_WRITABLE_OFF.put("avro", DEFAULT_RESOLVER);
+
+        EXPECTED_FRAGMENTER_TEXT_ON = new HashMap<>();
+        EXPECTED_FRAGMENTER_TEXT_ON.put("text", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_ON.put("csv", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_ON.put("json", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_ON.put("parquet", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_ON.put("avro", NOT_SUPPORTED);
+
+        EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT = new HashMap<>();
+        EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT.put("text", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT.put("csv", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT.put("json", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT.put("parquet", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_BENEFIT.put("avro", DEFAULT_FRAGMENTER);
+
+        EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT = new HashMap<>();
+        EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT.put("text", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT.put("csv", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT.put("json", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT.put("parquet", FILE_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_AUTO_NO_BENEFIT.put("avro", DEFAULT_FRAGMENTER);
+
+        EXPECTED_FRAGMENTER_TEXT_OFF = new HashMap<>();
+        EXPECTED_FRAGMENTER_TEXT_OFF.put("text", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_OFF.put("csv", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_OFF.put("json", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_OFF.put("parquet", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_TEXT_OFF.put("avro", DEFAULT_FRAGMENTER);
+
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON = new HashMap<>();
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON.put("text", NOT_SUPPORTED);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON.put("csv", NOT_SUPPORTED);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON.put("json", NOT_SUPPORTED);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON.put("parquet", NOT_SUPPORTED);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_ON.put("avro", NOT_SUPPORTED);
+
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO = new HashMap<>();
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO.put("text", NOT_SUPPORTED);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO.put("csv", NOT_SUPPORTED);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO.put("json", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO.put("parquet", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_AUTO.put("avro", DEFAULT_FRAGMENTER);
+
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF = new HashMap<>();
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF.put("text", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF.put("csv", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF.put("json", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF.put("parquet", DEFAULT_FRAGMENTER);
+        EXPECTED_FRAGMENTER_GPDB_WRITABLE_OFF.put("avro", DEFAULT_FRAGMENTER);
+
+        EXPECTED_ACCESSOR_TEXT_ON = new HashMap<>();
+        EXPECTED_ACCESSOR_TEXT_ON.put("text", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_ON.put("csv", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_ON.put("json", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_ON.put("parquet", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_ON.put("avro", NOT_SUPPORTED);
+
+        EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT = new HashMap<>();
+        EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT.put("text", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT.put("csv", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT.put("json", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT.put("parquet", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_BENEFIT.put("avro", DEFAULT_ACCESSOR);
+
+        EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT = new HashMap<>();
+        EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT.put("text", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT.put("csv", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT.put("json", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT.put("parquet", S3_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT.put("avro", DEFAULT_ACCESSOR);
+
+        EXPECTED_ACCESSOR_TEXT_OFF = new HashMap<>();
+        EXPECTED_ACCESSOR_TEXT_OFF.put("text", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_OFF.put("csv", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_OFF.put("json", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_OFF.put("parquet", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_TEXT_OFF.put("avro", DEFAULT_ACCESSOR);
+
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_ON = new HashMap<>();
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_ON.put("text", NOT_SUPPORTED);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_ON.put("csv", NOT_SUPPORTED);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_ON.put("json", NOT_SUPPORTED);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_ON.put("parquet", NOT_SUPPORTED);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_ON.put("avro", NOT_SUPPORTED);
+
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO = new HashMap<>();
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO.put("text", NOT_SUPPORTED);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO.put("csv", NOT_SUPPORTED);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO.put("json", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO.put("parquet", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO.put("avro", DEFAULT_ACCESSOR);
+
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF = new HashMap<>();
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF.put("text", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF.put("csv", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF.put("json", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF.put("parquet", DEFAULT_ACCESSOR);
+        EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF.put("avro", DEFAULT_ACCESSOR);
+    }
 
     private S3ProtocolHandler handler;
     private RequestContext context;
@@ -73,7 +216,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectOnResolver() {
+    public void testTextWithSelectOn() {
         context.addOption("S3-SELECT", "on");
         context.setOutputFormat(OutputFormat.TEXT);
         verifyAccessors(context, EXPECTED_ACCESSOR_TEXT_ON);
@@ -82,7 +225,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithBenefitFilterOnlyResolver() {
+    public void testTextWithSelectAutoWithBenefitFilterOnly() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.TEXT);
         context.setFilterString("abc");
@@ -92,7 +235,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithBenefitProjectionOnlyResolver() {
+    public void testTextWithSelectAutoWithBenefitProjectionOnly() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.TEXT);
         context.setNumAttrsProjected(1);
@@ -102,7 +245,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithBenefitFilterAndProjectionResolver() {
+    public void testTextWithSelectAutoWithBenefitFilterAndProjection() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.TEXT);
         context.setFilterString("abc");
@@ -113,7 +256,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithBenefitFilterAndFullProjectionResolver() {
+    public void testTextWithSelectAutoWithBenefitFilterAndFullProjection() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.TEXT);
         context.setFilterString("abc");
@@ -124,7 +267,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolver() {
+    public void testTextWithSelectAutoWithNoBenefit() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.TEXT);
         verifyAccessors(context, EXPECTED_ACCESSOR_TEXT_AUTO_NO_BENEFIT);
@@ -133,7 +276,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithDelimiterOption() {
+    public void testTextWithSelectAutoWithNoBenefitWithDelimiterOption() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("DELIMITER", "|");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -143,7 +286,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithQuoteCharacterOption() {
+    public void testTextWithSelectAutoWithNoBenefitWithQuoteCharacterOption() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("QUOTE", "'");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -153,7 +296,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithQuoteEscapeCharacterOption() {
+    public void testTextWithSelectAutoWithNoBenefitWithQuoteEscapeCharacterOption() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("ESCAPE", "\\");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -163,7 +306,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithRecordDelimiterOption() {
+    public void testTextWithSelectAutoWithNoBenefitWithRecordDelimiterOption() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("NEWLINE", "\r");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -173,7 +316,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithFileHeaderInfoOptionUSE() {
+    public void testTextWithSelectAutoWithNoBenefitWithFileHeaderInfoOptionUSE() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("HEADER", "USE");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -183,7 +326,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithFileHeaderInfoOptionIGNORE() {
+    public void testTextWithSelectAutoWithNoBenefitWithFileHeaderInfoOptionIGNORE() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("HEADER", "IGNORE");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -193,7 +336,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitResolverWithFileHeaderInfoOptionNONE() {
+    public void testTextWithSelectAutoWithNoBenefitWithFileHeaderInfoOptionNONE() {
         context.addOption("S3-SELECT", "auto");
         context.addOption("HEADER", "NONE");
         context.setOutputFormat(OutputFormat.TEXT);
@@ -203,7 +346,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectAutoWithNoBenefitAllProjectedResolver() {
+    public void testTextWithSelectAutoWithNoBenefitAllProjected() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.TEXT);
         context.setNumAttrsProjected(2);
@@ -213,7 +356,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testTextWithSelectOffResolver() {
+    public void testTextWithSelectOff() {
         context.addOption("S3-SELECT", "off");
         context.setOutputFormat(OutputFormat.TEXT);
         verifyAccessors(context, EXPECTED_ACCESSOR_TEXT_OFF);
@@ -222,7 +365,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectOnResolver() {
+    public void testGPDBWritableWithSelectOn() {
         context.addOption("S3-SELECT", "on");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         verifyAccessors(context, EXPECTED_ACCESSOR_GPDB_WRITABLE_ON);
@@ -231,7 +374,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectAutoWithBenefitFilterOnlyResolver() {
+    public void testGPDBWritableWithSelectAutoWithBenefitFilterOnly() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         context.setFilterString("abc");
@@ -241,7 +384,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectAutoWithBenefitProjectionOnlyResolver() {
+    public void testGPDBWritableWithSelectAutoWithBenefitProjectionOnly() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         context.setNumAttrsProjected(1);
@@ -251,7 +394,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectAutoWithBenefitFilterAndProjectionResolver() {
+    public void testGPDBWritableWithSelectAutoWithBenefitFilterAndProjection() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         context.setFilterString("abc");
@@ -262,7 +405,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectAutoWithBenefitFilterAndFullProjectionResolver() {
+    public void testGPDBWritableWithSelectAutoWithBenefitFilterAndFullProjection() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         context.setFilterString("abc");
@@ -273,7 +416,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectAutoWithNoBenefitResolver() {
+    public void testGPDBWritableWithSelectAutoWithNoBenefit() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         verifyAccessors(context, EXPECTED_ACCESSOR_GPDB_WRITABLE_AUTO);
@@ -282,7 +425,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectAutoWithNoBenefitAllProjectedResolver() {
+    public void testGPDBWritableWithSelectAutoWithNoBenefitAllProjected() {
         context.addOption("S3-SELECT", "auto");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         context.setNumAttrsProjected(2);
@@ -292,7 +435,7 @@ public class S3ProtocolHandlerTest {
     }
 
     @Test
-    public void testGPDBWritableWithSelectOffResolver() {
+    public void testGPDBWritableWithSelectOff() {
         context.addOption("S3-SELECT", "off");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         verifyAccessors(context, EXPECTED_ACCESSOR_GPDB_WRITABLE_OFF);
@@ -305,6 +448,8 @@ public class S3ProtocolHandlerTest {
         context.setFormat("CSV");
         context.setOutputFormat(OutputFormat.TEXT);
         assertEquals("default-accessor", handler.getAccessorClassName(context));
+        assertEquals("default-resolver", handler.getResolverClassName(context));
+        assertEquals("default-fragmenter", handler.getFragmenterClassName(context));
     }
 
     @Test
@@ -331,6 +476,7 @@ public class S3ProtocolHandlerTest {
         context.addOption("S3-SELECT", "off");
         assertEquals("default-accessor", handler.getAccessorClassName(context));
         assertEquals("default-resolver", handler.getResolverClassName(context));
+        assertEquals("default-fragmenter", handler.getFragmenterClassName(context));
     }
 
     @Test
@@ -339,6 +485,7 @@ public class S3ProtocolHandlerTest {
         context.setFormat("custom");
         assertEquals("default-accessor", handler.getAccessorClassName(context));
         assertEquals("default-resolver", handler.getResolverClassName(context));
+        assertEquals("default-fragmenter", handler.getFragmenterClassName(context));
     }
 
     @Test
@@ -365,6 +512,7 @@ public class S3ProtocolHandlerTest {
         context.addOption("S3-SELECT", "AUTO");
         assertEquals("default-accessor", handler.getAccessorClassName(context));
         assertEquals("default-resolver", handler.getResolverClassName(context));
+        assertEquals("default-fragmenter", handler.getFragmenterClassName(context));
     }
 
     @Test
@@ -373,44 +521,45 @@ public class S3ProtocolHandlerTest {
         context.setFormat("custom");
         assertEquals("default-accessor", handler.getAccessorClassName(context));
         assertEquals("default-resolver", handler.getResolverClassName(context));
+        assertEquals("default-fragmenter", handler.getFragmenterClassName(context));
     }
 
-    private void verifyFragmenters(RequestContext context, String[] expected) {
-        IntStream.range(0, FORMATS.length).forEach(i -> {
-            context.setFormat(FORMATS[i]);
+    private void verifyFragmenters(RequestContext context, Map<String, String> expected) {
+        for (String format : expected.keySet()) {
+            context.setFormat(format);
             try {
-                assertEquals(expected[i], handler.getFragmenterClassName(context));
+                assertEquals(expected.get(format), handler.getFragmenterClassName(context));
             } catch (IllegalArgumentException e) {
-                if (!expected[i].equals(NOT_SUPPORTED)) {
+                if (!expected.get(format).equals(NOT_SUPPORTED)) {
                     throw e;
                 }
             }
-        });
+        }
     }
 
-    private void verifyResolvers(RequestContext context, String[] expected) {
-        IntStream.range(0, FORMATS.length).forEach(i -> {
-            context.setFormat(FORMATS[i]);
+    private void verifyResolvers(RequestContext context, Map<String, String> expected) {
+        for (String format : expected.keySet()) {
+            context.setFormat(format);
             try {
-                assertEquals(expected[i], handler.getResolverClassName(context));
+                assertEquals(expected.get(format), handler.getResolverClassName(context));
             } catch (IllegalArgumentException e) {
-                if (!expected[i].equals(NOT_SUPPORTED)) {
+                if (!expected.get(format).equals(NOT_SUPPORTED)) {
                     throw e;
                 }
             }
-        });
+        }
     }
 
-    private void verifyAccessors(RequestContext context, String[] expected) {
-        IntStream.range(0, FORMATS.length).forEach(i -> {
-            context.setFormat(FORMATS[i]);
+    private void verifyAccessors(RequestContext context, Map<String, String> expected) {
+        for (String format : expected.keySet()) {
+            context.setFormat(format);
             try {
-                assertEquals(expected[i], handler.getAccessorClassName(context));
+                assertEquals(expected.get(format), handler.getAccessorClassName(context));
             } catch (IllegalArgumentException e) {
-                if (!expected[i].equals(NOT_SUPPORTED)) {
+                if (!expected.get(format).equals(NOT_SUPPORTED)) {
                     throw e;
                 }
             }
-        });
+        }
     }
 }
