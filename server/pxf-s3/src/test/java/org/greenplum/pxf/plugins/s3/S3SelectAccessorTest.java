@@ -120,14 +120,6 @@ public class S3SelectAccessorTest {
     }
 
     @Test
-    public void testFileHeaderInfoNotProvided() {
-        RequestContext context = getDefaultRequestContext();
-        InputSerialization inputSerialization =
-                new S3SelectAccessor().getInputSerialization(context);
-        assertNull(inputSerialization.getCsv().getFileHeaderInfo());
-    }
-
-    @Test
     public void testFileHeaderInfoIsIgnore() {
         RequestContext context = getDefaultRequestContext();
         context.addOption("HEADER", "IGNORE");
@@ -202,6 +194,7 @@ public class S3SelectAccessorTest {
         accessor.initialize(context);
         SelectObjectContentRequest request = accessor.generateBaseCSVRequest(context);
         assertEquals("my-bucket", request.getBucketName());
+        assertEquals("", request.getKey());
     }
 
     @Test

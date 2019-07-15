@@ -75,7 +75,7 @@ public class RequestContext {
 
     // The protocol defined at the foreign data wrapper (FDW) level
     private String protocol;
-    // The format defined at the foreign data wrapper (FDW) level
+    // The format defined at the FDW foreign table level
     private String format;
 
     /**

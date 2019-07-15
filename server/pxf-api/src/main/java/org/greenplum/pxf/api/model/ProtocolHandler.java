@@ -22,7 +22,7 @@ public interface ProtocolHandler {
     /**
      * Returns the class name of a resolver to use for converting data
      * @param context request context
-     * @return class name of the accessor
+     * @return class name of the resolver
      */
     String getResolverClassName(RequestContext context);
 }

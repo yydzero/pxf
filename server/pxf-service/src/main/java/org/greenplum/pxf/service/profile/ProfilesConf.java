@@ -28,6 +28,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -50,6 +51,7 @@ public class ProfilesConf implements PluginConf {
     private final static ProfilesConf INSTANCE = new ProfilesConf();
     private final String externalProfilesFilename;
 
+    // maps a profileName --> Profile object
     private Map<String, Profile> profilesMap;
 
     /**
@@ -150,9 +152,12 @@ public class ProfilesConf implements PluginConf {
                 // update internal map with the new profile definitions
                 profilesMap.put(profileName, profile);
 
+                List<Profile.Mapping> mappings = profile.getMappingList();
+                Map<String, String> optionsMap = profile.getOptionsMap();
+
                 // We were unable to get this working in the Profile class
-                if (profile.getMappingList() != null && profile.getMappingList().size() > 0) {
-                    profile.getMappingList().forEach(m -> profile.getOptionsMap().put(m.getOption(), m.getProperty()));
+                if (mappings != null && mappings.size() > 0) {
+                    mappings.forEach(m -> optionsMap.put(m.getOption(), m.getProperty()));
                 }
             }
             LOG.info("Processed {} profiles from file {}", processedProfiles.size(), fileName);

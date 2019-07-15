@@ -162,8 +162,7 @@ public class S3SelectAccessor extends BasePlugin implements Accessor {
         String fileHeaderInfo = context.getOption(FILE_HEADER_INFO);
         boolean usePositionToIdentifyColumn = inputSerialization.getCsv() != null &&
                 (StringUtils.isBlank(fileHeaderInfo) ||
-                        StringUtils.equalsIgnoreCase(FILE_HEADER_INFO_NONE, fileHeaderInfo) ||
-                        StringUtils.equalsIgnoreCase(FILE_HEADER_INFO_IGNORE, fileHeaderInfo));
+                        !StringUtils.equalsIgnoreCase(FILE_HEADER_INFO_USE, fileHeaderInfo));
         S3SelectQueryBuilder queryBuilder = new S3SelectQueryBuilder(context, usePositionToIdentifyColumn);
         String query = queryBuilder.buildSelectQuery();
 

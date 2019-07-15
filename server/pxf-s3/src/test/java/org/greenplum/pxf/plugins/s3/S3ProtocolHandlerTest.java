@@ -312,6 +312,8 @@ public class S3ProtocolHandlerTest {
         context.setFormat("CSV");
         context.setOutputFormat(OutputFormat.GPDBWritable);
         assertEquals("default-accessor", handler.getAccessorClassName(context));
+        assertEquals("default-resolver", handler.getResolverClassName(context));
+        assertEquals("default-fragmenter", handler.getFragmenterClassName(context));
     }
 
     @Test

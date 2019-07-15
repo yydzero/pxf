@@ -265,7 +265,10 @@ public class S3SelectFilterParser implements FilterParser.FilterBuilder {
             return null;
         }
 
-        if (operation != FilterParser.Operation.HDOP_IS_NULL && operation != FilterParser.Operation.HDOP_IS_NOT_NULL) {
+        boolean operationRequiresValue =
+                operation != FilterParser.Operation.HDOP_IS_NULL && operation != FilterParser.Operation.HDOP_IS_NOT_NULL;
+
+        if (operationRequiresValue) {
 
             // Insert constraint constant
             Object val = bFilter.getConstant().constant();

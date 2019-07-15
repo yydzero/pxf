@@ -480,7 +480,7 @@ public class HttpRequestParserTest {
     }
 
     @Test
-    public void testWireFormatIsAbsentAndFormatIsInferred() {
+    public void testWireFormatIsPresentAndFormatIsInferred() {
         parameters.putSingle("X-GP-FORMAT", "GPDBWritable");
         parameters.putSingle("X-GP-OPTIONS-PROFILE", "foo:bar");
         RequestContext context = parser.parseRequest(mockRequestHeaders);
@@ -489,7 +489,7 @@ public class HttpRequestParserTest {
     }
 
     @Test
-    public void testWireFormatIsAbsentAndFormatIsInferredToNothing() {
+    public void testWireFormatIsPresentAndFormatIsInferredToNothing() {
         parameters.putSingle("X-GP-FORMAT", "GPDBWritable");
         parameters.putSingle("X-GP-OPTIONS-PROFILE", "foobar");
         RequestContext context = parser.parseRequest(mockRequestHeaders);
