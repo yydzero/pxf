@@ -20,6 +20,7 @@ groups:
       - test_pxf_hdp_secure_with_impersonation
       - test_pxf_no_impersonation
       - test_pxf_hdp_multinode_gpdb
+      - test_pxf_on_kubernetes
 {% if pipeline_type == "release" %}
       - test_pxf_hdp_centos6
       - test_pxf_mapr_centos6
@@ -58,6 +59,7 @@ groups:
 {% endif %}
       - test_pxf_s3_no_impersonation
       - test_pxf_s3_with_impersonation
+      - test_pxf_on_kubernetes
 {% if pipeline_type == "release" %}
       - test_pxf_adl
       - test_pxf_gs
@@ -159,6 +161,27 @@ resources:
     tag_filter: 5.*
 {% endif %}
 
+- name: greenplum-for-kubernetes
+  type: git
+  source:
+    uri: git@github.com:Pivotal/greenplum-for-kubernetes
+    tag_filter: v*
+    private_key: {{gpcloud-greenplum-for-kubernetes-git-deploy-key}}
+
+- name: gp-kubernetes-rc-release
+  type: gcs
+  source:
+    bucket: gp-kubernetes-ci-release
+    json_key: ((gcp-svc_acct_key))
+    regexp: green/greenplum-for-kubernetes-v(.*).tar.gz
+
+- name: greenplum-for-kubernetes-pcf-manifest
+  type: gcs
+  source:
+    bucket: greenplum-for-kubernetes-pcf-manifest
+    json_key: ((gcp-svc_acct_key))
+    versioned_file: manifest.json
+
 - name: gpdb-pxf-dev-centos6
   type: docker-image
   source:
@@ -191,6 +214,13 @@ resources:
   source:
     repository: pivotaldata/gpdb-pxf-dev
     tag: ubuntu16-hdp-server
+
+- name: gpdb-ubuntu18.04-test-gp4k8s
+  type: docker-image
+  source:
+    repository: pivotaldata/gpdb-ubuntu18.04-test-gp4k8s
+    username: {{docker-username}}
+    password: {{docker-password}}
 {% else %}
 - name: gpdb-pxf-dev-ubuntu18-hdp-server
   type: docker-image
@@ -839,6 +869,91 @@ jobs:
       ACCEPTANCE: true
 {% endif %}
 
+- name: test_pxf_on_kubernetes
+  max_in_flight: 1
+  plan:
+  - aggregate:
+    - get: gpdb-ubuntu18.04-test-gp4k8s
+    - get: gpdb_src
+      passed:
+      - compile_pxf
+{% if compile_gpdb %}
+      - compile_gpdb_centos6
+{% endif %}
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+{% if compile_gpdb %}
+      passed:
+      - compile_gpdb_centos6
+{% endif %}
+    - get: gp-kubernetes-rc-release
+      params:
+        unpack: true
+    - get: greenplum-for-kubernetes
+    - get: greenplum-for-kubernetes-pcf-manifest
+    - get: pxf_src
+      passed:
+      - compile_pxf
+      trigger: true
+    - get: pxf_tarball
+      passed:
+      - compile_pxf
+      trigger: true
+    - get: gpdb-pxf-dev-centos6-hdp-server
+  - task: Provision Kubernetes Cluster
+    file: greenplum-for-kubernetes/concourse/cross-team/provision-cluster.yml
+    image: gpdb-ubuntu18.04-test-gp4k8s
+    params:
+      NETWORK: greenplum-for-kubernetes
+      SEGMENT_COUNT: 3
+      CIDR_RANGE: 10.0.0.0/14
+      GP_INSTANCE_NAME: my-greenplum-cluster
+      KUBEENV: GKE
+      CLUSTER_NAME: gke-ud-21932292-583822477791-ic
+      GCP_SVC_ACCT_KEY: {{google-service-account-key}}
+      GCP_PROJECT: data-gpdb-ud
+      GCP_ZONE: us-central1-f
+      CLUSTER_CONFIG: |
+        apiVersion: "greenplum.pivotal.io/v1"
+        kind: "GreenplumCluster"
+        metadata:
+          name: # Use the `GP_INSTANCE_NAME` parameter to set this
+        spec:
+          masterAndStandby:
+            hostBasedAuthentication: |
+              # 0 is the public IP for the NAT gateway
+              host   all   gpadmin   0/32   trust
+              # host   all   gpuser    0.0.0.0/0   md5
+            memory: "800Mi"
+            cpu: "0.5"
+            storageClassName: standard
+            storage: 1G
+            antiAffinity: "yes"
+            workerSelector: {}
+          segments:
+            primarySegmentCount: 1
+            memory: "800Mi"
+            cpu: "0.5"
+            storageClassName: standard
+            storage: 2G
+            antiAffinity: "yes"
+            workerSelector: {}
+  - task: test_pxf
+    file: pxf_src/concourse/tasks/test_pxf.yml
+    image: gpdb-pxf-dev-centos6-hdp-server
+    params:
+      ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      GROUP: hcfs,s3
+      IMPERSONATION: true
+      PROTOCOL: s3
+      TEST_ENV: {{test-env}}
+      TEST_OS: centos
+      TARGET_OS: centos
+{% if acceptance %}
+      ACCEPTANCE: true
+{% endif %}
+
 - name: test_pxf_s3_with_impersonation
   plan:
   - aggregate:
@@ -1053,6 +1168,7 @@ jobs:
     - test_pxf_hdp_secure_with_impersonation
     - test_pxf_no_impersonation
     - test_pxf_hdp_multinode_gpdb
+    - test_pxf_on_kubernetes
     trigger: true
   - put: pxf_tarball_stable
     params:
@@ -1081,6 +1197,7 @@ jobs:
     - test_pxf_hdp_secure_no_impersonation
     - test_pxf_no_impersonation
     - test_pxf_hdp_multinode_gpdb
+    - test_pxf_on_kubernetes
     trigger: true
   - get: gpdb_release
   - get: pxf_src
@@ -1102,6 +1219,7 @@ jobs:
     - test_pxf_hdp_secure_no_impersonation
     - test_pxf_no_impersonation
     - test_pxf_hdp_multinode_gpdb
+    - test_pxf_on_kubernetes
   - task: package_pxf_rc
     config:
       inputs:
