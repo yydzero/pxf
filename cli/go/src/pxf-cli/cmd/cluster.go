@@ -124,7 +124,7 @@ func doSetup(command *pxf.Command) (*ClusterData, error) {
 	}
 	segConfigs := cluster.MustGetSegmentConfiguration(connection)
 	clusterData := &ClusterData{Cluster: cluster.NewCluster(segConfigs), connection: connection}
-	if command.Name() == pxf.Sync || command.Name() == pxf.Init {
+	if command.Name() == pxf.Sync || command.Name() == pxf.Init || command.Name() == pxf.Reset {
 		err = clusterData.appendMasterStandby()
 		if err != nil {
 			return nil, err
