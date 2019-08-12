@@ -21,22 +21,10 @@ PARENT_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 #############################################################################
 # The PXF_CONF property is updated by pxf init script, do not edit manually #
 #############################################################################
-export PXF_CONF=${PXF_CONF:=NOT_INITIALIZED}
+export PXF_CONF=${PXF_CONF:-NOT_INITIALIZED}
 #############################################################################
 
-# load user environment first, warn if the script is missing when not in init mode
-if [[ $pxf_script_command != init && $pxf_cluster_command != init ]]; then
-	if [[ $PXF_CONF == NOT_INITIALIZED ]]; then
-		echo 'ERROR: PXF is not initialized, call pxf init command'
-		exit 1
-	fi
-	user_env_script=${PXF_CONF}/conf/pxf-env.sh
-	if [[ ! -f $user_env_script ]]; then
-	    echo "WARNING: failed to find ${user_env_script}, default parameters will be used"
-	else
-		source "$user_env_script"
-	fi
-fi
+[[ -f ${PXF_CONF}/conf/pxf-env.sh ]] && source "${PXF_CONF}/conf/pxf-env.sh"
 
 # Default PXF_HOME
 export PXF_HOME=${PXF_HOME:=${PARENT_SCRIPT_DIR}}

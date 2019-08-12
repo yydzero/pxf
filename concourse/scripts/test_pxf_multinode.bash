@@ -187,7 +187,9 @@ EOF
 function _main() {
 
 	cp -R cluster_env_files/.ssh/* /root/.ssh
-	gpdb_master=$(grep < cluster_env_files/etc_hostfile mdw | awk '{print $1}')
+	# we need word boundary in case of standby master (smdw)
+	gpdb_master=$(grep < cluster_env_files/etc_hostfile '\bmdw' | awk '{print $1}')
+
 	gpdb_segments=$(grep < cluster_env_files/etc_hostfile -e sdw | awk '{print $1}')
 	if [[ -d dataproc_env_files ]]; then
 		HADOOP_HOSTNAME=$(cat dataproc_env_files/name)

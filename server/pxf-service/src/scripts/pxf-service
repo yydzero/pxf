@@ -89,7 +89,7 @@ function update_pxf_conf()
     echo "Using $PXF_CONF as a location for user-configurable files"
 
     # update the value on PXF_CONF in the default env file
-    sed "${SED_OPTS[@]}" "s|{PXF_CONF:=.*}$|{PXF_CONF:=\"${PXF_CONF}\"}|g" "$default_env_script"
+    sed "${SED_OPTS[@]}" "s|{PXF_CONF:-.*}$|{PXF_CONF:-\"${PXF_CONF}\"}|g" "$default_env_script"
 }
 
 function get_environment()
@@ -101,6 +101,10 @@ function get_environment()
     # shellcheck source=/Users/pivotal/workspace/pxf/server/pxf-service/src/scripts/pxf-env-default.sh
     source "$default_env_script"
 
+}
+
+checkJavaHome()
+{
     # validate JAVA_HOME
     if [[ ! -x ${JAVA_HOME}/bin/java ]]; then
         fail "\$JAVA_HOME=$JAVA_HOME is invalid. Set \$JAVA_HOME in ~/.bashrc or $default_env_script on all Greenplum hosts."
@@ -349,7 +353,7 @@ function doReset()
     rm -rf "$PXF_RUNDIR"
 
     echo "Reverting changes to ${default_env_script}..."
-    sed "${SED_OPTS[@]}" "s|{PXF_CONF:=\"${PXF_CONF}\"}|{PXF_CONF:=NOT_INITIALIZED}|g" "$default_env_script"
+    sed "${SED_OPTS[@]}" "s|{PXF_CONF:-\"${PXF_CONF}\"}|{PXF_CONF:-NOT_INITIALIZED}|g" "$default_env_script"
 
     echo "Finished cleaning PXF instance directories"
 }
@@ -364,6 +368,7 @@ function doInit()
 
     update_pxf_conf
     get_environment
+    checkJavaHome
     generatePrivateClasspath || return 1
     generateUserConfigs || return 1
     createInstance || return 1
@@ -386,6 +391,9 @@ function doStart()
         fail 'Cannot find PXF instance, maybe call init?'
     fi
     get_environment
+    checkJavaHome
+    checkPxfConf
+    warnUserEnvScript
     [[ $PXF_DEBUG == true ]] && flags+=(jpda)
     flags+=(start)
     "${instance}/bin/catalina.sh" "${flags[@]}" || return 1
@@ -405,12 +413,18 @@ function doStop()
         fail 'Cannot find PXF instance, maybe call init?'
     fi
     get_environment
+    checkJavaHome
+    checkPxfConf
+    warnUserEnvScript
     "${instance}/bin/catalina.sh" stop -force || return 1
 }
 
 function doStatus()
 {
     get_environment
+    checkJavaHome
+    checkPxfConf
+    warnUserEnvScript
     checkWebapp 1 || return 1
 }
 
@@ -424,14 +438,37 @@ function doSync()
         fail 'Cannot find PXF instance, maybe call init?'
     fi
     get_environment
+    checkPxfConf
+    warnUserEnvScript
     rsync -az -e "ssh -o StrictHostKeyChecking=no" "$PXF_CONF"/{conf,lib,servers} "${target_host}:$PXF_CONF"
 }
 
 function doCluster()
 {
-    pxf_cluster_command=$2
+    local pxf_cluster_command=$2
     get_environment
+    # Go CLI handles unset PXF_CONF when appropriate
+    [[ $PXF_CONF == NOT_INITIALIZED ]] && unset PXF_CONF
+    if [[ $pxf_cluster_command != init ]]; then
+        warnUserEnvScript
+    fi
     GPHOME=${GPHOME:-"${PXF_HOME}/.."} "${parent_script_dir}/bin/pxf-cli" "$@"
+}
+
+function warnUserEnvScript()
+{
+   local user_env_script=${PXF_CONF}/conf/pxf-env.sh
+   if [[ ! -f $user_env_script ]]; then
+      echo "WARNING: failed to find ${user_env_script}, default parameters will be used"
+   fi
+}
+
+function checkPxfConf()
+{
+   if [[ $PXF_CONF == NOT_INITIALIZED ]]; then
+      echo 'ERROR: PXF is not initialized, call pxf init command'
+      exit 1
+   fi
 }
 
 pxf_script_command=$1
