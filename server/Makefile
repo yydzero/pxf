@@ -35,6 +35,7 @@ help:
 	@echo	"  - install - setup PXF along with tomcat in the configured deployPath"
 	@echo	"  - tar - bundle PXF along with tomcat into a single tarball"
 	@echo	"  - doc - creates aggregate javadoc under docs"
+	@echo	'  - rpm - create RPM with PXF CLI and PXF Server'
 
 all:
 	./gradlew clean tar $(BUILD_PARAMS)
@@ -47,6 +48,9 @@ test unittest:
 
 tar: tomcat
 	./gradlew tar ${BUILD_PARAMS}
+
+rpm:
+	./gradlew rpm
 
 clean:
 	./gradlew clean

@@ -17,9 +17,17 @@
  * under the License.
  */
 
+buildscript {
+    dependencies {
+        classpath "com.netflix.nebula:gradle-ospackage-plugin:2.2.6"
+    }
+}
+
 plugins {
   id "com.github.hierynomus.license-report" version"0.15.0"
 }
+
+apply plugin: 'nebula.rpm'
 
 downloadLicenses {
     dependencyConfiguration = 'bundleJars'
@@ -328,4 +336,30 @@ task version {
     doLast {
         println ${version}
     }
+}
+
+task rpm(type: Rpm, dependsOn: [bundle]) {
+    packageName 'pxf-server'
+    // version project.version
+    release '1'
+    arch X86_64
+    os LINUX
+    summary 'PXF server'
+    description '''PXF is an extensible framework that allows a distributed database like GPDB
+                   to query external data files, whose metadata is not managed by the database. 
+                   PXF includes a server with built-in connectors for accessing data that exists inside HDFS files,
+                   Hive tables, HBase tables, JDBC-accessible databases, public clouds and more.
+                   Users can also create their own connectors to other data storages or processing engines.'''
+    //license project.license
+    url 'https://github.com/greenplum-db/pxf'
+    sourcePackage "https://github.com/greenplum-db/pxf/tree/${project.version}"
+    //prefix '/usr/local/pxf'
+    //user 'gpadmin'
+    //permissionGroup 'gpadmin'
+
+    preUninstall file('scripts/rpm/preUninstall.sh')
+
+    into '/usr/local/pxf'
+    from bundle.outputs.files
+
 }

@@ -39,6 +39,10 @@ tar:
 	make -C cli/go/src/pxf-cli tar
 	make -C server tar
 
+rpm:
+	make -C cli/go/src/pxf-cli tar
+	make -C server rpm
+
 help:
 	@echo
 	@echo 'Possible targets'
@@ -49,3 +53,4 @@ help:
 	@echo	'  - test - runs tests for PXF Go CLI and server'
 	@echo	'  - install - install PXF CLI and server'
 	@echo	'  - tar - bundle PXF CLI along with tomcat into a single tarball'
+	@echo	'  - rpm - create RPM with PXF CLI and PXF Server'
