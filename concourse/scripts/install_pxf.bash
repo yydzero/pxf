@@ -4,7 +4,8 @@ set -euxo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 GPHOME="/usr/local/greenplum-db-devel"
-MASTER_HOSTNAME=$(grep -E '\bmdw.*' cluster_env_files/etc_hostfile | awk '{print $2}')
+# we need word boundary in case of standby master (smdw)
+MASTER_HOSTNAME=$(grep < cluster_env_files/etc_hostfile '\bmdw' | awk '{print $2}')
 REALM=${REALM:-}
 KERBEROS=${KERBEROS:-false}
 if [[ -f "terraform_dataproc/name" ]]; then
