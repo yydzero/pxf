@@ -101,8 +101,7 @@ public class CloudAccessTest extends BaseFeature {
         runTestScenario("no_server_no_credentials_with_hdfs", null, false);
     }
 
-    // TODO: restore security group
-    @Test(groups = {"gpdb"})
+    @Test(groups = {"gpdb", "security"})
     public void testCloudAccessWithHdfsOkWhenServerNoCredsValidConfigFileExists() throws Exception {
         runTestScenario("server_no_credentials_valid_config_with_hdfs", "s3", false);
     }
@@ -117,14 +116,12 @@ public class CloudAccessTest extends BaseFeature {
         runTestScenario("no_server_credentials_no_config_with_hdfs", null, true);
     }
 
-    // TODO: restore security group
-    @Test(groups = {"gpdb"})
+    @Test(groups = {"gpdb", "security"})
     public void testCloudAccessWithHdfsFailsWhenServerNoCredsInvalidConfigFileExists() throws Exception {
         runTestScenario("server_no_credentials_invalid_config_with_hdfs", "s3-invalid", false);
     }
 
-    // TODO: restore security group
-    @Test(groups = {"gpdb"})
+    @Test(groups = {"gpdb", "security"})
     public void testCloudAccessWithHdfsOkWhenServerCredsInvalidConfigFileExists() throws Exception {
         runTestScenario("server_credentials_invalid_config_with_hdfs", "s3-invalid", true);
     }

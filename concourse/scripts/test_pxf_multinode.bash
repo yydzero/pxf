@@ -138,10 +138,10 @@ function setup_pxf_on_cluster() {
 
 function run_pxf_automation() {
 
-	local multiNodesCluster=pxf_src/automation/src/test/resources/sut/MultiNodesCluster.xml
+	local multiNodesCluster=pxf_src/automation/src/test/resources/sut/MultiNodesCluster.xml search replace
 	if (( HIVE_VERSION == 2 )); then
-		local search='<hiveBaseHdfsDirectory>/hive/warehouse/</hiveBaseHdfsDirectory>'
-		local replace='<hiveBaseHdfsDirectory>/user/hive/warehouse/</hiveBaseHdfsDirectory>'
+		search='<hiveBaseHdfsDirectory>/hive/warehouse/</hiveBaseHdfsDirectory>'
+		replace='<hiveBaseHdfsDirectory>/user/hive/warehouse/</hiveBaseHdfsDirectory>'
 		sed -i "s|${search}|${replace}|g" "$multiNodesCluster"
 	fi
 
@@ -157,7 +157,9 @@ function run_pxf_automation() {
 			-e "s|</cluster>|<testKerberosPrincipal>gpadmin@${REALM}</testKerberosPrincipal></cluster>|g" \
 			-e "s|</hive>|<kerberosPrincipal>${KERBERIZED_HADOOP_URI}</kerberosPrincipal><userName>gpadmin</userName></hive>|g" \
 			"$multiNodesCluster"
+		replace='<property><name>yarn.resourcemanager.principal</name><value>${pxf.service.kerberos.principal}</value></property>'
 		ssh gpadmin@mdw "
+			sed -i -e 's|</configuration>|$replace</configuration>|g' ${PXF_CONF_DIR}/servers/s3{,-invalid}/s3-site.xml
 			sed -i -e 's|\(jdbc:hive2://${HADOOP_HOSTNAME}:10000/default\)|\1;principal=${KERBERIZED_HADOOP_URI}|g' \
 				${PXF_CONF_DIR}/servers/db-hive/jdbc-site.xml &&
 			${GPHOME}/pxf/bin/pxf cluster sync
