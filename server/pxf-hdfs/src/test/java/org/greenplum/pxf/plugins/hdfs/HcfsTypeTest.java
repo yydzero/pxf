@@ -1,14 +1,24 @@
 package org.greenplum.pxf.plugins.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.namenode.top.window.RollingWindowManager;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({UserGroupInformation.class})
 public class HcfsTypeTest {
     private final String S3_PROTOCOL = "s3";
     @Rule
@@ -21,6 +31,7 @@ public class HcfsTypeTest {
         context = new RequestContext();
         context.setDataSource("/foo/bar.txt");
         configuration = new Configuration();
+        PowerMockito.mockStatic(UserGroupInformation.class);
     }
 
     @Test
@@ -253,4 +264,43 @@ public class HcfsTypeTest {
         assertEquals("xyz://abc/foo/bar/XID-XYZ-123456_2.gz",
                 type.getUriForWrite(configuration, context));
     }
+
+    @Test
+    public void testNonSecureNoConfigChangeOnNonHdfs() {
+        configuration.set("fs.defaultFS", "xyz://abc/");
+        context.setDataSource("foo/bar.txt");
+
+        HcfsType type = HcfsType.getHcfsType(configuration, context);
+        String dataUri = type.getDataUri(configuration, context); // has side effect of changing config :-(
+        assertEquals("xyz://abc/foo/bar.txt", dataUri);
+        assertNull(configuration.get(MRJobConfig.JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE));
+    }
+
+    @Test
+    public void testNonSecureNoConfigChangeOnHdfs() {
+    }
+
+    @Test
+    public void testSecureNoConfigChangeOnHdfs() {
+    }
+
+    @Test
+    public void testSecureConfigChangeOnNonHdfs() {
+        PowerMockito.when(UserGroupInformation.isSecurityEnabled()).thenReturn(true);
+        configuration.set("fs.defaultFS", "s3a://abc/");
+//        configuration.set("hadoop.security.authentication", "kerberos");
+        context.setDataSource("foo/bar.txt");
+        configuration.set("fs.s3a.impl.disable.cache", "true");
+
+        HcfsType type = HcfsType.getHcfsType(configuration, context);
+        String dataUri = type.getDataUri(configuration, context); // has side effect of changing config :-(
+        assertEquals("s3a://abc/foo/bar.txt", dataUri);
+        assertNull(configuration.get(MRJobConfig.JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE));
+
+    }
+
+    @Test
+    public void testSecureConfigChangeOnNonHdfsShortPath() {
+    }
+
 }

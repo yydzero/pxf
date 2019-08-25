@@ -66,37 +66,37 @@ public class CloudAccessTest extends BaseFeature {
         s3Server.writeTableToFile(PROTOCOL_S3 + s3Path + fileName, dataTable, ",");
     }
 
-    @Test(groups = {"s3"})
+    @Test(groups = {"s3", "security"})
     public void testCloudAccessFailsWhenNoServerNoCredsSpecified() throws Exception {
         runTestScenario("no_server_no_credentials", null, false);
     }
 
-    @Test(groups = {"s3"})
+    @Test(groups = {"s3", "security"})
     public void testCloudAccessFailsWhenServerNoCredsNoConfigFileExists() throws Exception {
         runTestScenario("server_no_credentials_no_config", "s3-non-existent", false);
     }
 
-    @Test(groups = {"s3"})
+    @Test(groups = {"s3", "security"})
     public void testCloudAccessOkWhenNoServerCredsNoConfigFileExists() throws Exception {
         runTestScenario("no_server_credentials_no_config", null, true);
     }
 
-    @Test(groups = {"s3"})
+    @Test(groups = {"s3", "security"})
     public void testCloudAccessFailsWhenServerNoCredsInvalidConfigFileExists() throws Exception {
         runTestScenario("server_no_credentials_invalid_config", "s3-invalid", false);
     }
 
-    @Test(groups = {"s3"})
+    @Test(groups = {"s3", "security", "tmp-security"})
     public void testCloudAccessOkWhenServerCredsInvalidConfigFileExists() throws Exception {
         runTestScenario("server_credentials_invalid_config", "s3-invalid", true);
     }
 
-    @Test(groups = {"s3"})
+    @Test(groups = {"s3", "security", "tmp-security"})
     public void testCloudAccessOkWhenServerCredsNoConfigFileExists() throws Exception {
         runTestScenario("server_credentials_no_config", "s3-non-existent", true);
     }
 
-    @Test(groups = {"gpdb", "security"})
+    @Test(groups = {"gpdb", "security", "tmp-security"})
     public void testCloudAccessWithHdfsFailsWhenNoServerNoCredsSpecified() throws Exception {
         runTestScenario("no_server_no_credentials_with_hdfs", null, false);
     }
@@ -106,12 +106,12 @@ public class CloudAccessTest extends BaseFeature {
         runTestScenario("server_no_credentials_valid_config_with_hdfs", "s3", false);
     }
 
-    @Test(groups = {"gpdb", "security"})
+    @Test(groups = {"gpdb", "security", "tmp-security"})
     public void testCloudAccessWithHdfsFailsWhenServerNoCredsNoConfigFileExists() throws Exception {
         runTestScenario("server_no_credentials_no_config_with_hdfs", "s3-non-existent", false);
     }
 
-    @Test(groups = {"gpdb", "security"})
+    @Test(groups = {"gpdb", "security", "tmp-security"})
     public void testCloudAccessWithHdfsFailsWhenNoServerCredsNoConfigFileExists() throws Exception {
         runTestScenario("no_server_credentials_no_config_with_hdfs", null, true);
     }

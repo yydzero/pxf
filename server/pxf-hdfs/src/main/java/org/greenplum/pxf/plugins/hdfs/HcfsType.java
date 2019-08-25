@@ -3,11 +3,15 @@ package org.greenplum.pxf.plugins.hdfs;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 
@@ -19,7 +23,9 @@ public enum HcfsType {
         @Override
         public String getDataUri(Configuration configuration, RequestContext context) {
             String profileScheme = StringUtils.isBlank(context.getProfileScheme()) ? "" : context.getProfileScheme() + "://";
-            return getDataUriForPrefix(configuration, context, profileScheme);
+            String uri = getDataUriForPrefix(configuration, context, profileScheme);
+            manageSecureTokenRenewal(new Path(uri), configuration, LOG);
+            return uri;
         }
     },
     FILE {
@@ -175,7 +181,36 @@ public enum HcfsType {
      * @return an absolute data path
      */
     public String getDataUri(Configuration configuration, RequestContext context) {
-        return getDataUriForPrefix(configuration, context, this.prefix);
+        String uri = getDataUriForPrefix(configuration, context, this.prefix);
+        manageSecureTokenRenewal(new Path(uri), configuration, LOG);
+        return uri;
+    }
+
+    /**
+     * For secured cluster, circumvent token renewal for non-HDFS hcfs access (such as s3 etc)
+     * @param path path of the resource to access
+     * @param configuration JobConf used for HCFS operations
+     */
+    private static void manageSecureTokenRenewal(Path path, Configuration configuration, Logger LOG) {
+        if (UserGroupInformation.isSecurityEnabled()) {
+            // find the "host" that TokenCache will check against the exclusion list
+            FileSystem fs;
+            try {
+                fs = path.getFileSystem(configuration);
+            } catch (IOException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+            if (fs == null) {
+                LOG.warn("Cannot determine file system for path={}", path);
+            } else {
+                String host = fs.getUri().getHost();
+                LOG.debug("Disabling token renewal for host {} for path {}", host, path);
+                if (host != null) {
+                    // disable token renewal for the host in the path
+                    configuration.set(MRJobConfig.JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE, host);
+                }
+            }
+        }
     }
 
     /**

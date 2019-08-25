@@ -30,16 +30,15 @@ set -x
 
 PLAINTEXT=$(mktemp)
 PLAINTEXT_NAME=$(basename "$PLAINTEXT")
-PETNAME=ccp-$(petname)
+PETNAME=ccp-divine-rodent
 
 # Initialize the dataproc service
 GCLOUD_COMMAND=(gcloud beta dataproc clusters
   "--region=$REGION" create "$PETNAME"
   --initialization-actions "$INITIALIZATION_SCRIPT"
-  --no-address
   --subnet "projects/${PROJECT}/regions/${REGION}/subnetworks/$SUBNETWORK"
   "--zone=$ZONE"
-  "--tags=bosh-network,outbound-through-nat,tag-concourse-dynamic"
+  "--tags=only-palo-alto-internal"
   "--num-workers=$NUM_WORKERS"
   --image-version "$IMAGE_VERSION"
   --properties 'core:hadoop.proxyuser.gpadmin.hosts=*,core:hadoop.proxyuser.gpadmin.groups=*')

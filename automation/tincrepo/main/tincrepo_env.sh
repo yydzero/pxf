@@ -7,3 +7,4 @@ fi
 
 export TINCREPOHOME=`pwd`
 export PYTHONPATH=$PYTHONPATH:$TINCREPOHOME
+export PATH=~/perl5/perlbrew/perls/perl-5.22.4/bin:$PATH
