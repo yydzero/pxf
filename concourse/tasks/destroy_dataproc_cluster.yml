@@ -1,0 +1,17 @@
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: pivotaldata/ccp
+    tag: 7
+inputs:
+  - name: dataproc_env_files
+  - name: pxf_src
+params:
+  GOOGLE_CREDENTIALS:
+  GOOGLE_ZONE:
+  GOOGLE_PROJECT_ID:
+  ENV_FILES_DIR: dataproc_env_files
+  PETNAME:
+run:
+  path: pxf_src/concourse/scripts/destroy_dataproc_cluster.bash

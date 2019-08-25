@@ -24,4 +24,4 @@ params:
   SUBNETWORK: dynamic
   ZONE: us-central1-a
 run:
-  path: pxf_src/concourse/scripts/start_dataproc_cluster.bash
+path: pxf_src/concourse/scripts/create_dataproc_cluster.bash
