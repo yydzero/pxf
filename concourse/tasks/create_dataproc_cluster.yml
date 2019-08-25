@@ -1,6 +1,9 @@
 platform: linux
 image_resource:
   type: docker-image
+  source:
+    repository: pivotaldata/ccp
+    tag: 7
 inputs:
   - name: pxf_src
 outputs:
@@ -18,10 +21,15 @@ params:
   KERBEROS: false
   KEYRING:
   KEY:
+  PETNAME:
+  SSH_KEY:
+  EXTRA_USER:
+  USE_EXTERNAL_IP:
+  TAGS:
   PROJECT:
   REGION: us-central1
   SECRETS_BUCKET:
   SUBNETWORK: dynamic
   ZONE: us-central1-a
 run:
-path: pxf_src/concourse/scripts/create_dataproc_cluster.bash
+  path: pxf_src/concourse/scripts/create_dataproc_cluster.bash
