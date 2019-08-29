@@ -19,17 +19,16 @@ public class FileFormatsUtils {
 		File file = new File(pathToFile);
 		file.delete();
 
-		String listString = "";
+		StringBuilder listString = new StringBuilder();
 
 		for (List<String> row : dataTable.getData()) {
-
 			for (String item : row) {
-				listString += item + ",";
+				listString.append(item).append(",");
 			}
-			listString = listString.substring(0, listString.length() - 1);
-			listString += System.getProperty("line.separator");
+			listString.deleteCharAt(listString.length() - 1);
+			listString.append(System.getProperty("line.separator"));
 		}
-		listString = listString.substring(0, listString.length() - 1);
+		listString.deleteCharAt(listString.length() - 1);
 
 		PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(file, true)));
 

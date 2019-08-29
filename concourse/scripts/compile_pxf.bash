@@ -1,20 +1,14 @@
-#!/bin/bash -l
+#!/bin/bash
 
-set -eox pipefail
+set -eoux pipefail
 
-GPHOME="/usr/local/greenplum-db-devel"
-export PXF_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
+GPHOME=/usr/local/greenplum-db-devel
+PXF_ARTIFACTS_DIR=${PWD}/${OUTPUT_ARTIFACT_DIR}
 
-_main() {
-	export TERM=xterm
-	export BUILD_NUMBER="${TARGET_OS}"
-	export PXF_HOME="${GPHOME}/pxf"
-	export PATH=$PATH:${HOME}/go/bin
-	make -C pxf_src test install
-	# Create tarball for PXF
-	pushd ${GPHOME}
-		tar -czf ${PXF_ARTIFACTS_DIR}/pxf.tar.gz pxf
-	popd
-}
+su --login -c "
+	export PXF_HOME=${GPHOME}/pxf BUILD_NUMBER=${TARGET_OS}
+	make -C '${PWD}/pxf_src' test install
+" root
 
-_main
+# Create tarball for PXF
+tar -C "${GPHOME}" -czf "${PXF_ARTIFACTS_DIR}/pxf.tar.gz" pxf

@@ -72,13 +72,13 @@ fi
 HADOOP_HOSTNAME=${PETNAME}-m
 
 gcloud compute instances add-metadata "$HADOOP_HOSTNAME" \
-  --metadata ssh-keys="$HADOOP_USER:$(cat ~/.ssh/google_compute_engine.pub)" \
+  --metadata "ssh-keys=$HADOOP_USER:$(< ~/.ssh/google_compute_engine.pub)" \
   --zone "$ZONE"
 
 for ((i=0; i < NUM_WORKERS; i++));
 do
   gcloud compute instances add-metadata "${PETNAME}-w-${i}" \
-    --metadata ssh-keys="$HADOOP_USER:$(cat ~/.ssh/google_compute_engine.pub)" \
+    --metadata "ssh-keys=$HADOOP_USER:$(< ~/.ssh/google_compute_engine.pub)" \
     --zone "$ZONE"
 done
 

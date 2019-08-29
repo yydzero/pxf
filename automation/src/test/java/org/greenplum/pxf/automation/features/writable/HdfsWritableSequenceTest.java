@@ -172,7 +172,7 @@ public class HdfsWritableSequenceTest extends BaseWritableFeature {
     }
 
     /**
-     * Test circle type converted to text and baHdfsWritableSequenceTest.writeAndRead...FAILEDck
+     * Test circle type converted to text and back
      *
      * @throws Exception if test fails to run
      */

@@ -9,6 +9,7 @@ inputs:
   - name: dataproc_env_files
     optional: true
 params:
+  ACCEPTANCE:
   ACCESS_KEY_ID:
   GROUP: feature
   HIVE_VERSION: 1

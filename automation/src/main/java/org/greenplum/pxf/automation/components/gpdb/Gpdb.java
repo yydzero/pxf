@@ -1,16 +1,15 @@
 package org.greenplum.pxf.automation.components.gpdb;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.lang.StringUtils;
 import org.greenplum.pxf.automation.components.common.DbSystemObject;
 import org.greenplum.pxf.automation.components.common.ShellSystemObject;
 import org.greenplum.pxf.automation.structures.tables.basic.Table;
+import org.greenplum.pxf.automation.utils.jsystem.report.ReportUtils;
 import org.springframework.util.Assert;
 
-import org.greenplum.pxf.automation.utils.jsystem.report.ReportUtils;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * GPDB system object, defines functionality for GPDB Data Base.
@@ -234,7 +233,21 @@ public class Gpdb extends DbSystemObject {
 	 */
 	public void copyFromFile(Table to, File path, String delim, boolean csv) throws Exception {
 		String from = "'" + path.getAbsolutePath() + "'";
+		copyLocalFileToRemoteGpdb(from);
 		copy(to.getName(), from, null, delim, null, csv);
+	}
+
+	private void copyLocalFileToRemoteGpdb(String from) throws Exception {
+		// copy file to remote host if GPDB is not on localhost
+		if (masterHost.equals("localhost")) {
+			return;
+		}
+		ShellSystemObject remoteConn = new ShellSystemObject();
+		remoteConn.init();
+		String user = sshUserName == null ? System.getProperty("gpdbUser", System.getenv("USER")) : sshUserName;
+		// first create the directory then ship the files over
+		remoteConn.runRemoteCommand(user, sshPassword, masterHost, "mkdir -p " + from.replaceFirst("(/[^/]*/?)'$", "'"));
+		remoteConn.copyToRemoteMachine(user, sshPassword, masterHost, from, from);
 	}
 
 	/**
@@ -247,10 +260,11 @@ public class Gpdb extends DbSystemObject {
      * @param csv is csv format - if it is, delimiter is not used.
      * @throws Exception
      */
-    public void copyFromFile(Table to, File path, String delim, String nullChar, boolean csv) throws Exception {
-        String from = "'" + path.getAbsolutePath() + "'";
-        copy(to.getName(), from, null, delim, nullChar, csv);
-    }
+	public void copyFromFile(Table to, File path, String delim, String nullChar, boolean csv) throws Exception {
+		String from = "'" + path.getAbsolutePath() + "'";
+		copyLocalFileToRemoteGpdb(from);
+		copy(to.getName(), from, null, delim, nullChar, csv);
+	}
 
 	private void copy(String to, String from, String dataToCopy, String delim, String nullChar, boolean csv) throws Exception {
 

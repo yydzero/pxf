@@ -57,8 +57,8 @@ public class MultiUserTest extends BaseFeature {
         // create a native table in another database (will be used by testuser)
         Gpdb gpdbEx = new Gpdb();
         gpdbEx.setDb("template1");
-        gpdbEx.setHost("localhost");
-        gpdbEx.setMasterHost("localhost");
+        gpdbEx.setHost(gpdb.getHost());
+        gpdbEx.setMasterHost(gpdb.getMasterHost());
         gpdbEx.init();
         gpdbEx.createTableAndVerify(gpdbNativeTable);
         gpdbEx.copyFromFile(gpdbNativeTable, new File(localDataResourcesFolder
