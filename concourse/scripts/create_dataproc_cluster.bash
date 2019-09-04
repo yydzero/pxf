@@ -113,6 +113,18 @@ mkdir -p "${ENV_FILES_DIR}/conf"
 "${SCP[@]}" "${HADOOP_USER}@${HADOOP_HOSTNAMES[0]}":/etc/{hadoop,hive}/conf/*-site.xml \
     "${ENV_FILES_DIR}/conf"
 
+temp_hdfs_site=$(mktemp)
+sed -e '/<\/configuration>/d' "${ENV_FILES_DIR}/conf/hdfs-site.xml" >> "${temp_hdfs_site}"
+cat >> "${temp_hdfs_site}" <<-EOF
+	  <property>
+	    <name>dfs.client.use.datanode.hostname</name>
+	    <value>true</value>
+	    <description>Whether clients use datanode hostnames when connecting to datanodes.</description>
+	  </property>
+	</configuration>
+EOF
+cp "${temp_hdfs_site}" "${ENV_FILES_DIR}/conf/hdfs-site.xml"
+
 "${SSH[@]}" "${HADOOP_USER}@${HADOOP_HOSTNAMES[0]}" \
     "sudo systemctl restart hadoop-hdfs-namenode"
 
