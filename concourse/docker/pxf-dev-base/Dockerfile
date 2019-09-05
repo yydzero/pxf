@@ -31,7 +31,7 @@ RUN useradd -s /sbin/nologin -d /opt/minio minio && \
 ADD pxf_src /tmp/pxf_src
 
 # Install krb5-workstation for Kerberos tests against dataproc (only needed on CentOS 6)
-RUN ["/bin/bash", "-c", "export BUILD_PARAMS=-Dorg.gradle.daemon=false && \
+RUN ["/bin/bash", "-c", "git -C /tmp/pxf_src checkout master && export BUILD_PARAMS=-Dorg.gradle.daemon=false && \
     GOPATH=/opt/go PATH=/opt/go/bin:/usr/local/go/bin:$PATH make -C /tmp/pxf_src tar && \
     PXF_HOME=/tmp/pxf_src/server/build/stage make -C /tmp/pxf_src/automation dev && \
     mkdir -p ~gpadmin/.tomcat && \

@@ -18,8 +18,7 @@ RUN pushd /etc/yum.repos.d && wget -q ${YUM_REPOFILE_URL} && popd && \
 COPY vagrant /root/vagrant
 
 # Use ambari to create a single-node HDP cluster using blueprints
-RUN sed "s/$HOSTNAME/${AMBARI_HOST} $HOSTNAME/g" /etc/hosts > /tmp/hosts && \
-    echo y | cp /tmp/hosts /etc/hosts && \
+RUN sed -ie "s/$HOSTNAME/${AMBARI_HOST} $HOSTNAME/g" /etc/hosts && \
     ambari-server setup --silent && \
     sed -i "s/hostname=localhost/hostname=${AMBARI_HOST}/" /etc/ambari-agent/conf/ambari-agent.ini && \
     ambari-agent start && \
@@ -34,21 +33,17 @@ RUN sed "s/$HOSTNAME/${AMBARI_HOST} $HOSTNAME/g" /etc/hosts > /tmp/hosts && \
     service postgresql stop
 
 # Install KDC and secure the HDP cluster using kerberos
-RUN sed "s/$HOSTNAME/${AMBARI_HOST} $HOSTNAME/g" /etc/hosts > /tmp/hosts && \
-	echo y | cp /tmp/hosts /etc/hosts && \
-	echo "export CLUSTER_NAME=${CLUSTER_NAME}" >> ~/.bash_profile && \
-	echo "export REALM=${REALM}" >> ~/.bash_profile && \
-	echo "export CURL_OPTS=${CURL_OPTS}" >> ~/.bash_profile && \
-	echo "export AMBARI_PREFIX=${AMBARI_PREFIX}" >> ~/.bash_profile && \
-	ambari-agent start && \
+RUN sed -ie "s/$HOSTNAME/${AMBARI_HOST} $HOSTNAME/g" /etc/hosts && \
+    echo -e "export CLUSTER_NAME=${CLUSTER_NAME} REALM=${REALM} CURL_OPTS='${CURL_OPTS}' AMBARI_PREFIX=${AMBARI_PREFIX}" >> ~/.bash_profile && \
+    ambari-agent start && \
     ambari-server start && \
     sudo yum -y install krb5-server krb5-workstation && yum clean all && \
-    sudo sed -i "s/default_realm = EXAMPLE.COM/default_realm = ${REALM}/" /etc/krb5.conf && \
-    sudo sed -i "s/EXAMPLE.COM = {/${REALM} = {/" /etc/krb5.conf && \
-    sudo sed -i "s/kdc = kerberos.example.com/kdc = ${AMBARI_HOST}/" /etc/krb5.conf && \
-    sudo sed -i "s/admin_server = kerberos.example.com/admin_server = ${AMBARI_HOST}/" /etc/krb5.conf && \
-    sudo sed -i "/\.example.com = EXAMPLE.COM/d" /etc/krb5.conf && \
-    sudo sed -i "s/example.com = EXAMPLE.COM/${AMBARI_HOST} = ${REALM}/" /etc/krb5.conf && \
+    sudo sed -ie "s/default_realm = EXAMPLE.COM/default_realm = ${REALM}/" \
+              -e "s/EXAMPLE.COM = {/${REALM} = {/" \
+              -e "s/kdc = kerberos.example.com/kdc = ${AMBARI_HOST}/" \
+              -e "s/admin_server = kerberos.example.com/admin_server = ${AMBARI_HOST}/" \
+              -e "/\.example.com = EXAMPLE.COM/d" \
+              -e "s/example.com = EXAMPLE.COM/${AMBARI_HOST} = ${REALM}/" /etc/krb5.conf && \
     printf 'admin\nadmin\n' | sudo kdb5_util create -s -r ${REALM} && \
     sudo sed -i "s/EXAMPLE.COM/${REALM}/" /var/kerberos/krb5kdc/kadm5.acl && \
     sudo kadmin.local -q "addprinc -pw admin admin/admin@${REALM}" && \
@@ -62,10 +57,10 @@ RUN sed "s/$HOSTNAME/${AMBARI_HOST} $HOSTNAME/g" /etc/hosts > /tmp/hosts && \
     curl ${CURL_OPTS} -X PUT -d '{"ServiceInfo": {"state" : "INSTALLED"}}' ${AMBARI_PREFIX}/clusters/${CLUSTER_NAME}/services && sleep 45 && \
     curl ${CURL_OPTS} -X PUT -d @/root/vagrant/credentials ${AMBARI_PREFIX}/clusters/${CLUSTER_NAME} && sleep 30 && \
     rm -rf /root/vagrant && \
-	ambari-server stop && \
-	ambari-agent stop && \
-	service postgresql stop && \
-	service krb5kdc stop && \
-	service kadmin stop
+    ambari-server stop && \
+    ambari-agent stop && \
+    service postgresql stop && \
+    service krb5kdc stop && \
+    service kadmin stop
 
 # This container must be run in privileged mode in order for the cluster to start up in secure mode
