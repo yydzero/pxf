@@ -313,9 +313,7 @@ public abstract class TableFactory {
      *
      * @param tableName external table name
      * @param fields for external table
-     * @param hiveTable to direct to
-     * @param useProfile true to use Profile or false to use Fragmenter Accessor
-     *            Resolver
+     * @param path path
      * @return PXF Readable External Table using "Parquet" profile
      */
     public static ReadableExternalTable getPxfParquetReadableTable(String tableName,
@@ -336,9 +334,7 @@ public abstract class TableFactory {
      *
      * @param tableName external table name
      * @param fields for external table
-     * @param hiveTable to direct to
-     * @param useProfile true to use Profile or false to use Fragmenter Accessor
-     *            Resolver
+     * @param path path
      * @return PXF Readable External Table using "JSON" profile
      */
     public static ReadableExternalTable getPxfJsonReadableTable(String tableName,
@@ -409,13 +405,13 @@ public abstract class TableFactory {
         return table;
     }
 
-    private static ExternalTable getPxfJdbcReadableTable(String tableName,
+    private static ReadableExternalTable getPxfJdbcReadableTable(String tableName,
                                                          String[] fields, String dataSourcePath, String driver,
                                                          String dbUrl, boolean isPartitioned,
                                                          Integer partitionByColumnIndex, String rangeExpression,
                                                          String interval, String user, EnumPartitionType partitionType,
                                                          String server, String customParameters) {
-        ExternalTable exTable = new ReadableExternalTable(tableName, fields,
+        ReadableExternalTable exTable = new ReadableExternalTable(tableName, fields,
                 dataSourcePath, "CUSTOM");
         List<String> userParameters = new ArrayList<String>();
         if (driver != null) {
@@ -463,11 +459,11 @@ public abstract class TableFactory {
      * @param user database user
      * @return External Writable Table
      */
-    public static ExternalTable getPxfJdbcWritableTable(String tableName,
+    public static ReadableExternalTable getPxfJdbcWritableTable(String tableName,
             String[] fields, String dataSourcePath, String driver,
             String dbUrl, String user, String customParameters) {
 
-        ExternalTable exTable = new WritableExternalTable(tableName, fields, dataSourcePath, "CUSTOM");
+        ReadableExternalTable exTable = new WritableExternalTable(tableName, fields, dataSourcePath, "CUSTOM");
         List<String> userParameters = new ArrayList<String>();
         if (driver != null) {
             userParameters.add("JDBC_DRIVER=" + driver);
@@ -505,7 +501,7 @@ public abstract class TableFactory {
      * @param partitionType partition type used to get fragments
      * @return External Readable Table
      */
-    public static ExternalTable getPxfJdbcReadablePartitionedTable(
+    public static ReadableExternalTable getPxfJdbcReadablePartitionedTable(
             String tableName,
             String[] fields, String dataSourcePath, String driver,
             String dbUrl, Integer partitionByColumnIndex,
@@ -528,7 +524,7 @@ public abstract class TableFactory {
      * @param user databases user name
      * @return External Readable Table
      */
-    public static ExternalTable getPxfJdbcReadableTable(String tableName,
+    public static ReadableExternalTable getPxfJdbcReadableTable(String tableName,
             String[] fields, String dataSourcePath, String driver, String dbUrl, String user) {
 
         return getPxfJdbcReadableTable(tableName, fields, dataSourcePath, driver,
@@ -548,7 +544,7 @@ public abstract class TableFactory {
      * @param
      * @return External Readable Table
      */
-    public static ExternalTable getPxfJdbcReadableTable(String tableName,
+    public static ReadableExternalTable getPxfJdbcReadableTable(String tableName,
             String[] fields, String dataSourcePath, String driver, String dbUrl, String user, String customParamters) {
 
         return getPxfJdbcReadableTable(tableName, fields, dataSourcePath, driver,
@@ -564,8 +560,24 @@ public abstract class TableFactory {
      * @param server name of configuration server
      * @return External Readable Table
      */
-    public static ExternalTable getPxfJdbcReadableTable(String tableName, String[] fields, String dataSourcePath, String server) {
+    public static ReadableExternalTable getPxfJdbcReadableTable(String tableName, String[] fields, String dataSourcePath, String server) {
         return getPxfJdbcReadableTable(tableName, fields, dataSourcePath, null,
                 null, false, null, null, null, null, null, server, null);
     }
+
+    /**
+     * Generates an External Readable Table using JDBC profile.
+     *
+     * @param tableName name of the external table which will be generated
+     * @param fields fields of the external table
+     * @param dataSourcePath path to the data object i.e. schema_name.table_name
+     * @param dbUrl JDBC url
+     * @param server name of configuration server
+     * @return External Readable Table
+     */
+    public static ReadableExternalTable getPxfJdbcReadableTable(String tableName, String[] fields, String dataSourcePath, String dbUrl, String server) {
+        return getPxfJdbcReadableTable(tableName, fields, dataSourcePath, null,
+                dbUrl, false, null, null, null, null, null, server, null);
+    }
+
 }

@@ -29,14 +29,15 @@ import org.greenplum.pxf.automation.features.BaseFeature;
 @Test(groups = "performance")
 public class PerformanceTest extends BaseFeature {
 
-    private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
-    private static final long GENERATE_TEXT_DATA_SIZE_MB = 500;
-    private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
+    // Modify the below paramters to tune the performance test benchamark
+    private static final long GENERATE_TEXT_DATA_SIZE_MB = 1;
     private static final int GENERATE_INT_COLUMNS_NUMBER = 5;
     private static final int GENERATE_TEXT_COLUMNS_NUMBER = 5;
-
     private static final int WARMUP_COUNT = 1;
     private static final int SAMPLES_COUNT = 2;
+
+    private static final String GENERATE_TEXT_DATA_COL_DELIMITER = ",";
+    private static final int GENERATE_COLUMN_MAX_WIDTH = 50;
 
     //Values for filters
     private static final String FILTER_10_PERCENT_RANGE = StringUtils.repeat(
