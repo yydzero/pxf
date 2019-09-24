@@ -7,6 +7,19 @@ resource_types:
 
 resources:
 
+- name: ccp-7
+  type: docker-image
+  source:
+    repository: pivotaldata/ccp
+    tag: 7
+
+- name: ccp_src
+  type: git
+  source:
+    branch: {{ccp-git-branch}}
+    private_key: {{ccp-git-key}}
+    uri: {{ccp-git-remote}}
+
 - name: gpdb_src
   type: git
   source:
@@ -83,6 +96,64 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: pxf_artifacts/((folder-prefix))_((gpdb-branch))/latest/bin_gpdb.tar.gz
+
+# anchors
+ccp_destroy_anchor: &ccp_destroy
+  do:
+  - put: terraform_gpdb
+    resource: terraform
+    params:
+      action: destroy
+      env_name_file: terraform_gpdb/name
+      terraform_source: ccp_src/google/
+    get_params:
+      action: destroy
+
+dataproc_destroy_anchor: &dataproc_destroy
+  do:
+  - aggregate:
+    - task: cleanup_dataproc
+      config:
+        run:
+          path: pxf_src/concourse/scripts/cleanup_dataproc_cluster.bash
+        inputs:
+          - name: pxf_src
+          - name: dataproc_env_files
+        platform: linux
+      image: ccp-7
+      params:
+        GOOGLE_CREDENTIALS: {{google-service-account-key}}
+        GOOGLE_ZONE: {{google-zone}}
+    - put: terraform_gpdb
+      resource: terraform
+      params:
+        action: destroy
+        env_name_file: terraform_gpdb/name
+        terraform_source: ccp_src/google/
+      get_params:
+        action: destroy
+
+dataproc_timed_destroy_anchor: &dataproc_timed_destroy
+  do:
+  - task: debug_sleep
+    image: ccp-7
+    config:
+      run:
+        path: /bin/sleep
+        args: [{{dataproc-destroy-timeout}}]
+      platform: linux
+  - task: cleanup_dataproc
+    config:
+      run:
+        path: pxf_src/concourse/scripts/cleanup_dataproc_cluster.bash
+      platform: linux
+      inputs:
+        - name: pxf_src
+        - name: dataproc_env_files
+    image: ccp-7
+    params:
+      GOOGLE_CREDENTIALS: {{google-service-account-key}}
+      GOOGLE_ZONE: {{google-zone}}
 
 jobs:
 
@@ -375,3 +446,104 @@ jobs:
       PROTOCOL: minio
       TARGET_OS: centos
       TARGET_OS_VERSION: 7
+
+- name: test_pxf_secure_multinode_gpdb
+  max_in_flight: 2
+  plan:
+  - aggregate:
+    - get: ccp_src
+    - get: gpdb_src
+      passed:
+        - compile_pxf
+        - compile_gpdb
+    - get: bin_gpdb
+      passed:
+        - compile_gpdb
+    - get: pxf_src
+      passed:
+        - compile_pxf
+      trigger: true
+    - get: pxf_tarball
+      passed:
+        - compile_pxf
+      trigger: true
+    - get: ccp-7
+    - get: gpdb-pxf-dev-centos7-hdp2-server
+  - aggregate:
+    - do:
+      - put: terraform_gpdb
+        resource: terraform
+        params:
+          action: create
+          delete_on_failure: true
+          generate_random_name: true
+          terraform_source: ccp_src/google/
+          vars:
+            PLATFORM: centos7
+            number_of_nodes: {{number_of_gpdb_nodes}}
+            segments_per_host: 4
+            instance_type: n1-standard-4
+            ccp_reap_minutes: 120
+      - task: Generate Greenplum Cluster
+        input_mapping:
+          terraform: terraform_gpdb
+        file: ccp_src/ci/tasks/gen_cluster.yml
+        image: ccp-7
+        params:
+          AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+          AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+          AWS_DEFAULT_REGION: {{aws-region}}
+          BUCKET_PATH: {{tf-bucket-path}}
+          BUCKET_NAME: {{tf-bucket-name}}
+          PLATFORM: centos7
+          CLOUD_PROVIDER: google
+      - task: intialize_greenplum
+        file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: Generate Hadoop Cluster
+      file: pxf_src/concourse/tasks/install_dataproc.yml
+      image: ccp-7
+      params:
+        GOOGLE_CREDENTIALS: {{google-service-account-key}}
+        GOOGLE_PROJECT_ID: {{google-project-id}}
+        GOOGLE_ZONE: {{google-zone}}
+        IMAGE_VERSION: {{dataproc-image-version}}
+        KERBEROS: {{kerberos-enabled}}
+  - task: setup_pxf
+    input_mapping:
+      terraform: terraform_gpdb
+      bin_gpdb: gpdb_binary
+    file: pxf_src/concourse/tasks/install_pxf.yml
+    image: ccp-7
+    params:
+      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      AWS_DEFAULT_REGION: {{aws-region}}
+      BUCKET_PATH: {{tf-bucket-path}}
+      BUCKET_NAME: {{tf-bucket-name}}
+      CLOUD_PROVIDER: google
+      IMPERSONATION: {{enable-impersonation-multinode}}
+      INSTALL_GPHDFS: false
+      KERBEROS: {{kerberos-enabled}}
+      PLATFORM: centos7
+      PXF_JVM_OPTS: {{pxf-jvm-opts}}
+    on_failure:
+      <<: *dataproc_timed_destroy
+  - task: test_pxf_multinode
+    input_mapping:
+      bin_gpdb: gpdb_binary
+    on_success:
+      <<: *dataproc_destroy
+    on_failure:
+      <<: *dataproc_timed_destroy
+    image: gpdb-pxf-dev-centos7-hdp2-server
+    file: pxf_src/concourse/tasks/test_pxf_multinode.yml
+    params:
+      ACCESS_KEY_ID: {{tf-machine-access-key-id}}
+      SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
+      HIVE_VERSION: 2
+      IMPERSONATION: {{enable-impersonation-multinode}}
+      KERBEROS: {{kerberos-enabled}}
+      GROUP: smoke_schedule,fdw_smoke_schedule
+      PG_REGRESS: true
+      PXF_JVM_OPTS: {{pxf-jvm-opts}}
+      TARGET_OS: centos

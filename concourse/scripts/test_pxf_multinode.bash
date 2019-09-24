@@ -113,8 +113,24 @@ function setup_pxf_on_cluster() {
 	"
 }
 
+function setup_kerberos_keytabs_and_conf() {
+	local DATAPROC_DIR=${1}
+	mkdir -p /etc/security/keytabs
+	cp "${DATAPROC_DIR}/pxf.service.keytab" /etc/security/keytabs/gpadmin.headless.keytab
+	chown gpadmin:gpadmin /etc/security/keytabs/gpadmin.headless.keytab
+	cp "${DATAPROC_DIR}/krb5.conf" /etc/krb5.conf
+}
+
+function run_pxf_pg_regress() {
+	chown -R gpadmin:gpadmin ~gpadmin/{.ssh,pxf} pxf_src/automation
+	if [[ $KERBEROS == true ]]; then
+		setup_kerberos_keytabs_and_conf "$(find /tmp/build/ -name dataproc_env_files)"
+	fi
+
+}
+
 function run_pxf_automation() {
-	local multiNodesCluster=pxf_src/automation/src/test/resources/sut/MultiNodesCluster.xml
+	local multiNodesCluster=pxf_src/automation/src/test/resources/sut/MultiNodesCluster.xml DATAPROC_DIR REALM KERBERIZED_HADOOP_URI
 	if (( HIVE_VERSION == 2 )); then
 		local search='<hiveBaseHdfsDirectory>/hive/warehouse/</hiveBaseHdfsDirectory>'
 		local replace='<hiveBaseHdfsDirectory>/user/hive/warehouse/</hiveBaseHdfsDirectory>'
@@ -131,7 +147,7 @@ function run_pxf_automation() {
 		REALM=$(< "${DATAPROC_DIR}/REALM")
 		REALM=${REALM^^} # make sure REALM is up-cased, down-case below for hive principal
 		KERBERIZED_HADOOP_URI="hive/${HADOOP_HOSTNAME}.${REALM,,}@${REALM};saslQop=auth-conf" # quoted because of semicolon
-		sed -i  -e "s|</hdfs>|<hadoopRoot>$DATAPROC_DIR</hadoopRoot></hdfs>|g" \
+		sed -i  -e "s|</hdfs>|<hadoopRoot>${DATAPROC_DIR}</hadoopRoot></hdfs>|g" \
 			-e "s|</cluster>|<testKerberosPrincipal>gpadmin@${REALM}</testKerberosPrincipal></cluster>|g" \
 			-e "s|</hive>|<kerberosPrincipal>${KERBERIZED_HADOOP_URI}</kerberosPrincipal><userName>gpadmin</userName></hive>|g" \
 			"$multiNodesCluster"
@@ -140,10 +156,7 @@ function run_pxf_automation() {
 				${PXF_CONF_DIR}/servers/db-hive/jdbc-site.xml &&
 			${GPHOME}/pxf/bin/pxf cluster sync
 		"
-		sudo mkdir -p /etc/security/keytabs
-		sudo cp "${DATAPROC_DIR}/pxf.service.keytab" /etc/security/keytabs/gpadmin.headless.keytab
-		sudo chown gpadmin:gpadmin /etc/security/keytabs/gpadmin.headless.keytab
-		sudo cp "${DATAPROC_DIR}/krb5.conf" /etc/krb5.conf
+		setup_kerberos_keytabs_and_conf "${DATAPROC_DIR}"
 	fi
 
 	sed -i 's/sutFile=default.xml/sutFile=MultiNodesCluster.xml/g' pxf_src/automation/jsystem.properties
