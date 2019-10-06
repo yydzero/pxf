@@ -333,8 +333,7 @@ public class GPDBWritable implements Writable {
     public void write(DataOutput out) throws IOException {
         int numCol = colType.length;
         boolean[] nullBits = new boolean[numCol];
-        int colLength = 0;
-        int padLength;
+        int colLength;
         byte[] padbytes = new byte[8];
         ByteArrayOutputStream types = new ByteArrayOutputStream();
         ByteArrayOutputStream values = new ByteArrayOutputStream();
@@ -350,99 +349,76 @@ public class GPDBWritable implements Writable {
         datlen += getNullByteArraySize(numCol);
 
         for (int i = 0; i < numCol; i++) {
+            nullBits[i] = colValue[i] == null ? true : false;
+            colLength = 0;
             /* Get the enum type */
             DBType coldbtype;
             switch (DataType.get(colType[i])) {
                 case BIGINT:
                     coldbtype = DBType.BIGINT;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = coldbtype.getTypeLength();
+                    values.write(longToByteArray((long) colValue[i]));
                     break;
                 case BOOLEAN:
                     coldbtype = DBType.BOOLEAN;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = coldbtype.getTypeLength();
+                    values.write(boolToByte((boolean) colValue[i]));
                     break;
                 case FLOAT8:
                     coldbtype = DBType.FLOAT8;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = coldbtype.getTypeLength();
+                    values.write(doubleToByteArray((double) colValue[i]));
                     break;
                 case INTEGER:
                     coldbtype = DBType.INTEGER;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = coldbtype.getTypeLength();
+                    values.write(intToByteArray((int) colValue[i]));
                     break;
                 case REAL:
                     coldbtype = DBType.REAL;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = coldbtype.getTypeLength();
+                    values.write(floatToByteArray((float) colValue[i]));
                     break;
                 case SMALLINT:
                     coldbtype = DBType.SMALLINT;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = coldbtype.getTypeLength();
+                    values.write(shortToByteArray((short) colValue[i]));
                     break;
                 case BYTEA:
                     coldbtype = DBType.BYTEA;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = ((byte[]) colValue[i]).length;
+                    datlen += 4; /* for variable length type, we add a 4 byte length header */
+                    values.write(intToByteArray(colLength));
+                    values.write((byte[]) colValue[i]);
                     break;
                 default:
                     coldbtype = DBType.TEXT;
+                    if (nullBits[i] == true) break;
+                    datlen += writePadToValues(coldbtype, datlen, values, padbytes);
+                    colLength = ((String) colValue[i]).getBytes(CHARSET).length;
+                    datlen += 4; /* for variable length type, we add a 4 byte length header */
+                    values.write(intToByteArray(colLength));
+                    byte[] data = ((String) colValue[i]).getBytes(CHARSET);
+                    values.write(data);
+                    break;
             }
             types.write((byte) (coldbtype.ordinal()));
 
-            /* Get the actual value, and set the null bit */
-            if (colValue[i] == null) {
-                nullBits[i] = true;
-                colLength = 0;
-            } else {
-                nullBits[i] = false;
-
-				/*
-                 * For fixed length type, we get the fixed length.
-				 * For var len binary format, the length is in the col value.
-				 * For text format, we must convert encoding first.
-				 */
-                if (!coldbtype.isVarLength()) {
-                    colLength = coldbtype.getTypeLength();
-                }
-
-				/* calculate and add the type alignment padding */
-                padLength = roundUpAlignment(datlen, coldbtype.getAlignment()) - datlen;
-                datlen += padLength;
-                values.write(padbytes, 0, padLength);
-
-                /* Now, write the actual column value */
-                switch (DataType.get(colType[i])) {
-                    case BIGINT:
-                        values.write(longToByteArray((long) colValue[i]));
-                        break;
-                    case BOOLEAN:
-                        values.write(boolToByte((boolean) colValue[i]));
-                        break;
-                    case FLOAT8:
-                        values.write(doubleToByteArray((double) colValue[i]));
-                        break;
-                    case INTEGER:
-                        values.write(intToByteArray((int) colValue[i]));
-                        break;
-                    case REAL:
-                        values.write(floatToByteArray((float) colValue[i]));
-                        break;
-                    case SMALLINT:
-                        values.write(shortToByteArray((short) colValue[i]));
-                        break;
-
-                    /* For BYTEA format, add 4byte length header at the beginning  */
-                    case BYTEA:
-                        colLength = ((byte[]) colValue[i]).length;
-                        datlen += 4; /* for variable length type, we add a 4 byte length header */
-                        values.write(intToByteArray(colLength));
-                        values.write((byte[]) colValue[i]);
-                        break;
-
-                    /* For text format, add 4byte length header. string is already '\0' terminated */
-                    default: {
-                        colLength = ((String) colValue[i]).getBytes(CHARSET).length;
-                        datlen += 4; /* for variable length type, we add a 4 byte length header */
-                        values.write(intToByteArray(colLength));
-                        byte[] data = ((String) colValue[i]).getBytes(CHARSET);
-                        values.write(data);
-                        break;
-                    }
-            }
             datlen += colLength;
-        }
-
-
         }
         /*
          * Add the final alignment padding for the next record
@@ -456,11 +432,21 @@ public class GPDBWritable implements Writable {
         out.writeByte(errorFlag);
         out.writeShort(numCol);
 
+        // write the types
         types.writeTo((OutputStream) out);
+        // write the null bits
         out.write(boolArrayToByteArray(nullBits));
+        // write the values
         values.writeTo((OutputStream) out);
         /* End padding */
         out.write(padbytes, 0, endpadding);
+    }
+
+    private int writePadToValues(DBType coldbtype, int datlen, ByteArrayOutputStream values, byte[] padbytes) {
+        /* calculate and add the type alignment padding */
+        int padLength = roundUpAlignment(datlen, coldbtype.getAlignment()) - datlen;
+        values.write(padbytes, 0, padLength);
+        return padLength;
     }
 
     private byte boolToByte(boolean b) {
