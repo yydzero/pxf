@@ -30,10 +30,12 @@ import org.apache.avro.io.DecoderFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.UnsupportedTypeException;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
+import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.plugins.hdfs.utilities.DataSchemaException;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.RecordkeyAdapter;
@@ -41,9 +43,13 @@ import org.greenplum.pxf.plugins.hdfs.utilities.RecordkeyAdapter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import static org.greenplum.pxf.api.io.DataType.UNSUPPORTED_TYPE;
+import static org.greenplum.pxf.api.io.DataType.isArrayType;
 
 /**
  * Class AvroResolver handles deserialization of records that were serialized
@@ -80,7 +86,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
 
         try {
             if (isAvroFile()) {
-                schema = (Schema) requestContext.getMetadata();
+                schema = (Schema) context.getMetadata();
             } else {
                 try (InputStream externalSchema = openExternalSchema()) {
                     schema = (new Schema.Parser()).parse(externalSchema);
@@ -91,7 +97,8 @@ public class AvroResolver extends BasePlugin implements Resolver {
         }
 
         reader = new GenericDatumReader<>(schema);
-        fields = schema.getFields();
+        // schema may be null when we are writing data to HDFS
+        if (schema != null) fields = schema.getFields();
 
         collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
                 : context.getOption("COLLECTION_DELIM");
@@ -141,7 +148,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
      */
     @Override
     public OneRow setFields(List<OneField> record) throws Exception {
-        throw new UnsupportedOperationException();
+        GenericRecord genericRecord = new GenericData.Record((Schema) context.getMetadata());
+        for (int i = 0; i < record.size(); i++) {
+            genericRecord.put(i, record.get(i).val);
+        }
+        return new OneRow(null, genericRecord);
     }
 
     /**

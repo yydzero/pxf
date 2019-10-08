@@ -22,30 +22,45 @@ package org.greenplum.pxf.plugins.hdfs;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
+import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
 import org.apache.avro.mapred.AvroInputFormat;
 import org.apache.avro.mapred.AvroJob;
 import org.apache.avro.mapred.AvroRecordReader;
 import org.apache.avro.mapred.AvroWrapper;
 import org.apache.avro.mapred.FsInput;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.UnsupportedTypeException;
+import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.greenplum.pxf.api.io.DataType.*;
 
 /**
  * A PXF Accessor for reading Avro File records
  */
 public class AvroFileAccessor extends HdfsSplittableDataAccessor {
+    private static String COMMON_NAMESPACE = "public.avro";
     private AvroWrapper<GenericRecord> avroWrapper;
+    private DataFileWriter<GenericRecord> writer;
+    private long rowsWritten, totalRowsWritten;
 
     /**
      * Constructs a new instance of the AvroFileAccessor
@@ -62,7 +77,12 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
+        rowsWritten = totalRowsWritten = 0;
 
+        // If we are about to write to HDFS, we don't need to locate schema
+        if (context.getDataFragment() == -1) {
+            return;
+        }
         // 1. Accessing the avro file through the "unsplittable" API just to get the schema.
         //    The splittable API (AvroInputFormat) which is the one we will be using to fetch
         //    the records, does not support getting the avro schema yet.
@@ -122,7 +142,21 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public boolean openForWrite() throws Exception {
-        throw new UnsupportedOperationException();
+        // Read schema file, if given
+        String schemaFile = context.getOption("SCHEMA");
+        Schema schema = (schemaFile != null) ? getAvroSchema(jobConf, schemaFile) :
+                generateAvroSchema(context.getTupleDescription());
+        context.setMetadata(schema);
+        // make writer
+        // how do we write the schema file?
+        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(schema);
+        writer = new DataFileWriter<>(datumWriter);
+        Path file = new Path(context.getDataSource());
+        FileSystem fs = file.getFileSystem(jobConf);
+        FSDataOutputStream avroOut = fs.create(file, false);
+        writer.create(schema, avroOut);
+
+        return true;
     }
 
     /**
@@ -134,7 +168,9 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public boolean writeNextObject(OneRow onerow) throws Exception {
-        throw new UnsupportedOperationException();
+        writer.append((GenericRecord) onerow.getData());
+        rowsWritten++;
+        return true;
     }
 
     /**
@@ -144,7 +180,11 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public void closeForWrite() throws Exception {
-        throw new UnsupportedOperationException();
+        if (writer != null) {
+            writer.close();
+            totalRowsWritten += rowsWritten;
+        }
+        LOG.debug("Wrote a TOTAL of {} rows", totalRowsWritten);
     }
 
     /**
@@ -166,5 +206,89 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         Schema schema = dummyFileReader.getSchema();
         dummyFileReader.close();
         return schema;
+    }
+
+    private Schema generateAvroSchema(List<ColumnDescriptor> tupleDescription) throws IOException {
+        String colName;
+        int colType;
+
+        Schema schema = Schema.createRecord("tableName", "", COMMON_NAMESPACE, false);
+        List<Schema.Field> fields = new ArrayList<Schema.Field>();
+
+        for (ColumnDescriptor cd : tupleDescription) {
+            colName = cd.columnName();
+            colType = cd.columnTypeCode();
+            // String delim = context.getOption("delimiter");
+            // columnDelimiter = delim == null ? ',' : delim.charAt(0);
+            fields.add(new Schema.Field(colName, getFieldSchema(DataType.get(colType), 0, 1), "", null));
+        }
+
+        schema.setFields(fields);
+
+        return schema;
+    }
+
+    private Schema getFieldSchema(DataType type, int notNull, int dim) throws IOException {
+        List<Schema> unionList = new ArrayList<Schema>();
+        // in this version of gpdb, external table should not set 'notnull' attribute
+        unionList.add(Schema.create(Schema.Type.NULL));
+
+        switch (type) {
+            case BOOLEAN:
+                unionList.add(Schema.create(Schema.Type.BOOLEAN));
+                break;
+            case BYTEA:
+                unionList.add(Schema.create(Schema.Type.BYTES));
+                break;
+            case BIGINT:
+                unionList.add(Schema.create(Schema.Type.LONG));
+                break;
+            case SMALLINT:
+            case INTEGER:
+                unionList.add(Schema.create(Schema.Type.INT));
+                break;
+            case REAL:
+                unionList.add(Schema.create(Schema.Type.FLOAT));
+                break;
+            case FLOAT8:
+                unionList.add(Schema.create(Schema.Type.DOUBLE));
+                break;
+            case TIMESTAMP_WITH_TIME_ZONE:
+                break;
+            case VARCHAR:
+            case BPCHAR:
+            case NUMERIC:
+            case DATE:
+            case TIME:
+            case TIMESTAMP:
+            case TEXT:
+                unionList.add(Schema.create(Schema.Type.STRING));
+                break;
+            case INT2ARRAY:
+            case INT4ARRAY:
+            case INT8ARRAY:
+            case BOOLARRAY:
+            case TEXTARRAY:
+            default:
+                if (type == UNSUPPORTED_TYPE) {
+                    throw new UnsupportedTypeException("Unsupported type");
+                }
+                if (!isArrayType(type.getOID())) {
+                    unionList.add(Schema.create(Schema.Type.STRING));
+                    break;
+                }
+                // array or other variable length types
+                DataType elementType = type.getTypeElem();
+                Schema array = Schema.createArray(getFieldSchema(elementType, notNull, 0));
+                // for multi-dim array
+                for (int i = 1; i < dim; i++) {
+                    array = Schema.createArray(array);
+                }
+                unionList.add(array);
+
+                break;
+        }
+
+        return Schema.createUnion(unionList);
     }
 }
