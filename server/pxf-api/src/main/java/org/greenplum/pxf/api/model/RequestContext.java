@@ -38,6 +38,30 @@ import java.util.TreeMap;
  */
 public class RequestContext {
 
+    private RequestType requestType;
+
+    /**
+     * The request type can be used to later determine whether we
+     * are in a read, write or fragmenter call.
+     */
+    public RequestType getRequestType() {
+        return requestType;
+    }
+
+    /**
+     * The request type can be set when parsing http parameters, etc.
+     * @see org.greenplum.pxf.service.HttpRequestParser#parseRequest()
+     */
+    public void setRequestType(RequestType requestType) {
+        this.requestType = requestType;
+    }
+
+    public enum RequestType {
+        FRAGMENTER,
+        READ_BRIDGE,
+        WRITE_BRIDGE,
+    };
+
     // ----- NAMED PROPERTIES -----
     private String accessor;
     private EnumAggregationType aggType;

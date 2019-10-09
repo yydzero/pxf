@@ -1,5 +1,6 @@
 package org.greenplum.pxf.service;
 
+import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.commons.lang.StringUtils;
 import org.greenplum.pxf.api.model.OutputFormat;
 import org.greenplum.pxf.api.model.PluginConf;
@@ -74,6 +75,16 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
 
         // build new instance of RequestContext and fill it with parsed values
         RequestContext context = new RequestContext();
+
+        // Set the type of request
+        String requestPath = ((ContainerRequest) request).getPath();
+        if (requestPath.contains("Writable/stream")) {
+            context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
+        } else if (requestPath.contains("Fragmenter/getFragments")) {
+            context.setRequestType(RequestContext.RequestType.FRAGMENTER);
+        } else {
+            context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
+        }
 
         // first of all, set profile and enrich parameters with information from specified profile
         String profile = params.removeUserProperty("PROFILE");

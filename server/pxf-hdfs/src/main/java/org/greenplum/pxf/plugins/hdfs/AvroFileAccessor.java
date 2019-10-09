@@ -61,6 +61,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     private AvroWrapper<GenericRecord> avroWrapper;
     private DataFileWriter<GenericRecord> writer;
     private long rowsWritten, totalRowsWritten;
+    private Schema schema;
 
     /**
      * Constructs a new instance of the AvroFileAccessor
@@ -79,14 +80,14 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         super.initialize(requestContext);
         rowsWritten = totalRowsWritten = 0;
 
-        // If we are about to write to HDFS, we don't need to locate schema
-        if (context.getDataFragment() == -1) {
+        // If we are writing to external source, there is no schema yet
+        if (requestContext.getRequestType() == RequestContext.RequestType.WRITE_BRIDGE) {
             return;
         }
+
         // 1. Accessing the avro file through the "unsplittable" API just to get the schema.
         //    The splittable API (AvroInputFormat) which is the one we will be using to fetch
         //    the records, does not support getting the avro schema yet.
-        Schema schema;
         try {
             schema = getAvroSchema(configuration, context.getDataSource());
         } catch (IOException e) {
@@ -144,7 +145,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     public boolean openForWrite() throws Exception {
         // Read schema file, if given
         String schemaFile = context.getOption("SCHEMA");
-        Schema schema = (schemaFile != null) ? getAvroSchema(jobConf, schemaFile) :
+        schema = (schemaFile != null) ? getAvroSchema(jobConf, schemaFile) :
                 generateAvroSchema(context.getTupleDescription());
         context.setMetadata(schema);
         // make writer
@@ -212,7 +213,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         int colType;
 
         Schema schema = Schema.createRecord("tableName", "", COMMON_NAMESPACE, false);
-        List<Schema.Field> fields = new ArrayList<Schema.Field>();
+        List<Schema.Field> fields = new ArrayList<>();
 
         for (ColumnDescriptor cd : tupleDescription) {
             colName = cd.columnName();
