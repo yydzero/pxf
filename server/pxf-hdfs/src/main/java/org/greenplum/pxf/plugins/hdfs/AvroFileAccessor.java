@@ -106,7 +106,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
 
     @Override
     protected Object getReader(JobConf jobConf, InputSplit split) throws IOException {
-        return new AvroRecordReader<Object>(jobConf, (FileSplit) split);
+        return new AvroRecordReader<>(jobConf, (FileSplit) split);
     }
 
     /**
@@ -149,7 +149,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
                 generateAvroSchema(context.getTupleDescription());
         context.setMetadata(schema);
         // make writer
-        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(schema);
+        DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         writer = new DataFileWriter<>(datumWriter);
         Path file = new Path(hcfsType.getUriForWrite(configuration, context, true) + ".avro");
         FileSystem fs = file.getFileSystem(jobConf);
@@ -220,7 +220,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
             colType = cd.columnTypeCode();
             // String delim = context.getOption("delimiter");
             // columnDelimiter = delim == null ? ',' : delim.charAt(0);
-            fields.add(new Schema.Field(colName, getFieldSchema(DataType.get(colType), 0, 1), "", null));
+            fields.add(new Schema.Field(colName, getFieldSchema(DataType.get(colType), false, 1), "", null));
         }
 
         schema.setFields(fields);
@@ -228,7 +228,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         return schema;
     }
 
-    private Schema getFieldSchema(DataType type, int notNull, int dim) throws IOException {
+    private Schema getFieldSchema(DataType type, boolean notNull, int dim) throws IOException {
         List<Schema> unionList = new ArrayList<>();
         // in this version of gpdb, external table should not set 'notnull' attribute
         unionList.add(Schema.create(Schema.Type.NULL));

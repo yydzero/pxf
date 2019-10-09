@@ -68,6 +68,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
     private String collectionDelim;
     private String mapkeyDelim;
     private String recordkeyDelim;
+    private Schema schema;
 
     /*
      * Initializes an AvroResolver. Initializes Avro data structure: the Avro
@@ -81,8 +82,6 @@ public class AvroResolver extends BasePlugin implements Resolver {
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
-
-        Schema schema;
 
         try {
             if (isAvroFile()) {
@@ -98,7 +97,9 @@ public class AvroResolver extends BasePlugin implements Resolver {
 
         reader = new GenericDatumReader<>(schema);
         // schema may be null when we are writing data to HDFS
-        if (schema != null) fields = schema.getFields();
+        if (schema != null) {
+            fields = schema.getFields();
+        }
 
         collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
                 : context.getOption("COLLECTION_DELIM");

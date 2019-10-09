@@ -21,6 +21,7 @@ package org.greenplum.pxf.service;
 
 
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.commons.codec.CharEncoding;
 import org.greenplum.pxf.api.model.OutputFormat;
 import org.greenplum.pxf.api.model.PluginConf;
@@ -59,7 +60,7 @@ public class HttpRequestParserTest {
     private MultivaluedMap<String, String> parameters;
     private HttpRequestParser parser;
     @Mock
-    private HttpHeaders mockRequestHeaders;
+    private ContainerRequest mockRequestHeaders;
     @Mock
     private PluginConf mockPluginConf;
 
@@ -87,6 +88,7 @@ public class HttpRequestParserTest {
         parameters.putSingle("X-GP-XID", "transaction:id");
 
         when(mockRequestHeaders.getRequestHeaders()).thenReturn(parameters);
+        when(mockRequestHeaders.getPath()).thenReturn("foo");
 
         parser = new HttpRequestParser(mockPluginConf);
     }
@@ -542,6 +544,26 @@ public class HttpRequestParserTest {
         when(mockPluginConf.getHandler("test-profile")).thenReturn("foo");
         parameters.putSingle("X-GP-OPTIONS-PROFILE", "test-profile");
         parser.parseRequest(mockRequestHeaders);
+    }
+
+    @Test
+    public void testWritePath() {
+        when(mockRequestHeaders.getPath()).thenReturn("v199/Writable/stream");
+        RequestContext context = parser.parseRequest(mockRequestHeaders);
+        assertEquals(RequestContext.RequestType.WRITE_BRIDGE, context.getRequestType());
+    }
+
+    @Test
+    public void testFragmenterPath() {
+        when(mockRequestHeaders.getPath()).thenReturn("v1999/Fragmenter/getFragments");
+        RequestContext context = parser.parseRequest(mockRequestHeaders);
+        assertEquals(RequestContext.RequestType.FRAGMENTER, context.getRequestType());
+    }
+
+    @Test
+    public void testReadPath() {
+        RequestContext context = parser.parseRequest(mockRequestHeaders);
+        assertEquals(RequestContext.RequestType.READ_BRIDGE, context.getRequestType());
     }
 
     static class TestHandler implements ProtocolHandler {
