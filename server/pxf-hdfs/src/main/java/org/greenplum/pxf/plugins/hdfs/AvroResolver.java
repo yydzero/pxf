@@ -208,12 +208,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
 
         Schema.Type fieldType = fieldSchema.getType();
         int ret = 0;
-        Object value = fieldValue;
 
         switch (fieldType) {
             case ARRAY:
                 if (fieldValue == null) {
-                    return addOneFieldToRecord(record, DataType.TEXT, fieldValue);
+                    return addOneFieldToRecord(record, DataType.TEXT, null);
                 }
                 List<OneField> listRecord = new LinkedList<>();
                 ret = setArrayField(listRecord, fieldValue, fieldSchema);
@@ -222,7 +221,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 break;
             case MAP:
                 if (fieldValue == null) {
-                    return addOneFieldToRecord(record, DataType.TEXT, fieldValue);
+                    return addOneFieldToRecord(record, DataType.TEXT, null);
                 }
                 List<OneField> mapRecord = new LinkedList<>();
                 ret = setMapField(mapRecord, fieldValue, fieldSchema);
@@ -231,7 +230,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 break;
             case RECORD:
                 if (fieldValue == null) {
-                    return addOneFieldToRecord(record, DataType.TEXT, fieldValue);
+                    return addOneFieldToRecord(record, DataType.TEXT, null);
                 }
                 List<OneField> recRecord = new LinkedList<>();
                 ret = setRecordField(recRecord, fieldValue, fieldSchema);
@@ -244,6 +243,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                  * of the union element, and delegate the record update via
                  * recursion
                  */
+
                 int unionIndex = GenericData.get().resolveUnion(fieldSchema,
                         fieldValue);
                 /**
@@ -251,39 +251,39 @@ public class AvroResolver extends BasePlugin implements Resolver {
                  * if value is null
                  */
                 if (fieldValue == null) {
-                    unionIndex ^= 1;
+                    unionIndex ^= 1; // exclusive or assignment
                 }
                 ret = populateRecord(record, fieldValue,
                         fieldSchema.getTypes().get(unionIndex));
                 break;
             case ENUM:
-                ret = addOneFieldToRecord(record, DataType.TEXT, value);
+                ret = addOneFieldToRecord(record, DataType.TEXT, fieldValue);
                 break;
             case INT:
-                ret = addOneFieldToRecord(record, DataType.INTEGER, value);
+                ret = addOneFieldToRecord(record, DataType.INTEGER, fieldValue);
                 break;
             case DOUBLE:
-                ret = addOneFieldToRecord(record, DataType.FLOAT8, value);
+                ret = addOneFieldToRecord(record, DataType.FLOAT8, fieldValue);
                 break;
             case STRING:
-                value = (fieldValue != null) ? String.format("%s", fieldValue)
+                fieldValue = (fieldValue != null) ? String.format("%s", fieldValue)
                         : null;
-                ret = addOneFieldToRecord(record, DataType.TEXT, value);
+                ret = addOneFieldToRecord(record, DataType.TEXT, fieldValue);
                 break;
             case FLOAT:
-                ret = addOneFieldToRecord(record, DataType.REAL, value);
+                ret = addOneFieldToRecord(record, DataType.REAL, fieldValue);
                 break;
             case LONG:
-                ret = addOneFieldToRecord(record, DataType.BIGINT, value);
+                ret = addOneFieldToRecord(record, DataType.BIGINT, fieldValue);
                 break;
             case BYTES:
-                ret = addOneFieldToRecord(record, DataType.BYTEA, value);
+                ret = addOneFieldToRecord(record, DataType.BYTEA, fieldValue);
                 break;
             case BOOLEAN:
-                ret = addOneFieldToRecord(record, DataType.BOOLEAN, value);
+                ret = addOneFieldToRecord(record, DataType.BOOLEAN, fieldValue);
                 break;
             case FIXED:
-                ret = addOneFieldToRecord(record, DataType.BYTEA, value);
+                ret = addOneFieldToRecord(record, DataType.BYTEA, fieldValue);
                 break;
             default:
                 break;

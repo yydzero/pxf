@@ -148,10 +148,9 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
                 generateAvroSchema(context.getTupleDescription());
         context.setMetadata(schema);
         // make writer
-        // how do we write the schema file?
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<GenericRecord>(schema);
         writer = new DataFileWriter<>(datumWriter);
-        Path file = new Path(context.getDataSource());
+        Path file = new Path(hcfsType.getUriForWrite(configuration, context, true) + ".avro");
         FileSystem fs = file.getFileSystem(jobConf);
         FSDataOutputStream avroOut = fs.create(file, false);
         writer.create(schema, avroOut);
@@ -229,7 +228,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     }
 
     private Schema getFieldSchema(DataType type, int notNull, int dim) throws IOException {
-        List<Schema> unionList = new ArrayList<Schema>();
+        List<Schema> unionList = new ArrayList<>();
         // in this version of gpdb, external table should not set 'notnull' attribute
         unionList.add(Schema.create(Schema.Type.NULL));
 
