@@ -148,11 +148,95 @@ public class AvroResolver extends BasePlugin implements Resolver {
      */
     @Override
     public OneRow setFields(List<OneField> record) throws Exception {
-        GenericRecord genericRecord = new GenericData.Record((Schema) context.getMetadata());
+        // FormatHandlerUtil.decodeString(schema.getFields().get(i).schema(), (String)colValue[i], true, columDelimiter[i])
+        Schema schema = (Schema) context.getMetadata();
+        GenericRecord genericRecord = new GenericData.Record(schema);
         for (int i = 0; i < record.size(); i++) {
-            genericRecord.put(i, record.get(i).val);
+            OneField of = record.get(i);
+            // always look at first element since in Avro everything is a Union with null
+            Schema nestedSchema = schema.getFields().get(i).schema();
+            if (nestedSchema.getTypes().get(1).getType() == Schema.Type.ARRAY) {
+                genericRecord.put(i, decodeString(nestedSchema, (String) of.val, true, ','));
+                continue;
+            }
+            genericRecord.put(i, of.val);
         }
         return new OneRow(null, genericRecord);
+    }
+
+    /**
+     * for write, decode array value according to schema
+     * assume that the array is only of one dimension
+     */
+    private static Object decodeString(Schema schema, String value, boolean isTopLevel, char delimiter) throws IOException {
+        if (schema.getType() == Schema.Type.ARRAY) {
+            if (value == null) {
+                // null array
+                return null;
+            }
+
+            List<Object> list = new ArrayList<Object>();
+            // lop off '{' and '}' from string and split on comma
+            String[] splits = value.substring(1, value.length() - 1).split(Character.toString(delimiter));
+            for (String string : splits) {
+                list.add(decodeString(schema.getElementType(), string, false, delimiter));
+            }
+            return list;
+        } else {
+            if (schema.getType() == Schema.Type.UNION) {
+                // we take the first not null type as this column's type
+                schema = firstNotNullSchema(schema.getTypes());
+
+                if (schema == null) {
+                    throw new IOException(schema.getName() + " is an union, but only has null type");
+                }
+
+                if (schema.getType() == Schema.Type.ARRAY) {
+                    return decodeString(schema, value, isTopLevel, delimiter);
+                }
+            }
+
+            if (value != null && value.equals("NULL") && !isTopLevel) {
+                // NULL in an array
+                return null;
+            }
+
+            Schema.Type fieldType = schema.getType();
+            switch (fieldType) {
+                case INT:
+                    return Integer.parseInt(value);
+                case DOUBLE:
+                    return Double.parseDouble(value);
+                case STRING:
+                    return value;
+                case FLOAT:
+                    return Float.parseFloat(value);
+                case LONG:
+                    return Long.parseLong(value);
+                // case BYTES:
+                //     return octString2byteArray(value);
+                case BOOLEAN:
+                    return Boolean.parseBoolean(value);
+                case ENUM:
+                case MAP:
+                case FIXED:
+                // we don't support these types now, because they are not in gpdb
+                default:
+                    throw new IOException("type :" + schema.getType() + " can't be support now");
+            }
+        }
+    }
+
+    /**
+     * for avro union
+     */
+    private static Schema firstNotNullSchema(List<Schema> types) {
+        for (Schema schema : types) {
+            if (schema.getType() != Schema.Type.NULL) {
+                return schema;
+            }
+        }
+        return null;
     }
 
     /**
