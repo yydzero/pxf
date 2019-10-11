@@ -1,13 +1,14 @@
 package org.greenplum.pxf.plugins.hdfs;
 
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 import org.greenplum.pxf.api.io.DataType;
 
 public enum AvroTypeConverter {
     BOOLEAN {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.BOOLEAN;
         }
 
@@ -18,7 +19,7 @@ public enum AvroTypeConverter {
     },
     BYTES {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.BYTEA;
         }
 
@@ -29,7 +30,7 @@ public enum AvroTypeConverter {
     },
     DOUBLE {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.FLOAT8;
         }
 
@@ -40,7 +41,7 @@ public enum AvroTypeConverter {
     },
     FLOAT {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.REAL;
         }
 
@@ -51,7 +52,7 @@ public enum AvroTypeConverter {
     },
     INT {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.INTEGER;
         }
 
@@ -62,7 +63,7 @@ public enum AvroTypeConverter {
     },
     LONG {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.BIGINT;
         }
 
@@ -73,7 +74,7 @@ public enum AvroTypeConverter {
     },
     STRING {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.TEXT;
         }
 
@@ -84,7 +85,7 @@ public enum AvroTypeConverter {
     },
     ARRAY {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.TEXT;
         }
 
@@ -95,7 +96,7 @@ public enum AvroTypeConverter {
     },
     MAP {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.TEXT;
         }
 
@@ -106,7 +107,7 @@ public enum AvroTypeConverter {
     },
     ENUM {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.TEXT;
         }
 
@@ -117,8 +118,19 @@ public enum AvroTypeConverter {
     },
     FIXED {
         @Override
-        public DataType getDataType() {
+        public DataType getDataType(Schema schema, Object val) {
             return DataType.BYTEA;
+        }
+
+        @Override
+        public Object getValue(GenericRecord genericRecord, int columnIndex, Schema.Type type) {
+            return null;
+        }
+    },
+    RECORD {
+        @Override
+        public DataType getDataType(Schema schema, Object val) {
+            return DataType.TEXT;
         }
 
         @Override
@@ -128,9 +140,27 @@ public enum AvroTypeConverter {
     },
     UNION {
         @Override
-        public DataType getDataType() {
-            // use the from method to get the correct converter for UNION
-            return null;
+        public DataType getDataType(Schema schema, Object val) {
+            /**
+             * When an Avro field is actually a union, we resolve the type
+             * of the union element, and delegate the record update via
+             * recursion
+             */
+            int unionIndex = GenericData.get().resolveUnion(schema, val);
+            /**
+             * Retrieve index of the non null data type from the type array
+             * if value is null, to match the column type in Greenplum
+             */
+            if (val == null) {
+                unionIndex ^= 1; // exclusive or assignment
+            }
+            Schema nestedSchema = schema.getTypes().get(unionIndex);
+            AvroTypeConverter converter = AvroTypeConverter.valueOf(
+                    nestedSchema
+                            .getType()
+                            .name()
+            );
+            return converter.getDataType(nestedSchema, val);
         }
 
         @Override
@@ -141,14 +171,12 @@ public enum AvroTypeConverter {
 
     public static AvroTypeConverter from(Schema schema) {
         Schema.Type type = schema.getType();
-        // we want the underlying type of UNION
-        if (valueOf(type.name()) == UNION) {
-            return valueOf(schema.getTypes().get(1).getType().name());
-        }
+
         return valueOf(type.name());
     }
 
     // ********** PUBLIC INTERFACE **********
-    public abstract DataType getDataType();
+    public abstract DataType getDataType(Schema schema, Object val);
+
     public abstract Object getValue(GenericRecord genericRecord, int columnIndex, Schema.Type type);
 }

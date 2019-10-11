@@ -81,7 +81,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         rowsWritten = totalRowsWritten = 0;
 
         // If we are writing to external source, there is no schema yet
-        if (requestContext.getRequestType() == RequestContext.RequestType.WRITE_BRIDGE) {
+        if (context.getRequestType() == RequestContext.RequestType.WRITE_BRIDGE) {
             return;
         }
 

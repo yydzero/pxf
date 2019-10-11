@@ -278,13 +278,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 ret = addOneFieldToRecord(record, DataType.BIGINT, fieldValue);
                 break;
             case BYTES:
+            case FIXED:
                 ret = addOneFieldToRecord(record, DataType.BYTEA, fieldValue);
                 break;
             case BOOLEAN:
                 ret = addOneFieldToRecord(record, DataType.BOOLEAN, fieldValue);
-                break;
-            case FIXED:
-                ret = addOneFieldToRecord(record, DataType.BYTEA, fieldValue);
                 break;
             default:
                 break;
@@ -389,7 +387,9 @@ public class AvroResolver extends BasePlugin implements Resolver {
         oneField.type = gpdbWritableType.getOID();
         switch (gpdbWritableType) {
             case BYTEA:
-                if (val instanceof ByteBuffer) {
+                if (val == null) {
+                    oneField.val = null;
+                } else if (val instanceof ByteBuffer) {
                     oneField.val = ((ByteBuffer) val).array();
                 } else {
                     /**
