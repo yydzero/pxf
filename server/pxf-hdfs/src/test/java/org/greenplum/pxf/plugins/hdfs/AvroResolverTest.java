@@ -77,6 +77,36 @@ public class AvroResolverTest {
     }
 
     @Test
+    public void testSetFields_Complex() throws Exception {
+        schema = getAvroSchemaForComplexTypes();
+        context.setMetadata(schema);
+        resolver.initialize(context);
+
+        List<OneField> fields = new ArrayList<>();
+        fields.add(new OneField(DataType.BYTEA.getOID(), new byte[]{65, 66, 67, 68})); // union of null and bytes
+        fields.add(new OneField(DataType.TEXT.getOID(), "{float:7.7,int:7,string:seven}")); // record
+        fields.add(new OneField(DataType.TEXT.getOID(), "[one,two,three]")); // array
+        fields.add(new OneField(DataType.TEXT.getOID(), "DIAMONDS")); // enum
+        fields.add(new OneField(DataType.BYTEA.getOID(), new byte[]{'F','O','O','B','A','R'})); // fixed length bytes
+        fields.add(new OneField(DataType.TEXT.getOID(), "{key1:123456789,key2:234567890}")); // map of string to long
+        OneRow row = resolver.setFields(fields);
+
+        assertNotNull(row);
+        Object data = row.getData();
+        assertNotNull(data);
+        assertTrue(data instanceof GenericRecord);
+        GenericRecord genericRecord = (GenericRecord) data;
+
+        // assert column values
+        assertArrayEquals(new byte[]{65, 66, 67, 68}, (byte[]) genericRecord.get(0));
+        assertEquals("{float:7.7,int:7,string:seven}", genericRecord.get(1));
+        assertEquals("[one,two,three]", genericRecord.get(2));
+        assertEquals("DIAMONDS", genericRecord.get(3));
+        assertArrayEquals(new byte[]{'F','O','O','B','A','R'}, (byte[]) genericRecord.get(4));
+        assertEquals("{key1:123456789,key2:234567890}", genericRecord.get(5));
+    }
+
+    @Test
     public void testGetFields_Primitive() throws Exception {
         schema = getAvroSchemaForPrimitiveTypes();
         context.setMetadata(schema);
@@ -85,7 +115,7 @@ public class AvroResolverTest {
 
         GenericRecord genericRecord = new GenericData.Record(schema);
         genericRecord.put(0, false);
-        genericRecord.put(1, ByteBuffer.wrap(new byte[]{(byte) 49}));
+        genericRecord.put(1, ByteBuffer.wrap(new byte[]{66, 89, 84, 69}));
         genericRecord.put(2, 23456789L);
         genericRecord.put(3, 1);
         genericRecord.put(4, 7.7f);
@@ -94,7 +124,7 @@ public class AvroResolverTest {
         List<OneField> fields = resolver.getFields(new OneRow(null, genericRecord));
 
         assertField(fields, 0, false, DataType.BOOLEAN);
-        assertField(fields, 1, new byte[]{(byte) 49}, DataType.BYTEA);
+        assertField(fields, 1, new byte[]{'B', 'Y', 'T', 'E'}, DataType.BYTEA);
         assertField(fields, 2, 23456789L, DataType.BIGINT);
         assertField(fields, 3, 1, DataType.INTEGER); // shorts should become integers in Greenplum
         assertField(fields, 4, (float) 7.7, DataType.REAL);
@@ -136,7 +166,7 @@ public class AvroResolverTest {
         resolver.initialize(context);
         GenericRecord genericRecord = new GenericData.Record(schema);
         // UNION of NULL and BYTES
-        genericRecord.put(0, null);
+        genericRecord.put(0, ByteBuffer.wrap(new byte[]{65, 66, 67, 68}));
 
         // Record with a float, int and a string
         final GenericData.Record nestedRecord = new GenericData.Record(schema.getFields().get(1).schema());
@@ -166,12 +196,12 @@ public class AvroResolverTest {
         genericRecord.put(5, map);
 
         List<OneField> fields = resolver.getFields(new OneRow(null, genericRecord));
-        assertField(fields, 0, null, DataType.BYTEA);
-        assertField(fields, 1, "{float:7.7,int:7,string:seven}", DataType.TEXT);
-        assertField(fields, 2, "[one,two,three]", DataType.TEXT);
-        assertField(fields, 3, "DIAMONDS", DataType.TEXT);
-        assertField(fields, 4, new byte[]{'F','O','O','B','A','R'}, DataType.BYTEA);
-        assertField(fields, 5, "{key1:123456789,key2:234567890}", DataType.TEXT);
+        assertField(fields, 0, new byte[]{'A', 'B', 'C', 'D'}, DataType.BYTEA); // union of null and bytes
+        assertField(fields, 1, "{float:7.7,int:7,string:seven}", DataType.TEXT); // record
+        assertField(fields, 2, "[one,two,three]", DataType.TEXT); // array
+        assertField(fields, 3, "DIAMONDS", DataType.TEXT); // enum
+        assertField(fields, 4, new byte[]{'F','O','O','B','A','R'}, DataType.BYTEA); // fixed length bytes
+        assertField(fields, 5, "{key1:123456789,key2:234567890}", DataType.TEXT); // map of string to long
     }
 
     @Test
@@ -274,7 +304,7 @@ public class AvroResolverTest {
                 "",
                 null)
         );
-        // add a FIXED with 4 byte length
+        // add a FIXED with 6 byte length
         fields.add(new Schema.Field(
                 Schema.Type.FIXED.getName(),
                 Schema.createFixed("fixed", "", null, 6),
@@ -309,6 +339,8 @@ public class AvroResolverTest {
         return Schema.createRecord(fields);
     }
 
+    // we can only support Unions that have 2 elements, and one has to be NULL
+    // otherwise we won't know which Greenplum type to use
     private Schema createUnion(Schema.Type type) {
         List<Schema> unionList = new ArrayList<>();
         unionList.add(Schema.create(Schema.Type.NULL));

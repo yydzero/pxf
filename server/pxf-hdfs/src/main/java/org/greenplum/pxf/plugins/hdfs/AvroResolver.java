@@ -245,8 +245,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                  * recursion
                  */
 
-                int unionIndex = GenericData.get().resolveUnion(fieldSchema,
-                        fieldValue);
+                int unionIndex = GenericData.get().resolveUnion(fieldSchema, fieldValue);
                 /**
                  * Retrieve index of the non null data type from the type array
                  * if value is null
@@ -254,8 +253,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 if (fieldValue == null) {
                     unionIndex ^= 1; // exclusive or assignment
                 }
-                ret = populateRecord(record, fieldValue,
-                        fieldSchema.getTypes().get(unionIndex));
+                ret = populateRecord(record, fieldValue, fieldSchema.getTypes().get(unionIndex));
                 break;
             case ENUM:
                 ret = addOneFieldToRecord(record, DataType.TEXT, fieldValue);
