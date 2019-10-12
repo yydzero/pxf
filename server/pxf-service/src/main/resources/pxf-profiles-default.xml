@@ -134,17 +134,6 @@ under the License.
         </plugins>
     </profile>
     <profile>
-        <name>Avro</name>
-        <description>This profile is suitable for using when reading Avro files (i.e
-            fileName.avro)
-        </description>
-        <plugins>
-            <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsDataFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.AvroFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.AvroResolver</resolver>
-        </plugins>
-    </profile>
-    <profile>
         <name>SequenceWritable</name>
         <description>
             Profile for accessing Sequence files serialized with a custom Writable class
@@ -425,6 +414,17 @@ under the License.
         <protocol>gs</protocol>
     </profile>
     <!-- AVRO PROFILES -->
+    <profile>
+        <name>Avro</name>
+        <description>This profile is suitable for using when reading Avro files (i.e
+            fileName.avro)
+        </description>
+        <plugins>
+            <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsDataFragmenter</fragmenter>
+            <accessor>org.greenplum.pxf.plugins.hdfs.AvroFileAccessor</accessor>
+            <resolver>org.greenplum.pxf.plugins.hdfs.AvroResolver</resolver>
+        </plugins>
+    </profile>
     <profile>
         <name>hdfs:avro</name>
         <description>This profile is suitable for using when reading Avro files (i.e

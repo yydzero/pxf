@@ -30,26 +30,18 @@ import org.apache.avro.io.DecoderFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
-import org.greenplum.pxf.api.UnsupportedTypeException;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
-import org.greenplum.pxf.api.utilities.ColumnDescriptor;
-import org.greenplum.pxf.plugins.hdfs.utilities.DataSchemaException;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.RecordkeyAdapter;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-
-import static org.greenplum.pxf.api.io.DataType.UNSUPPORTED_TYPE;
-import static org.greenplum.pxf.api.io.DataType.isArrayType;
 
 /**
  * Class AvroResolver handles deserialization of records that were serialized
@@ -83,23 +75,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
 
-        try {
-            if (isAvroFile()) {
-                schema = (Schema) context.getMetadata();
-            } else {
-                try (InputStream externalSchema = openExternalSchema()) {
-                    schema = (new Schema.Parser()).parse(externalSchema);
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize AvroResolver: " + e.getMessage(), e);
-        }
+        schema = (Schema) context.getMetadata();
 
         reader = new GenericDatumReader<>(schema);
-        // schema may be null when we are writing data to HDFS
-        if (schema != null) {
-            fields = schema.getFields();
-        }
+
+        fields = schema.getFields();
 
         collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
                 : context.getOption("COLLECTION_DELIM");
@@ -145,10 +125,9 @@ public class AvroResolver extends BasePlugin implements Resolver {
      *
      * @param record list of {@link OneField}
      * @return the constructed {@link OneRow}
-     * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
+    public OneRow setFields(List<OneField> record) {
         GenericRecord genericRecord = new GenericData.Record((Schema) context.getMetadata());
         for (int i = 0; i < record.size(); i++) {
             genericRecord.put(i, record.get(i).val);
@@ -404,32 +383,5 @@ public class AvroResolver extends BasePlugin implements Resolver {
 
         record.add(oneField);
         return 1;
-    }
-
-    /**
-     * Opens Avro schema based on DATA-SCHEMA parameter.
-     *
-     * @return InputStream of schema file
-     * @throws DataSchemaException if schema file could not be opened
-     */
-    InputStream openExternalSchema() {
-
-        String schemaName = context.getOption("DATA-SCHEMA");
-
-        /**
-         * Testing that the schema name was supplied by the user - schema is an
-         * optional properly.
-         */
-        if (schemaName == null) {
-            throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_INDICATED,
-                    this.getClass().getName());
-        }
-
-        /** Testing that the schema resource exists. */
-        if (this.getClass().getClassLoader().getResource(schemaName) == null) {
-            throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_ON_CLASSPATH, schemaName);
-        }
-        ClassLoader loader = this.getClass().getClassLoader();
-        return loader.getResourceAsStream(schemaName);
     }
 }

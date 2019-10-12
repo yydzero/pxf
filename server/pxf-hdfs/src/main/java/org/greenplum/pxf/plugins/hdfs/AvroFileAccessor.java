@@ -51,13 +51,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.greenplum.pxf.api.io.DataType.*;
+import static org.greenplum.pxf.api.io.DataType.UNSUPPORTED_TYPE;
+import static org.greenplum.pxf.api.io.DataType.isArrayType;
 
 /**
  * A PXF Accessor for reading Avro File records
  */
 public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     private static String COMMON_NAMESPACE = "public.avro";
+
     private AvroWrapper<GenericRecord> avroWrapper;
     private DataFileWriter<GenericRecord> writer;
     private long rowsWritten, totalRowsWritten;
@@ -71,37 +73,48 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     }
 
     /*
-     * Initializes a AvroFileAccessor that creates the job configuration and
-     * accesses the avro file to fetch the avro schema
+     * Initializes an AvroFileAccessor.
+     *
+     * We need schema to be read or generated before
+     * AvroResolver#initialize() is called so that
+     * AvroResolver#fields can be set.
+     *
+     * for READ:
+     * creates the job configuration and accesses the data
+     * source avro file or a user-provided path to an avro file
+     * to fetch the avro schema.
+     *
+     * for WRITE:
+     * We get the schema either from a user-provided path to an
+     * avro file or by generating it on the fly.
      */
-
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
-        rowsWritten = totalRowsWritten = 0;
-
-        // If we are writing to external source, there is no schema yet
-        if (context.getRequestType() == RequestContext.RequestType.WRITE_BRIDGE) {
-            return;
-        }
 
         // 1. Accessing the avro file through the "unsplittable" API just to get the schema.
         //    The splittable API (AvroInputFormat) which is the one we will be using to fetch
         //    the records, does not support getting the avro schema yet.
         try {
-            schema = getAvroSchema(configuration, context.getDataSource());
+            readOrGenerateAvroSchema();
         } catch (IOException e) {
             throw new RuntimeException("Failed to obtain Avro schema for " + context.getDataSource(), e);
         }
 
-        // 2. Pass the schema to the AvroInputFormat
+        // 2. Add schema to RequestContext's metadata to avoid computing it again in the resolver
+        requestContext.setMetadata(schema);
+    }
+
+    @Override
+    public boolean openForRead() throws Exception {
+        boolean ret = super.openForRead();
+        // Pass the schema to the AvroInputFormat
         AvroJob.setInputSchema(jobConf, schema);
 
-        // 3. The avroWrapper required for the iteration
+        // The avroWrapper required for the iteration
         avroWrapper = new AvroWrapper<>();
 
-        // 4. Add schema to RequestContext's metadata to avoid computing it again in the resolver
-        requestContext.setMetadata(schema);
+        return ret;
     }
 
     @Override
@@ -143,11 +156,6 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public boolean openForWrite() throws Exception {
-        // Read schema file, if given
-        String schemaFile = context.getOption("SCHEMA");
-        schema = (schemaFile != null) ? getAvroSchema(jobConf, schemaFile) :
-                generateAvroSchema(context.getTupleDescription());
-        context.setMetadata(schema);
         // make writer
         DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
         writer = new DataFileWriter<>(datumWriter);
@@ -158,6 +166,24 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
 
         return true;
     }
+
+    private void readOrGenerateAvroSchema() throws IOException {
+        String userProvidedSchemaFile = context.getOption("DATA-SCHEMA");
+        // user-provided schema trumps everything
+        if (userProvidedSchemaFile != null) {
+            schema = readAvroSchema(jobConf, userProvidedSchemaFile);
+            return;
+        }
+
+        // if we are writing we must generate the schema if there is none to read
+        if (context.getRequestType() == RequestContext.RequestType.WRITE_BRIDGE) {
+            schema = generateAvroSchema(context.getTupleDescription());
+            return;
+        }
+
+        // reading from external: get the schema from data source
+        schema = readAvroSchema(jobConf, context.getDataSource());
+}
 
     /**
      * Writes the next object.
@@ -197,18 +223,20 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      * @return the Avro schema
      * @throws IOException if I/O error occurred while accessing Avro schema file
      */
-    Schema getAvroSchema(Configuration conf, String dataSource)
+    Schema readAvroSchema(Configuration conf, String dataSource)
             throws IOException {
+        Schema schema;
         FsInput inStream = new FsInput(new Path(dataSource), conf);
         DatumReader<GenericRecord> dummyReader = new GenericDatumReader<>();
-        DataFileReader<GenericRecord> dummyFileReader = new DataFileReader<>(
-                inStream, dummyReader);
-        Schema schema = dummyFileReader.getSchema();
-        dummyFileReader.close();
+        // try-with-resources will take care of closing the readers
+        try (DataFileReader<GenericRecord> dummyFileReader = new DataFileReader<>(
+                inStream, dummyReader)) {
+            schema = dummyFileReader.getSchema();
+        }
         return schema;
     }
 
-    private Schema generateAvroSchema(List<ColumnDescriptor> tupleDescription) throws IOException {
+    Schema generateAvroSchema(List<ColumnDescriptor> tupleDescription) throws IOException {
         String colName;
         int colType;
 

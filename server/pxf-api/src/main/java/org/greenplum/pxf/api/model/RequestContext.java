@@ -38,12 +38,11 @@ import java.util.TreeMap;
  */
 public class RequestContext {
 
-    private RequestType requestType;
-
     /**
      * The request type can be used to later determine whether we
      * are in a read, write or fragmenter call.
      */
+    private RequestType requestType;
     public RequestType getRequestType() {
         return requestType;
     }
