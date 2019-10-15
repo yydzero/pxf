@@ -45,6 +45,8 @@ public abstract class ExternalTable extends Table {
 
     private String encoding;
 
+    private String externalDataSchema;
+
     public ExternalTable(String name, String[] fields, String path,
                          String format) {
         super(name, fields);
@@ -107,23 +109,27 @@ public abstract class ExternalTable extends Table {
         StringBuilder sb = new StringBuilder();
 
         if (getProfile() != null) {
-            appendParamter(sb, "PROFILE=" + getProfile());
+            appendParameter(sb, "PROFILE=" + getProfile());
         }
 
         if (getFragmenter() != null) {
-            appendParamter(sb, "FRAGMENTER=" + getFragmenter());
+            appendParameter(sb, "FRAGMENTER=" + getFragmenter());
         }
 
         if (getAccessor() != null) {
-            appendParamter(sb, "ACCESSOR=" + getAccessor());
+            appendParameter(sb, "ACCESSOR=" + getAccessor());
         }
 
         if (getResolver() != null) {
-            appendParamter(sb, "RESOLVER=" + getResolver());
+            appendParameter(sb, "RESOLVER=" + getResolver());
         }
 
         if (getDataSchema() != null) {
-            appendParamter(sb, "DATA-SCHEMA=" + getDataSchema());
+            appendParameter(sb, "DATA-SCHEMA=" + getDataSchema());
+        }
+
+        if (getExternalDataSchema() != null) {
+            appendParameter(sb, "SCHEMA=" + getExternalDataSchema());
         }
 
         String[] params = getUserParameters();
@@ -131,12 +137,12 @@ public abstract class ExternalTable extends Table {
         if (params != null) {
 
             for (int i = 0; i < params.length; i++) {
-                appendParamter(sb, params[i]);
+                appendParameter(sb, params[i]);
             }
         }
 
         if (getServer() != null) {
-            appendParamter(sb, getServer());
+            appendParameter(sb, getServer());
         }
 
         return sb.toString();
@@ -149,7 +155,7 @@ public abstract class ExternalTable extends Table {
      * @param sBuilder  {@link StringBuilder} to collect parameters
      * @param parameter to add to {@link StringBuilder}
      */
-    protected void appendParamter(StringBuilder sBuilder, String parameter) {
+    protected void appendParameter(StringBuilder sBuilder, String parameter) {
 
         // if not the first parameter, add '&'
         if (!sBuilder.toString().equals("")) {
@@ -354,5 +360,13 @@ public abstract class ExternalTable extends Table {
 
     public String getServer() {
         return server;
+    }
+
+    public String getExternalDataSchema() {
+        return externalDataSchema;
+    }
+
+    public void setExternalDataSchema(String externalDataSchema) {
+        this.externalDataSchema = externalDataSchema;
     }
 }

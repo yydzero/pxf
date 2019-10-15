@@ -23,7 +23,7 @@ public class WritableExternalTable extends ReadableExternalTable {
 		sb.append(super.getLocationParameters());
 
 		if (compressionCodec != null) {
-			appendParamter(sb, "COMPRESSION_CODEC=" + getCompressionCodec());
+			appendParameter(sb, "COMPRESSION_CODEC=" + getCompressionCodec());
 		}
 
 		return sb.toString();

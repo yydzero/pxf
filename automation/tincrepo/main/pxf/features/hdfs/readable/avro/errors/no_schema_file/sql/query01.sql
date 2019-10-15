@@ -12,8 +12,11 @@
 -- m/(ERROR|WARNING):.*javax.servlet.ServletException: java.lang.Exception:.*/
 -- s/javax.servlet.ServletException: //
 --
--- m/  Description  .*/
--- s/Description  .*/Description  DESCRIPTION/
+-- m/   description  .*/
+-- s/description  .*/Description  DESCRIPTION/
+--
+-- m/Failed to obtain Avro schema for hdfs:\/\/.*\/tmp\/pxf_automation_data\/avro\/avro_in_sequence_arrays.tbl/
+-- s/Failed to obtain Avro schema for hdfs:\/\/.*\/tmp\/pxf_automation_data\/avro\/avro_in_sequence_arrays.tbl/Failed to obtain Avro schema for hdfs \/tmp\/pxf_automation_data\/avro\/avro_in_sequence_arrays.tbl/
 --
 -- m/DETAIL/
 -- s/DETAIL/CONTEXT/

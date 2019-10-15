@@ -1,8 +1,9 @@
-package org.greenplum.pxf.automation.features.hdfs;
-
-import java.io.File;
+package org.greenplum.pxf.automation.features.avro;
 
 import org.greenplum.pxf.automation.components.cluster.PhdCluster;
+import org.greenplum.pxf.automation.datapreparer.CustomAvroPreparer;
+import org.greenplum.pxf.automation.features.BaseFeature;
+import org.greenplum.pxf.automation.fileformats.IAvroSchema;
 import org.greenplum.pxf.automation.structures.tables.basic.Table;
 import org.greenplum.pxf.automation.structures.tables.pxf.ReadableExternalTable;
 import org.greenplum.pxf.automation.utils.fileformats.FileFormatsUtils;
@@ -10,9 +11,7 @@ import org.greenplum.pxf.automation.utils.system.ProtocolUtils;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import org.greenplum.pxf.automation.fileformats.IAvroSchema;
-import org.greenplum.pxf.automation.features.BaseFeature;
-import org.greenplum.pxf.automation.datapreparer.CustomAvroPreparer;
+import java.io.File;
 
 /**
  * Collection of Test cases for PXF ability to read AvroFile or Avro serialized
@@ -36,8 +35,9 @@ public class HdfsReadableAvroTest extends BaseFeature {
     String avroComplexFileName = "complex";
     String avroComplexNullFileName = "complex_null";
     String avroInSequenceArraysFileName = "avro_in_sequence_arrays.tbl";
-    /** To be used for Avro Complex types */
-    String avroInSequenceComplexFileName = "avro_in_sequence_complex.tbl";
+    /**
+     * To be used for Avro Complex types
+     */
     String avroMultiBlockDir = "avro_multi/";
     String avroInSequenceArraysSchemaFile = "PXFCustomAvro.avsc";
     String avroInSequenceArraysSchemaFileWithSpaces = "PXF Custom Avro1.avsc";
@@ -59,13 +59,13 @@ public class HdfsReadableAvroTest extends BaseFeature {
         String newPath = "/tmp/publicstage/pxf";
         // copy schema file to cluster nodes, used for avro in sequence cases
         cluster.copyFileToNodes(new File(resourcePath
-                + avroInSequenceArraysSchemaFile).getAbsolutePath(), newPath,
+                        + avroInSequenceArraysSchemaFile).getAbsolutePath(), newPath,
                 true, false);
         cluster.copyFileToNodes(new File(resourcePath
-                + avroInSequenceArraysSchemaFileWithSpaces).getAbsolutePath(), newPath,
+                        + avroInSequenceArraysSchemaFileWithSpaces).getAbsolutePath(), newPath,
                 true, false);
         cluster.copyFileToNodes(new File(resourcePath
-                + avroInSequenceComplexSchemaFile).getAbsolutePath(), newPath,
+                        + avroInSequenceComplexSchemaFile).getAbsolutePath(), newPath,
                 true, false);
         // add new path to classpath file and restart PXF service
         cluster.addPathToPxfClassPath(newPath);
@@ -130,7 +130,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avrotest_simple");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroSimpleFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] { "name text", "age int" });
+        exTable.setFields(new String[]{"name text", "age int"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -150,14 +150,14 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avrotest_supported_primitive_types");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroTypesFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "type_int int",
                 "type_double float8",
                 "type_string text",
                 "type_float real",
                 "type_long bigint",
                 "type_bytes bytea",
-                "type_boolean bool" });
+                "type_boolean bool"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -176,7 +176,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avrotest_arrays");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroArrayFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "type_int int",
                 "type_int_array text",
                 "type_double float8",
@@ -190,7 +190,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "type_bytes bytea",
                 "type_bytes_array text",
                 "type_boolean bool",
-                "type_boolean_array text", });
+                "type_boolean_array text",});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -209,7 +209,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avrotest_complex");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroComplexFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "type_long bigint",
                 "type_string text",
                 "type_array text",
@@ -217,7 +217,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "type_map text",
                 "type_record text",
                 "type_enum text",
-                "type_fixed bytea" });
+                "type_fixed bytea"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -236,7 +236,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avrotest_null");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroComplexFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "type_long bigint",
                 "type_string text",
                 "type_array text",
@@ -244,7 +244,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "type_map text",
                 "type_record text",
                 "type_enum text",
-                "type_fixed bytea" });
+                "type_fixed bytea"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -262,33 +262,33 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avrotest_complex_null");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroComplexNullFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] {
-            "sourcetimestamp bigint",
-            "sourceagent varchar(200)",
-            "sourceip_address varchar(20)",
-            "meetmeuser_id bigint",
-            "meetmeinterested_uid bigint",
-            "meetmevote varchar(4)",
-            "meetmeis_match int",
-            "meetmenetwork_score bigint",
-            "meetmeresponsiveness_score bigint",
-            "meetmesession_id varchar(32)",
-            "meetmefriends int",
-            "meetmeprevious_view varchar(32)",
-            "meetmemodel bigint",
-            "meetmescore float8",
-            "meetmemethod int",
-            "meetmecontributions varchar(120)",
-            "meetmeclicksource varchar(20)",
-            "meetmeclickaction varchar(20)",
-            "meetmeprofileview_ts bigint",
-            "meetmeplatform varchar(20)",
-            "metatopic_name varchar(100)",
-            "metarequest_user_agent varchar(200)",
-            "metarequest_session_id varchar(50)",
-            "metarequest_id text",
-            "metakvpairs varchar(1000)",
-            "meta_handlers varchar(1000)"});
+        exTable.setFields(new String[]{
+                "sourcetimestamp bigint",
+                "sourceagent varchar(200)",
+                "sourceip_address varchar(20)",
+                "meetmeuser_id bigint",
+                "meetmeinterested_uid bigint",
+                "meetmevote varchar(4)",
+                "meetmeis_match int",
+                "meetmenetwork_score bigint",
+                "meetmeresponsiveness_score bigint",
+                "meetmesession_id varchar(32)",
+                "meetmefriends int",
+                "meetmeprevious_view varchar(32)",
+                "meetmemodel bigint",
+                "meetmescore float8",
+                "meetmemethod int",
+                "meetmecontributions varchar(120)",
+                "meetmeclicksource varchar(20)",
+                "meetmeclickaction varchar(20)",
+                "meetmeprofileview_ts bigint",
+                "meetmeplatform varchar(20)",
+                "metatopic_name varchar(100)",
+                "metarequest_user_agent varchar(200)",
+                "metarequest_session_id varchar(50)",
+                "metarequest_id text",
+                "metakvpairs varchar(1000)",
+                "meta_handlers varchar(1000)"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -305,7 +305,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
     public void avroInSequenceFileArrays() throws Exception {
 
         exTable.setName("avro_in_seq_arrays");
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "num  text",
                 "int1  integer",
                 "int2  integer",
@@ -315,15 +315,15 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "dub    double precision",
                 "fts   text",
                 "ft   real",
-                "lngs  text",
+                "longs  text",
                 "lng   bigint",
                 "bls   text",
                 "bl   boolean",
-                "bts   bytea", });
+                "bts   bytea",});
         exTable.setPath(hdfsPath + avroInSequenceArraysFileName);
 
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":AvroSequenceFile");
-        exTable.setDataSchema(avroInSequenceArraysSchemaFile);
+        exTable.setExternalDataSchema(avroInSequenceArraysSchemaFile);
         exTable.setFormatter("pxfwritable_import");
 
         gpdb.createTableAndVerify(exTable);
@@ -341,7 +341,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
     public void avroFileNameWithSpaces() throws Exception {
 
         exTable.setName("avro_in_seq_arrays");
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "num  text",
                 "int1  integer",
                 "int2  integer",
@@ -351,15 +351,15 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "dub    double precision",
                 "fts   text",
                 "ft   real",
-                "lngs  text",
+                "longs  text",
                 "lng   bigint",
                 "bls   text",
                 "bl   boolean",
-                "bts   bytea", });
+                "bts   bytea",});
         exTable.setPath(hdfsPath + avroInSequenceArraysFileName);
 
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":AvroSequenceFile");
-        exTable.setDataSchema(avroInSequenceArraysSchemaFileWithSpaces);
+        exTable.setExternalDataSchema(avroInSequenceArraysSchemaFileWithSpaces);
         exTable.setFormatter("pxfwritable_import");
 
         gpdb.createTableAndVerify(exTable);
@@ -388,7 +388,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
         }
 
         exTable.setName("avro_multi");
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "num  text",
                 "int1  integer",
                 "int2  integer",
@@ -398,11 +398,11 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "dub    double precision",
                 "fts   text",
                 "ft   real",
-                "lngs  text",
+                "longs  text",
                 "lng   bigint",
                 "bls   text",
                 "bl   boolean",
-                "bts   bytea", });
+                "bts   bytea",});
         exTable.setPath(hdfsPath + avroMultiBlockDir);
 
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
@@ -424,22 +424,16 @@ public class HdfsReadableAvroTest extends BaseFeature {
         String schemaName = resourcePath + avroInSequenceArraysSchemaFile;
         Table dataTable = new Table("dataTable", null);
 
-        String[] codecs = { "snappy", "deflate" };
+        String[] codecs = {"snappy", "deflate"};
         for (String codec : codecs) {
             String fileName = hdfsPath + codec + SUFFIX_AVRO;
 
-            // TODO: nhorn - 18 SEP 15 - snappy files cannot be generated on centos5,
-            // so we use a pre-generated file for this test.
-            if (codec.equals("snappy")) {
-                hdfs.copyFromLocal(resourcePath + codec + SUFFIX_AVRO, fileName);
-            } else {
-                Object[] data = FileFormatsUtils.prepareData(
-                        new CustomAvroPreparer(schemaName), 50, dataTable);
-                hdfs.writeAvroFile(fileName, schemaName, codec,
-                        (IAvroSchema[]) data);
-            }
+            Object[] data = FileFormatsUtils.prepareData(
+                    new CustomAvroPreparer(schemaName), 50, dataTable);
+            hdfs.writeAvroFile(fileName, schemaName, codec,
+                    (IAvroSchema[]) data);
             exTable.setName("avro_codec");
-            exTable.setFields(new String[] {
+            exTable.setFields(new String[]{
                     "num  text",
                     "int1  integer",
                     "int2  integer",
@@ -449,11 +443,11 @@ public class HdfsReadableAvroTest extends BaseFeature {
                     "dub    double precision",
                     "fts   text",
                     "ft   real",
-                    "lngs  text",
+                    "longs  text",
                     "lng   bigint",
                     "bls   text",
                     "bl   boolean",
-                    "bts   bytea", });
+                    "bts   bytea",});
             exTable.setPath(fileName);
 
             exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
@@ -477,10 +471,10 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avro_extra_field");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroSimpleFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "name text",
                 "age int",
-                "alive boolean" });
+                "alive boolean"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -499,7 +493,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
         exTable.setName("avro_missing_field");
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":avro");
         exTable.setPath(hdfsPath + avroSimpleFileName + SUFFIX_AVRO);
-        exTable.setFields(new String[] { "name text" });
+        exTable.setFields(new String[]{"name text"});
 
         gpdb.createTableAndVerify(exTable);
 
@@ -515,7 +509,7 @@ public class HdfsReadableAvroTest extends BaseFeature {
     @Test(groups = {"features", "gpdb", "hcfs", "security"})
     public void noSchemaFile() throws Exception {
         exTable.setName("avro_in_seq_no_schema");
-        exTable.setFields(new String[] {
+        exTable.setFields(new String[]{
                 "num  text",
                 "int1  integer",
                 "int2  integer",
@@ -525,15 +519,15 @@ public class HdfsReadableAvroTest extends BaseFeature {
                 "dub    double precision",
                 "fts   text",
                 "ft   real",
-                "lngs  text",
-                "lng   bigint",
+                "longs  text",
+                "long   bigint",
                 "bls   text",
                 "bl   boolean",
-                "bts   bytea", });
+                "bts   bytea",});
         exTable.setPath(hdfsPath + avroInSequenceArraysFileName);
 
         exTable.setProfile(ProtocolUtils.getProtocol().value() + ":AvroSequenceFile");
-        exTable.setDataSchema("i_do_not_exist");
+        exTable.setExternalDataSchema("i_do_not_exist");
         exTable.setFormatter("pxfwritable_import");
 
         gpdb.createTableAndVerify(exTable);

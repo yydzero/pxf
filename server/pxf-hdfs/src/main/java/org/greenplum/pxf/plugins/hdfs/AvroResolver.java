@@ -34,6 +34,7 @@ import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
+import org.greenplum.pxf.plugins.hdfs.utilities.AvroUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.RecordkeyAdapter;
 
@@ -60,7 +61,6 @@ public class AvroResolver extends BasePlugin implements Resolver {
     private String collectionDelim;
     private String mapkeyDelim;
     private String recordkeyDelim;
-    private Schema schema;
 
     /*
      * Initializes an AvroResolver. Initializes Avro data structure: the Avro
@@ -75,7 +75,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
 
-        schema = (Schema) context.getMetadata();
+        Schema schema = AvroUtilities.obtainSchema(context, configuration);
 
         reader = new GenericDatumReader<>(schema);
 
@@ -136,17 +136,6 @@ public class AvroResolver extends BasePlugin implements Resolver {
     }
 
     /**
-     * Tests if the Avro records are residing inside an AVRO file. If the Avro
-     * records are not residing inside an AVRO file, then they may reside inside
-     * a sequence file, regular file, ...
-     *
-     * @return whether the resource is an Avro file
-     */
-    boolean isAvroFile() {
-        return context.getAccessor().toLowerCase().contains("avro");
-    }
-
-    /**
      * The record can arrive from one out of two different sources: a sequence
      * file or an AVRO file. If it comes from an AVRO file, then it was already
      * obtained as a {@link GenericRecord} when it was fetched from the
@@ -171,6 +160,17 @@ public class AvroResolver extends BasePlugin implements Resolver {
             decoder = DecoderFactory.get().binaryDecoder(bytes, decoder);
             return reader.read(reuseRecord, decoder);
         }
+    }
+
+    /**
+     * Tests if the Avro records are residing inside an AVRO file. If the Avro
+     * records are not residing inside an AVRO file, then they may reside inside
+     * a sequence file, regular file, ...
+     *
+     * @return whether the resource is an Avro file
+     */
+    private boolean isAvroFile() {
+        return context.getAccessor().toLowerCase().contains("avro");
     }
 
     /**
