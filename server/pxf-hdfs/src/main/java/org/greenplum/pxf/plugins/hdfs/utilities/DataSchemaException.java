@@ -31,8 +31,9 @@ public class DataSchemaException extends RuntimeException {
 		SCHEMA_NOT_INDICATED("%s requires a data schema to be specified in the "+
 							 "pxf uri, but none was found. Please supply it" +
 							 "using the DATA-SCHEMA option "),
-		SCHEMA_NOT_ON_CLASSPATH("schema resource \"%s\" is not located on the classpath");
-		
+		SCHEMA_NOT_ON_CLASSPATH("schema resource \"%s\" is not located on the classpath"),
+		SCHEMA_NOT_FOUND("schema resource \"%s\" is not located on the classpath nor is it a full path to a file");
+
         String format;
 
         MessageFmt(String format) {

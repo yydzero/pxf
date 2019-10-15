@@ -19,14 +19,47 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.greenplum.pxf.api.io.DataType.UNSUPPORTED_TYPE;
 import static org.greenplum.pxf.api.io.DataType.isArrayType;
 
-public class AvroUtilities {
+public final class AvroUtilities {
     private static String COMMON_NAMESPACE = "public.avro";
+
+    // UrlProvider and FsProvider are interfaces just used for testing/mocking
+    private static UrlProvider urlProvider;
+    public static void setUrlProvider(UrlProvider p) {
+        urlProvider = p;
+    }
+    private static UrlProvider getUrlProvider() {
+        if (urlProvider == null) {
+            urlProvider = (clazz, filename) -> clazz.getClassLoader().getResource(filename);
+        }
+        return urlProvider;
+    }
+    private static FsProvider fsProvider;
+    public static void setFsProvider(FsProvider p) {
+        fsProvider = p;
+    }
+    private static FsProvider getFsProvider() {
+        if (fsProvider == null) {
+            fsProvider = (c) -> {
+                try {
+                    return FileSystem.get(c);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return null;
+            };
+        }
+        return fsProvider;
+    }
+
 
     private static Schema readOrGenerateAvroSchema(RequestContext context, Configuration configuration) throws IOException {
         String userProvidedSchemaFile = context.getOption("SCHEMA");
@@ -37,7 +70,7 @@ public class AvroUtilities {
                     return (new Schema.Parser()).parse(externalSchema);
                 }
             }
-            return readAvroSchema(configuration, userProvidedSchemaFile);
+            return readAvroSchemaFromAvroBinary(configuration, userProvidedSchemaFile);
         }
 
         // if we are writing we must generate the schema if there is none to read
@@ -46,32 +79,21 @@ public class AvroUtilities {
         }
 
         // reading from external: get the schema from data source
-        return readAvroSchema(configuration, context.getDataSource());
+        return readAvroSchemaFromAvroBinary(configuration, context.getDataSource());
     }
 
     private static InputStream getJsonSchemaStream(Configuration configuration, String schemaName) throws IOException {
 
         // search HDFS first
-        FileSystem fs = FileSystem.get(configuration);
+        FileSystem fs = getFsProvider().getFilesystem(configuration);
         Path path = new Path(schemaName);
         if (fs.exists(path)) {
             return new FSDataInputStream(fs.open(path));
         }
 
-        // search full-path next
-        File file = new File(schemaName);
-        if (file.exists()) {
-            return new FileInputStream(file);
-        }
+        File file = searchForFile(schemaName);
 
-        // check on classpath last
-        ClassLoader loader = AvroUtilities.class.getClassLoader();
-
-        /** Testing that the schema resource exists. */
-        if (loader.getResource(schemaName) == null) {
-            throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_ON_CLASSPATH, schemaName);
-        }
-        return loader.getResourceAsStream(schemaName);
+        return new FileInputStream(file);
     }
 
     /**
@@ -84,33 +106,22 @@ public class AvroUtilities {
      * @return the Avro schema
      * @throws IOException if I/O error occurred while accessing Avro schema file
      */
-    private static Schema readAvroSchema(Configuration conf, String dataSource) throws IOException {
+    private static Schema readAvroSchemaFromAvroBinary(Configuration conf, String dataSource) throws IOException {
         final Path path = new Path(dataSource);
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         DataFileReader<GenericRecord> fileReader = null;
 
+        FileSystem fs = getFsProvider().getFilesystem(conf);
+
         try {
             // check inside HDFS first
-            if (FileSystem.get(conf).exists(path)) {
+            if (fs.exists(path)) {
                 FsInput inStream = new FsInput(path, conf);
                 fileReader = new DataFileReader<>(inStream, datumReader);
                 return fileReader.getSchema();
             }
 
-            /*
-             * if user provided a full path, use that.
-             * otherwise we need to check classpath
-            */
-            File file = new File(dataSource);
-            if (!file.exists()) {
-                ClassLoader loader = AvroUtilities.class.getClassLoader();
-
-                /** Testing that the schema resource exists. */
-                if (loader.getResource(dataSource) == null) {
-                    throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_ON_CLASSPATH, dataSource);
-                }
-                file = new File(loader.getResource(dataSource).getPath());
-            }
+            File file = searchForFile(dataSource);
 
             fileReader = new DataFileReader<>(file, datumReader);
             return fileReader.getSchema();
@@ -119,6 +130,24 @@ public class AvroUtilities {
                 fileReader.close();
             }
         }
+    }
+
+    /*
+     * if user provided a full path, use that.
+     * otherwise we need to check classpath
+     */
+    private static File searchForFile(String schemaName) throws UnsupportedEncodingException {
+        File file = new File(schemaName);
+        if (!file.exists()) {
+            URL url = getUrlProvider().getUrlFromPath(AvroUtilities.class, schemaName);
+
+            /** Testing that the schema resource exists. */
+            if (url == null) {
+                throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_FOUND, schemaName);
+            }
+            file = new File(URLDecoder.decode(url.getPath(), "UTF-8"));
+        }
+        return file;
     }
 
     private static Schema generateAvroSchema(List<ColumnDescriptor> tupleDescription) throws IOException {
@@ -221,10 +250,18 @@ public class AvroUtilities {
         }
         try {
             schema = readOrGenerateAvroSchema(context, configuration);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException("Failed to obtain Avro schema for " + context.getDataSource(), e);
         }
         context.setMetadata(schema);
         return schema;
+    }
+
+    public interface UrlProvider {
+        URL getUrlFromPath(Class<?> clazz, String filename);
+    }
+
+    public interface FsProvider {
+        FileSystem getFilesystem(Configuration configuration);
     }
 }
