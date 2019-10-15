@@ -756,7 +756,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageFileResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StringPassResolver</resolver>
         </plugins>
     </profile>
     <profile>
@@ -765,7 +765,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageFileResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StringPassResolver</resolver>
         </plugins>
         <protocol>s3a</protocol>
         <optionMappings>
@@ -779,7 +779,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageFileResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StringPassResolver</resolver>
         </plugins>
         <protocol>adl</protocol>
     </profile>
@@ -789,7 +789,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageFileResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StringPassResolver</resolver>
         </plugins>
         <protocol>gs</protocol>
     </profile>

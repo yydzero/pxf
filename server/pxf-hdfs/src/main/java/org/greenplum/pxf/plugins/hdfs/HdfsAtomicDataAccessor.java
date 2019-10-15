@@ -50,6 +50,7 @@ import java.net.URI;
 public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Accessor {
     InputStream inputStream;
     private FileSplit fileSplit;
+    protected URI uri;
 
     @Override
     public void initialize(RequestContext requestContext) {
@@ -70,7 +71,7 @@ public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Acces
             return false;
         }
 
-        URI uri = URI.create(context.getDataSource());
+        uri = URI.create(context.getDataSource());
         // input data stream, FileSystem.get actually
         // returns an FSDataInputStream
         FileSystem fs = FileSystem.get(uri, configuration);
