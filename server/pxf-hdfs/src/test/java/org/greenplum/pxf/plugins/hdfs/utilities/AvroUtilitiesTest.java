@@ -3,10 +3,13 @@ package org.greenplum.pxf.plugins.hdfs.utilities;
 import org.apache.avro.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.greenplum.pxf.api.model.RequestContext;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mock;
+import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -18,16 +21,29 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@RunWith(MockitoJUnitRunner.class)
 public class AvroUtilitiesTest {
+
+    private static String pathString = "/path/to/file";
+    private static Path path = new Path(pathString);
+
     private RequestContext context;
     private Schema schema;
     private Schema testSchema;
     private String avroDirectory;
     private Configuration configuration;
+
+    @Mock
+    private AvroUtilities.UrlProvider mockUrlProvider;
+    @Mock
+    private AvroUtilities.FsProvider mockFsProvider;
+    @Mock
+    private FileSystem mockFileSystem;
+
+    private AvroUtilities avroUtilities;
 
     @Before
     public void setup() {
@@ -39,6 +55,9 @@ public class AvroUtilitiesTest {
         context.setDataSource(avroDirectory + "test.avro");
 
         testSchema = generateTestSchema();
+        avroUtilities = new AvroUtilities(mockUrlProvider, mockFsProvider);
+        when(mockFsProvider.getFilesystem(configuration)).thenReturn(mockFileSystem);
+
     }
 
     /* READ PATH */
@@ -46,7 +65,7 @@ public class AvroUtilitiesTest {
     @Test
     public void testObtainSchemaOnRead() {
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "example_schema");
     }
@@ -57,7 +76,7 @@ public class AvroUtilitiesTest {
 
         context.addOption("SCHEMA", avroDirectory + "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
@@ -67,81 +86,64 @@ public class AvroUtilitiesTest {
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
         context.addOption("SCHEMA", avroDirectory + "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test
     public void testObtainSchemaOnReadWithUserProvidedSchemaLocalFile() throws IOException {
-        AvroUtilities.FsProvider provider = mock(AvroUtilities.FsProvider.class);
-        FileSystem mockFileSystem = mock(FileSystem.class);
-        when(mockFileSystem.exists(any())).thenReturn(false);
-        when(provider.getFilesystem(any())).thenReturn(mockFileSystem);
-        AvroUtilities.setFsProvider(provider);
-
+        when(mockFileSystem.exists(path)).thenReturn(false);
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
-
         context.addOption("SCHEMA", avroDirectory + "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
+
+        verify(mockFileSystem).exists(path);
     }
 
     @Test
-    public void testObtainSchemaOnReadWithUserProvidedSchemaJsonLocalFile() throws IOException {
-        AvroUtilities.FsProvider provider = mock(AvroUtilities.FsProvider.class);
-        FileSystem mockFileSystem = mock(FileSystem.class);
-        when(mockFileSystem.exists(any())).thenReturn(false);
-        when(provider.getFilesystem(any())).thenReturn(mockFileSystem);
-        AvroUtilities.setFsProvider(provider);
-
+    public void testObtainSchema_OnRead_WithUserProvidedSchema_Json_LocalFile() throws IOException {
+        when(mockFileSystem.exists(path)).thenReturn(false);
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
         context.addOption("SCHEMA", avroDirectory + "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test
-    public void testObtainSchemaOnReadWhenUserProvidedSchemaOnClasspath() throws MalformedURLException {
-        AvroUtilities.UrlProvider provider = mock(AvroUtilities.UrlProvider.class);
-        when(provider.getUrlFromPath(any(), any())).thenReturn(new URL("file://" + avroDirectory + "user-provided.avro"));
-        AvroUtilities.setUrlProvider(provider);
-
+    public void testObtainSchema_OnRead_WithUserProvidedSchema_Binary_OnClasspath() throws MalformedURLException {
+        when(mockUrlProvider.getUrlFromPath(pathString)).thenReturn(new URL("file://" + avroDirectory + "user-provided.avro"));
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
-
         context.addOption("SCHEMA", "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test
-    public void testObtainSchemaOnReadWhenUserProvidedJsonSchemaOnClasspath() throws MalformedURLException {
-        AvroUtilities.UrlProvider provider = mock(AvroUtilities.UrlProvider.class);
-        when(provider.getUrlFromPath(any(), any())).thenReturn(new URL("file://" + avroDirectory + "user-provided.avsc"));
-        AvroUtilities.setUrlProvider(provider);
-
+    public void testObtainSchema_OnRead_WithUserProvidedSchema_Json_OnClasspath() throws MalformedURLException {
+        when(mockUrlProvider.getUrlFromPath(pathString)).thenReturn(new URL("file://" + avroDirectory + "user-provided.avsc"));
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
-
         context.addOption("SCHEMA", "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test(expected = DataSchemaException.class)
-    public void testObtainSchemaOnReadWhenUserProvidedSchemaNotOnClasspath() {
+    public void testObtainSchema_OnRead_WithUserProvidedSchema_Binary_NotOnClasspath() {
         context.setRequestType(RequestContext.RequestType.READ_BRIDGE);
 
         context.addOption("SCHEMA", "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
     }
 
     @Test(expected = DataSchemaException.class)
@@ -150,7 +152,7 @@ public class AvroUtilitiesTest {
 
         context.addOption("SCHEMA", "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
     }
 
 
@@ -161,7 +163,7 @@ public class AvroUtilitiesTest {
         context.setTupleDescription(AvroTypeConverter.getColumnDescriptorsFromSchema(testSchema));
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifyGeneratedSchema(schema);
     }
@@ -172,7 +174,7 @@ public class AvroUtilitiesTest {
         context.addOption("SCHEMA", avroDirectory + "user-provided.avro");
         context.setDataSource(avroDirectory);
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
@@ -183,96 +185,68 @@ public class AvroUtilitiesTest {
         context.addOption("SCHEMA", avroDirectory + "user-provided.avsc");
         context.setDataSource(avroDirectory);
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test
     public void testObtainSchemaOnWriteWithUserProvidedSchemaLocalFile() throws IOException {
-        AvroUtilities.FsProvider provider = mock(AvroUtilities.FsProvider.class);
-        FileSystem mockFileSystem = mock(FileSystem.class);
-        when(mockFileSystem.exists(any())).thenReturn(false);
-        when(provider.getFilesystem(any())).thenReturn(mockFileSystem);
-        AvroUtilities.setFsProvider(provider);
-
+        when(mockFileSystem.exists(path)).thenReturn(false);
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
-
         context.addOption("SCHEMA", avroDirectory + "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test
     public void testObtainSchemaOnWriteWithUserProvidedSchemaJsonLocalFile() throws IOException {
-        AvroUtilities.FsProvider provider = mock(AvroUtilities.FsProvider.class);
-        FileSystem mockFileSystem = mock(FileSystem.class);
-        when(mockFileSystem.exists(any())).thenReturn(false);
-        when(provider.getFilesystem(any())).thenReturn(mockFileSystem);
-        AvroUtilities.setFsProvider(provider);
-
+        when(mockFileSystem.exists(path)).thenReturn(false);
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
         context.addOption("SCHEMA", avroDirectory + "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
-
     @Test
     public void testObtainSchemaOnWriteWhenUserProvidedSchemaOnClasspath() throws MalformedURLException {
-        AvroUtilities.UrlProvider provider = mock(AvroUtilities.UrlProvider.class);
-        when(provider.getUrlFromPath(any(), any())).thenReturn(new URL("file://" + avroDirectory + "user-provided.avro"));
-        AvroUtilities.setUrlProvider(provider);
-
+        when(mockUrlProvider.getUrlFromPath(pathString)).thenReturn(new URL("file://" + avroDirectory + "user-provided.avro"));
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
-
         context.addOption("SCHEMA", "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
 
     @Test
     public void testObtainSchemaOnWriteWhenUserProvidedJsonSchemaOnClasspath() throws MalformedURLException {
-        AvroUtilities.UrlProvider provider = mock(AvroUtilities.UrlProvider.class);
-        when(provider.getUrlFromPath(any(), any())).thenReturn(new URL("file://" + avroDirectory + "user-provided.avsc"));
-        AvroUtilities.setUrlProvider(provider);
-
+        when(mockUrlProvider.getUrlFromPath(pathString)).thenReturn(new URL("file://" + avroDirectory + "user-provided.avsc"));
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
-
         context.addOption("SCHEMA", "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
 
         verifySchema(schema, "user_provided_schema");
     }
     @Test(expected = DataSchemaException.class)
     public void testObtainSchemaOnWriteWhenUserProvidedSchemaNotOnClasspath() {
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
-
         context.addOption("SCHEMA", "user-provided.avro");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
+        schema = avroUtilities.obtainSchema(context, configuration);
     }
 
     @Test(expected = DataSchemaException.class)
     public void testObtainSchemaOnWriteWhenUserProvidedSchemaJsonNotOnClasspath() {
         context.setRequestType(RequestContext.RequestType.WRITE_BRIDGE);
-
         context.addOption("SCHEMA", "user-provided.avsc");
 
-        schema = AvroUtilities.obtainSchema(context, configuration);
-    }
-
-    @After
-    public void tearDown() {
-        AvroUtilities.setUrlProvider(null);
-        AvroUtilities.setFsProvider(null);
+        schema = avroUtilities.obtainSchema(context, configuration);
     }
 
     /**
@@ -280,7 +254,7 @@ public class AvroUtilitiesTest {
      *
      * @param schema
      */
-    private static void verifySchema(Schema schema, String name) {
+    private void verifySchema(Schema schema, String name) {
         assertNotNull(schema);
         assertEquals(Schema.Type.RECORD, schema.getType());
         assertEquals(name, schema.getName());
@@ -302,7 +276,7 @@ public class AvroUtilitiesTest {
      *
      * @param schema
      */
-    private static void verifyGeneratedSchema(Schema schema) {
+    private void verifyGeneratedSchema(Schema schema) {
         assertNotNull(schema);
         assertEquals(schema.getType(), Schema.Type.RECORD);
         Map<String, String> fieldToType = new HashMap<String, String>() {{

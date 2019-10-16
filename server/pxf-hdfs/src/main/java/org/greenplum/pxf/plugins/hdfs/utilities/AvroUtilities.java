@@ -28,40 +28,47 @@ import java.util.List;
 import static org.greenplum.pxf.api.io.DataType.UNSUPPORTED_TYPE;
 import static org.greenplum.pxf.api.io.DataType.isArrayType;
 
-public final class AvroUtilities {
+public class AvroUtilities {
     private static String COMMON_NAMESPACE = "public.avro";
 
+    // default constructor
+    private AvroUtilities() {
+        urlProvider = (filename) -> AvroUtilities.class.getClassLoader().getResource(filename);
+        fsProvider = (c) -> {
+            try {
+                return FileSystem.get(c);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        };
+    }
+
+    public interface UrlProvider {
+        URL getUrlFromPath(String filename);
+    }
+
+    public interface FsProvider {
+        FileSystem getFilesystem(Configuration configuration);
+    }
+
+    private static AvroUtilities instance = new AvroUtilities();
+
+    // constructor for use in test
+    AvroUtilities(UrlProvider urlProvider, FsProvider fsProvider) {
+        this.urlProvider = urlProvider;
+        this.fsProvider = fsProvider;
+    }
+
+    public static AvroUtilities getInstance() {
+        return instance;
+    }
+
     // UrlProvider and FsProvider are interfaces just used for testing/mocking
-    private static UrlProvider urlProvider;
-    public static void setUrlProvider(UrlProvider p) {
-        urlProvider = p;
-    }
-    private static UrlProvider getUrlProvider() {
-        if (urlProvider == null) {
-            urlProvider = (clazz, filename) -> clazz.getClassLoader().getResource(filename);
-        }
-        return urlProvider;
-    }
-    private static FsProvider fsProvider;
-    public static void setFsProvider(FsProvider p) {
-        fsProvider = p;
-    }
-    private static FsProvider getFsProvider() {
-        if (fsProvider == null) {
-            fsProvider = (c) -> {
-                try {
-                    return FileSystem.get(c);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                return null;
-            };
-        }
-        return fsProvider;
-    }
+    private UrlProvider urlProvider;
+    private FsProvider fsProvider;
 
-
-    private static Schema readOrGenerateAvroSchema(RequestContext context, Configuration configuration) throws IOException {
+    private Schema readOrGenerateAvroSchema(RequestContext context, Configuration configuration) throws IOException {
         String userProvidedSchemaFile = context.getOption("SCHEMA");
         // user-provided schema trumps everything
         if (userProvidedSchemaFile != null) {
@@ -82,10 +89,10 @@ public final class AvroUtilities {
         return readAvroSchemaFromAvroBinary(configuration, context.getDataSource());
     }
 
-    private static InputStream getJsonSchemaStream(Configuration configuration, String schemaName) throws IOException {
+    private InputStream getJsonSchemaStream(Configuration configuration, String schemaName) throws IOException {
 
         // search HDFS first
-        FileSystem fs = getFsProvider().getFilesystem(configuration);
+        FileSystem fs = fsProvider.getFilesystem(configuration);
         Path path = new Path(schemaName);
         if (fs.exists(path)) {
             return new FSDataInputStream(fs.open(path));
@@ -106,12 +113,12 @@ public final class AvroUtilities {
      * @return the Avro schema
      * @throws IOException if I/O error occurred while accessing Avro schema file
      */
-    private static Schema readAvroSchemaFromAvroBinary(Configuration conf, String dataSource) throws IOException {
+    private Schema readAvroSchemaFromAvroBinary(Configuration conf, String dataSource) throws IOException {
         final Path path = new Path(dataSource);
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<>();
         DataFileReader<GenericRecord> fileReader = null;
 
-        FileSystem fs = getFsProvider().getFilesystem(conf);
+        FileSystem fs = fsProvider.getFilesystem(conf);
 
         try {
             // check inside HDFS first
@@ -136,10 +143,10 @@ public final class AvroUtilities {
      * if user provided a full path, use that.
      * otherwise we need to check classpath
      */
-    private static File searchForFile(String schemaName) throws UnsupportedEncodingException {
+    private File searchForFile(String schemaName) throws UnsupportedEncodingException {
         File file = new File(schemaName);
         if (!file.exists()) {
-            URL url = getUrlProvider().getUrlFromPath(AvroUtilities.class, schemaName);
+            URL url = urlProvider.getUrlFromPath(schemaName);
 
             /** Testing that the schema resource exists. */
             if (url == null) {
@@ -242,7 +249,7 @@ public final class AvroUtilities {
      * @param configuration
      * @return
      */
-    public static Schema obtainSchema(RequestContext context, Configuration configuration) {
+    public Schema obtainSchema(RequestContext context, Configuration configuration) {
         Schema schema = (Schema) context.getMetadata();
 
         if (schema != null) {
@@ -257,11 +264,5 @@ public final class AvroUtilities {
         return schema;
     }
 
-    public interface UrlProvider {
-        URL getUrlFromPath(Class<?> clazz, String filename);
-    }
 
-    public interface FsProvider {
-        FileSystem getFilesystem(Configuration configuration);
-    }
 }

@@ -75,7 +75,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
 
-        Schema schema = AvroUtilities.obtainSchema(context, configuration);
+        Schema schema = AvroUtilities.getInstance().obtainSchema(context, configuration);
 
         reader = new GenericDatumReader<>(schema);
 
