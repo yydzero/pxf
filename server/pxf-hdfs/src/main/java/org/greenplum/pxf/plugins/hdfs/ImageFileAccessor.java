@@ -2,6 +2,7 @@ package org.greenplum.pxf.plugins.hdfs;
 
 
 import org.greenplum.pxf.api.OneRow;
+import org.greenplum.pxf.api.model.GreenplumCSV;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -44,12 +45,13 @@ public class ImageFileAccessor extends HdfsAtomicDataAccessor {
 
         Path path = Paths.get(uri.getPath());
 
-        sb.append(uri.toString())
-                .append(",")
-                .append(path.getParent().getFileName())
-                .append(",")
-                .append(path.getFileName().toString())
-                .append(",\"{");
+        sb.append(context.getGreenplumCSV().toCsvField(uri.toString(), true, true, true))
+                .append(context.getGreenplumCSV().getDelimiter())
+                .append(context.getGreenplumCSV().toCsvField(path.getParent().getFileName().toString(), true, true, true))
+                .append(context.getGreenplumCSV().getDelimiter())
+                .append(context.getGreenplumCSV().toCsvField(path.getFileName().toString(), true, true, true))
+                .append(context.getGreenplumCSV().getDelimiter())
+                .append("\"{");
 
         for (int i = 0; i < h; i++) {
             if (i > 0) sb.append(",");
