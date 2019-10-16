@@ -1,12 +1,15 @@
 package org.greenplum.pxf.plugins.hdfs;
 
+
 import org.greenplum.pxf.api.OneRow;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 
 public class ImageFileAccessor extends HdfsAtomicDataAccessor {
 
@@ -15,6 +18,15 @@ public class ImageFileAccessor extends HdfsAtomicDataAccessor {
         /* check if working segment */
         if (super.readNextObject() == null) {
             return null;
+        }
+
+        Iterator readers = ImageIO.getImageReadersByFormatName("JPEG");
+        ImageReader reader = null;
+        while (readers.hasNext()) {
+            reader = (ImageReader) readers.next();
+            if (reader.canReadRaster()) {
+                break;
+            }
         }
 
         BufferedImage image = ImageIO.read(inputStream);
