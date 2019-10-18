@@ -12,4 +12,44 @@
         <name>fs.s3a.fast.upload</name>
         <value>true</value>
     </property>
+    <property>
+        <name>fs.s3a.fast.buffer.size</name>
+        <value>1048576</value>
+    </property>
+    <property>
+        <name>fs.s3a.fast.upload.buffer</name>
+        <value>array</value>
+    </property>
+    <property>
+        <name>fs.s3a.multipart.size</name>
+        <value>10M</value>
+    </property>
+    <property>
+        <name>fs.s3a.multipart.threshold</name>
+        <value>10M</value>
+    </property>
+    <property>
+        <name>fs.s3a.fast.upload.active.blocks</name>
+        <value>8</value>
+    </property>
+    <property>
+        <name>fs.s3a.threads.max</name>
+        <value>50</value>
+    </property>
+    <property>
+        <name>fs.s3a.max.total.tasks</name>
+        <value>30</value>
+    </property>
+
+
+<!--    fs.s3a.fast.upload = true-->
+<!--    fs.s3a.fast.buffer.size = 1048576-->
+<!--    fs.s3a.fast.upload.buffer = array-->
+<!--    Reduce the part size of multi-part upload to get more parallelism.-->
+<!--    fs.s3a.multipart.size = 10M-->
+<!--    fs.s3a.multipart.threshold = 10M-->
+<!--    fs.s3a.fast.upload.active.blocks = 8-->
+<!--    Increase connection/thread counts.-->
+<!--    fs.s3a.threads.max = 50-->
+<!--    fs.s3a.max.total.tasks = 30-->
 </configuration>
