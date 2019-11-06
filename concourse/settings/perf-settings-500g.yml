@@ -6,18 +6,18 @@ perf-scale: 500
 
 enable-impersonation-multinode: true
 pxf-jvm-opts: "-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/heap_dump -Xmx8g -Xms4g"
-perf-ccp-reap-minutes: 280
+perf-ccp-reap-minutes: 1920
 
 perf-gpdb-number-of-nodes: 16
 perf-gpdb-segments-per-host: 8
 perf-gpdb-instance-type: n1-highmem-8
-perf-gpdb-disk-size: 200
+perf-gpdb-disk-size: 1000
 
 perf-hadoop-number-of-nodes: 25
 perf-hadoop-initialization-script: gs://pxf-perf/scripts/update-site-core.sh
 perf-hadoop-initialization-script-timeout: 360
 perf-hadoop-instance-type: n1-standard-2
-perf-hadoop-disk-size: 400
+perf-hadoop-disk-size: 1000
 
 perf-trigger-interval: 720h
 perf-trigger-start: 11:00 PM
@@ -26,8 +26,8 @@ perf-trigger-stop: 11:10 PM
 perf-benchmark-concurrency: 1
 perf-benchmark-hadoop: true
 perf-benchmark-adl: false
-perf-benchmark-s3: true
-perf-benchmark-s3-extension: true
+perf-benchmark-s3: false
+perf-benchmark-s3-extension: false
 perf-benchmark-gcs: false
 perf-benchmark-gphdfs: false
 perf-benchmark-wasb: false
