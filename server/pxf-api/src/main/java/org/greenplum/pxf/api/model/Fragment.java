@@ -25,7 +25,7 @@ package org.greenplum.pxf.api.model;
  */
 public class Fragment {
 
-    private static final String[] HOSTS = new String[]{"localhost"};
+    public static final String[] HOSTS = new String[]{"localhost"};
 
     /**
      * File path+name, table name, etc.

@@ -24,6 +24,7 @@ import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.plugins.hdfs.parquet.ParquetTypeConverter;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

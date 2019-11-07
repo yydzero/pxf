@@ -258,10 +258,10 @@ public class RequestContext {
     /**
      * Sets the byte serialization of a fragment meta data.
      *
-     * @param location start, len, and location of the fragment
+     * @param fragmentMetadata start, len, and location of the fragment
      */
-    public void setFragmentMetadata(byte[] location) {
-        this.fragmentMetadata = location;
+    public void setFragmentMetadata(byte[] fragmentMetadata) {
+        this.fragmentMetadata = fragmentMetadata;
     }
 
     /**

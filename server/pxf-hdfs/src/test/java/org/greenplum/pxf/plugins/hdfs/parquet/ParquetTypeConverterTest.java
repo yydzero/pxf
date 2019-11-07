@@ -1,4 +1,4 @@
-package org.greenplum.pxf.plugins.hdfs;
+package org.greenplum.pxf.plugins.hdfs.parquet;
 
 import org.apache.parquet.io.api.Binary;
 import org.greenplum.pxf.api.GreenplumDateTime;

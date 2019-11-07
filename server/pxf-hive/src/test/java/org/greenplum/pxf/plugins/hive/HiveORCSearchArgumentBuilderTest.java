@@ -2,7 +2,11 @@ package org.greenplum.pxf.plugins.hive;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.io.sarg.SearchArgument;
-import org.greenplum.pxf.api.filter.*;
+import org.greenplum.pxf.api.filter.FilterParser;
+import org.greenplum.pxf.api.filter.Node;
+import org.greenplum.pxf.api.filter.SupportedOperatorPruner;
+import org.greenplum.pxf.api.filter.TreeTraverser;
+import org.greenplum.pxf.api.filter.TreeVisitor;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.junit.Before;

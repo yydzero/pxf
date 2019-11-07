@@ -35,6 +35,7 @@ import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.Resolver;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.plugins.hdfs.parquet.ParquetTypeConverter;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -51,7 +52,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
 
     // used to distinguish string pattern between type "timestamp" ("2019-03-14 14:10:28")
     // and type "timestamp with time zone" ("2019-03-14 14:10:28+07:30")
-    private static final Pattern timestampPattern = Pattern.compile("[+-]\\d{2}(:\\d{2})?$");
+    public static final Pattern TIMESTAMP_PATTERN = Pattern.compile("[+-]\\d{2}(:\\d{2})?$");
 
     @Override
     public List<OneField> getFields(OneRow row) {
@@ -161,7 +162,7 @@ public class ParquetResolver extends BasePlugin implements Resolver {
                 break;
             case INT96:  // SQL standard timestamp string value with or without time zone literals: https://www.postgresql.org/docs/9.4/datatype-datetime.html
                 String timestamp = (String) field.val;
-                if (timestampPattern.matcher(timestamp).find()) {
+                if (TIMESTAMP_PATTERN.matcher(timestamp).find()) {
                     // Note: this conversion convert type "timestamp with time zone" will lose timezone information
                     // while preserving the correct value. (as Parquet doesn't support timestamp with time zone.
                     group.add(index, ParquetTypeConverter.getBinaryFromTimestampWithTimeZone(timestamp));

@@ -182,7 +182,7 @@ project('pxf-hdfs') {
         compile "org.apache.htrace:htrace-core4:${htraceVersion}"
         compile "org.apache.hadoop:hadoop-hdfs:${hadoopVersion}"
         compile "org.apache.hadoop:hadoop-hdfs-client:${hadoopVersion}"
-        compile "org.apache.parquet:parquet-format:2.4.0"
+        compile "org.apache.parquet:parquet-format:2.7.0"
         compile "org.apache.parquet:parquet-column:${parquetVersion}"
         compile "org.apache.parquet:parquet-common:${parquetVersion}"
         compile "org.apache.parquet:parquet-encoding:${parquetVersion}"
@@ -191,7 +191,7 @@ project('pxf-hdfs') {
         compile "org.apache.hive:hive-storage-api:2.4.0" // for parquet writing
 
         // for parquet tests
-        testCompile "org.apache.parquet:parquet-pig:1.10.0"
+        testCompile "org.apache.parquet:parquet-pig:${parquetVersion}"
 
         bundleJars "org.apache.avro:avro:1.7.7"
         // Dependency in hadoop 2.9.2

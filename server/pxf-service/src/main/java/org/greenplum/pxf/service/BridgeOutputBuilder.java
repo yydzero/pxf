@@ -228,11 +228,11 @@ public class BridgeOutputBuilder {
         for (int i = 0; i < size; i++) {
             OneField current = recFields.get(i);
             if (!isTypeInSchema(current.type, schema[i])) {
-                throw new BadRecordException("For field " + colNames[i]
-                        + " schema requires type "
-                        + DataType.get(schema[i]).toString()
-                        + " but input record has type "
-                        + DataType.get(current.type).toString());
+                throw new BadRecordException(
+                        String.format("For field %s schema requires type %s but input record has type %s",
+                                colNames[i],
+                                DataType.get(schema[i]),
+                                DataType.get(current.type)));
             }
 
             fillOneGPDBWritableField(current, i);
