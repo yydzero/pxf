@@ -58,6 +58,8 @@ public enum DataType {
     INT8ARRAY(1016),
     BOOLARRAY(1000),
     TEXTARRAY(1009),
+    FLOAT4ARRAY(1021),
+    FLOAT8ARRAY(1022),
 
     UNSUPPORTED_TYPE(-1);
 

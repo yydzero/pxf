@@ -21,16 +21,16 @@ package org.greenplum.pxf.plugins.hdfs;
 
 
 import org.apache.avro.Schema;
-import org.apache.avro.file.DataFileReader;
-import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
 import org.apache.avro.mapred.AvroInputFormat;
 import org.apache.avro.mapred.AvroJob;
 import org.apache.avro.mapred.AvroRecordReader;
 import org.apache.avro.mapred.AvroWrapper;
-import org.apache.avro.mapred.FsInput;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.FileSplit;
@@ -38,14 +38,19 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.plugins.hdfs.utilities.AvroUtilities;
 
 import java.io.IOException;
 
 /**
- * A PXF Accessor for reading Avro File records
+ * A PXF Accessor for Avro File records
  */
 public class AvroFileAccessor extends HdfsSplittableDataAccessor {
+
     private AvroWrapper<GenericRecord> avroWrapper;
+    private DataFileWriter<GenericRecord> writer;
+    private long rowsWritten;
+    private Schema schema;
 
     /**
      * Constructs a new instance of the AvroFileAccessor
@@ -55,37 +60,43 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
     }
 
     /*
-     * Initializes a AvroFileAccessor that creates the job configuration and
-     * accesses the avro file to fetch the avro schema
+     * Initializes an AvroFileAccessor.
+     *
+     * We need schema to be read or generated before
+     * AvroResolver#initialize() is called so that
+     * AvroResolver#fields can be set.
+     *
+     * for READ:
+     * creates the job configuration and accesses the data
+     * source avro file or a user-provided path to an avro file
+     * to fetch the avro schema.
+     *
+     * for WRITE:
+     * We get the schema either from a user-provided path to an
+     * avro file or by generating it on the fly from the Greenplum schema.
      */
-
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
 
-        // 1. Accessing the avro file through the "unsplittable" API just to get the schema.
-        //    The splittable API (AvroInputFormat) which is the one we will be using to fetch
-        //    the records, does not support getting the avro schema yet.
-        Schema schema;
-        try {
-            schema = getAvroSchema(configuration, context.getDataSource());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to obtain Avro schema for " + context.getDataSource(), e);
-        }
+        schema = AvroUtilities.getInstance().obtainSchema(context, configuration, hcfsType);
 
-        // 2. Pass the schema to the AvroInputFormat
+    }
+
+    @Override
+    public boolean openForRead() throws Exception {
+        // Pass the schema to the AvroInputFormat
         AvroJob.setInputSchema(jobConf, schema);
 
-        // 3. The avroWrapper required for the iteration
+        // The avroWrapper required for the iteration
         avroWrapper = new AvroWrapper<>();
 
-        // 4. Add schema to RequestContext's metadata to avoid computing it again in the resolver
-        requestContext.setMetadata(schema);
+        return super.openForRead();
     }
 
     @Override
     protected Object getReader(JobConf jobConf, InputSplit split) throws IOException {
-        return new AvroRecordReader<Object>(jobConf, (FileSplit) split);
+        return new AvroRecordReader<>(jobConf, (FileSplit) split);
     }
 
     /**
@@ -122,8 +133,26 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public boolean openForWrite() throws Exception {
-        throw new UnsupportedOperationException();
+        // make writer
+        writer = new DataFileWriter<>(new GenericDatumWriter<>(schema));
+        Path file = new Path(hcfsType.getUriForWrite(configuration, context, true) + ".avro");
+        FileSystem fs = file.getFileSystem(jobConf);
+        FSDataOutputStream avroOut = null;
+        try {
+            avroOut = fs.create(file, false);
+            writer.create(schema, avroOut);
+        } catch (IOException e) {
+            if (avroOut != null) {
+                avroOut.close();
+            }
+            if (writer != null) {
+                writer.close();
+            }
+            throw e;
+        }
+        return true;
     }
+
 
     /**
      * Writes the next object.
@@ -134,7 +163,9 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public boolean writeNextObject(OneRow onerow) throws Exception {
-        throw new UnsupportedOperationException();
+        writer.append((GenericRecord) onerow.getData());
+        rowsWritten++;
+        return true;
     }
 
     /**
@@ -144,27 +175,13 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public void closeForWrite() throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Accessing the Avro file through the "unsplittable" API just to get the
-     * schema. The splittable API (AvroInputFormat) which is the one we will be
-     * using to fetch the records, does not support getting the Avro schema yet.
-     *
-     * @param conf       Hadoop configuration
-     * @param dataSource Avro file (i.e fileName.avro) path
-     * @return the Avro schema
-     * @throws IOException if I/O error occurred while accessing Avro schema file
-     */
-    Schema getAvroSchema(Configuration conf, String dataSource)
-            throws IOException {
-        FsInput inStream = new FsInput(new Path(dataSource), conf);
-        DatumReader<GenericRecord> dummyReader = new GenericDatumReader<>();
-        DataFileReader<GenericRecord> dummyFileReader = new DataFileReader<>(
-                inStream, dummyReader);
-        Schema schema = dummyFileReader.getSchema();
-        dummyFileReader.close();
-        return schema;
+        if (writer != null) {
+            writer.close();
+        }
+        LOG.debug("Segment {}: writer closed, wrote a TOTAL of {} rows to {} on server {}",
+                context.getSegmentId(),
+                rowsWritten,
+                context.getDataSource(),
+                context.getServerName());
     }
 }

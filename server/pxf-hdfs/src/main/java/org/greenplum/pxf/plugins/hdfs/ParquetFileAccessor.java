@@ -259,7 +259,11 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             parquetWriter.close();
             totalRowsWritten += rowsWritten;
         }
-        LOG.debug("Wrote a TOTAL of {} rows", totalRowsWritten);
+        LOG.debug("Segment {}: writer closed, wrote a TOTAL of {} rows to {} on server {}",
+                context.getSegmentId(),
+                totalRowsWritten,
+                context.getDataSource(),
+                context.getServerName());
     }
 
     /**

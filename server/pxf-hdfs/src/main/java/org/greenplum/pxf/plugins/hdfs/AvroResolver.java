@@ -34,12 +34,11 @@ import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Resolver;
-import org.greenplum.pxf.plugins.hdfs.utilities.DataSchemaException;
+import org.greenplum.pxf.plugins.hdfs.utilities.AvroUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.RecordkeyAdapter;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
@@ -62,6 +61,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
     private String collectionDelim;
     private String mapkeyDelim;
     private String recordkeyDelim;
+    private HcfsType hcfsType;
 
     /*
      * Initializes an AvroResolver. Initializes Avro data structure: the Avro
@@ -76,21 +76,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
 
-        Schema schema;
-
-        try {
-            if (isAvroFile()) {
-                schema = (Schema) requestContext.getMetadata();
-            } else {
-                try (InputStream externalSchema = openExternalSchema()) {
-                    schema = (new Schema.Parser()).parse(externalSchema);
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to initialize AvroResolver: " + e.getMessage(), e);
-        }
+        hcfsType = HcfsType.getHcfsType(configuration, context);
+        Schema schema = AvroUtilities.getInstance().obtainSchema(context, configuration, hcfsType);
 
         reader = new GenericDatumReader<>(schema);
+
         fields = schema.getFields();
 
         collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
@@ -137,22 +127,19 @@ public class AvroResolver extends BasePlugin implements Resolver {
      *
      * @param record list of {@link OneField}
      * @return the constructed {@link OneRow}
-     * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Tests if the Avro records are residing inside an AVRO file. If the Avro
-     * records are not residing inside an AVRO file, then they may reside inside
-     * a sequence file, regular file, ...
-     *
-     * @return whether the resource is an Avro file
-     */
-    boolean isAvroFile() {
-        return context.getAccessor().toLowerCase().contains("avro");
+    public OneRow setFields(List<OneField> record) {
+        GenericRecord genericRecord = new GenericData.Record((Schema) context.getMetadata());
+        int cnt = 0;
+        for (OneField field : record) {
+            // Avro does not seem to understand regular byte arrays
+            if (field.val instanceof byte[]) {
+                field.val = ByteBuffer.wrap((byte[]) field.val);
+            }
+            genericRecord.put(cnt++, field.val);
+        }
+        return new OneRow(null, genericRecord);
     }
 
     /**
@@ -173,7 +160,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
      */
     GenericRecord makeAvroRecord(Object obj, GenericRecord reuseRecord)
             throws IOException {
-        if (isAvroFile()) {
+        if (obj instanceof GenericRecord) {
             return (GenericRecord) obj;
         } else {
             byte[] bytes = ((BytesWritable) obj).getBytes();
@@ -197,12 +184,11 @@ public class AvroResolver extends BasePlugin implements Resolver {
 
         Schema.Type fieldType = fieldSchema.getType();
         int ret = 0;
-        Object value = fieldValue;
 
         switch (fieldType) {
             case ARRAY:
                 if (fieldValue == null) {
-                    return addOneFieldToRecord(record, DataType.TEXT, fieldValue);
+                    return addOneFieldToRecord(record, DataType.TEXT, null);
                 }
                 List<OneField> listRecord = new LinkedList<>();
                 ret = setArrayField(listRecord, fieldValue, fieldSchema);
@@ -211,7 +197,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 break;
             case MAP:
                 if (fieldValue == null) {
-                    return addOneFieldToRecord(record, DataType.TEXT, fieldValue);
+                    return addOneFieldToRecord(record, DataType.TEXT, null);
                 }
                 List<OneField> mapRecord = new LinkedList<>();
                 ret = setMapField(mapRecord, fieldValue, fieldSchema);
@@ -220,7 +206,7 @@ public class AvroResolver extends BasePlugin implements Resolver {
                 break;
             case RECORD:
                 if (fieldValue == null) {
-                    return addOneFieldToRecord(record, DataType.TEXT, fieldValue);
+                    return addOneFieldToRecord(record, DataType.TEXT, null);
                 }
                 List<OneField> recRecord = new LinkedList<>();
                 ret = setRecordField(recRecord, fieldValue, fieldSchema);
@@ -233,46 +219,42 @@ public class AvroResolver extends BasePlugin implements Resolver {
                  * of the union element, and delegate the record update via
                  * recursion
                  */
-                int unionIndex = GenericData.get().resolveUnion(fieldSchema,
-                        fieldValue);
-                /**
+
+                int unionIndex = GenericData.get().resolveUnion(fieldSchema, fieldValue);
+                /*
                  * Retrieve index of the non null data type from the type array
                  * if value is null
                  */
                 if (fieldValue == null) {
-                    unionIndex ^= 1;
+                    unionIndex ^= 1; // exclusive or assignment
                 }
-                ret = populateRecord(record, fieldValue,
-                        fieldSchema.getTypes().get(unionIndex));
+                ret = populateRecord(record, fieldValue, fieldSchema.getTypes().get(unionIndex));
                 break;
             case ENUM:
-                ret = addOneFieldToRecord(record, DataType.TEXT, value);
+                ret = addOneFieldToRecord(record, DataType.TEXT, fieldValue);
                 break;
             case INT:
-                ret = addOneFieldToRecord(record, DataType.INTEGER, value);
+                ret = addOneFieldToRecord(record, DataType.INTEGER, fieldValue);
                 break;
             case DOUBLE:
-                ret = addOneFieldToRecord(record, DataType.FLOAT8, value);
+                ret = addOneFieldToRecord(record, DataType.FLOAT8, fieldValue);
                 break;
             case STRING:
-                value = (fieldValue != null) ? String.format("%s", fieldValue)
-                        : null;
-                ret = addOneFieldToRecord(record, DataType.TEXT, value);
+                fieldValue = (fieldValue != null) ? fieldValue.toString() : null;
+                ret = addOneFieldToRecord(record, DataType.TEXT, fieldValue);
                 break;
             case FLOAT:
-                ret = addOneFieldToRecord(record, DataType.REAL, value);
+                ret = addOneFieldToRecord(record, DataType.REAL, fieldValue);
                 break;
             case LONG:
-                ret = addOneFieldToRecord(record, DataType.BIGINT, value);
+                ret = addOneFieldToRecord(record, DataType.BIGINT, fieldValue);
                 break;
             case BYTES:
-                ret = addOneFieldToRecord(record, DataType.BYTEA, value);
+            case FIXED:
+                ret = addOneFieldToRecord(record, DataType.BYTEA, fieldValue);
                 break;
             case BOOLEAN:
-                ret = addOneFieldToRecord(record, DataType.BOOLEAN, value);
-                break;
-            case FIXED:
-                ret = addOneFieldToRecord(record, DataType.BYTEA, value);
+                ret = addOneFieldToRecord(record, DataType.BOOLEAN, fieldValue);
                 break;
             default:
                 break;
@@ -377,7 +359,9 @@ public class AvroResolver extends BasePlugin implements Resolver {
         oneField.type = gpdbWritableType.getOID();
         switch (gpdbWritableType) {
             case BYTEA:
-                if (val instanceof ByteBuffer) {
+                if (val == null) {
+                    oneField.val = null;
+                } else if (val instanceof ByteBuffer) {
                     oneField.val = ((ByteBuffer) val).array();
                 } else {
                     /**
@@ -394,32 +378,5 @@ public class AvroResolver extends BasePlugin implements Resolver {
 
         record.add(oneField);
         return 1;
-    }
-
-    /**
-     * Opens Avro schema based on DATA-SCHEMA parameter.
-     *
-     * @return InputStream of schema file
-     * @throws DataSchemaException if schema file could not be opened
-     */
-    InputStream openExternalSchema() {
-
-        String schemaName = context.getOption("DATA-SCHEMA");
-
-        /**
-         * Testing that the schema name was supplied by the user - schema is an
-         * optional properly.
-         */
-        if (schemaName == null) {
-            throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_INDICATED,
-                    this.getClass().getName());
-        }
-
-        /** Testing that the schema resource exists. */
-        if (this.getClass().getClassLoader().getResource(schemaName) == null) {
-            throw new DataSchemaException(DataSchemaException.MessageFmt.SCHEMA_NOT_ON_CLASSPATH, schemaName);
-        }
-        ClassLoader loader = this.getClass().getClassLoader();
-        return loader.getResourceAsStream(schemaName);
     }
 }

@@ -10,7 +10,9 @@ import org.greenplum.pxf.api.utilities.Utilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.util.Arrays;
 
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
@@ -189,6 +191,18 @@ public enum HcfsType {
     }
 
     /**
+     * Returns a fully resolved path include protocol
+     *
+     * @param path The path to file
+     * @return an absolute data path
+     */
+    public String getDataUri(Configuration configuration, String path) {
+        String uri = getDataUriForPrefix(configuration, path, this.prefix);
+        disableSecureTokenRenewal(uri, configuration);
+        return uri;
+    }
+
+    /**
      * Returns the normalized data source for the given protocol
      *
      * @param dataSource The path to the data source
@@ -225,6 +239,12 @@ public enum HcfsType {
     protected void disableSecureTokenRenewal(String uri, Configuration configuration) {
         if (Utilities.isSecurityEnabled(configuration))
             return;
+
+        try {
+            uri = URLEncoder.encode(uri, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            throw new RuntimeException(String.format("Unable to encode URI %s", uri), ex);
+        }
         // find the "host" that TokenCache will check against the exclusion list, for cloud file systems (like S3)
         // it might actually be a bucket in the full resource path
         String host = URI.create(uri).getHost();
