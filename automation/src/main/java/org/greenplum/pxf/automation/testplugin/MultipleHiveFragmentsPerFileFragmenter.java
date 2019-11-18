@@ -16,9 +16,9 @@ import org.greenplum.pxf.api.model.BaseFragmenter;
 import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.Metadata;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.plugins.hive.HiveClientWrapper;
 import org.greenplum.pxf.plugins.hive.HiveDataFragmenter;
 import org.greenplum.pxf.plugins.hive.HiveUserData;
-import org.greenplum.pxf.plugins.hive.HiveClientWrapper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;

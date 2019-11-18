@@ -2,7 +2,9 @@ package org.greenplum.pxf.automation.components.hdfs;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -15,11 +17,13 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.avro.Schema;
+import org.apache.avro.data.Json;
 import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
+import org.apache.avro.tool.DataFileReadTool;
 import org.apache.avro.tool.DataFileWriteTool;
 import org.apache.avro.tool.Tool;
 import org.apache.commons.io.IOUtils;
@@ -350,6 +354,17 @@ public class Hdfs extends BaseSystemObject implements IFSFunctionality {
         ReportUtils.stopLevel(report);
     }
 
+    public void writeJsonFileFromAvro(String pathToFile, String pathToJson)
+            throws Exception {
+        Tool tool = new DataFileReadTool();
+        List<String> args = new ArrayList<>();
+        args.add(pathToFile);
+
+        try (PrintStream printStream = new PrintStream(new FileOutputStream(new File(pathToJson)))) {
+            tool.run(null, printStream, System.err, args);
+        }
+    }
+
     @Override
     public void writeProtocolBufferFile(String filePath,
                                         com.google.protobuf.GeneratedMessage data)
@@ -448,7 +463,7 @@ public class Hdfs extends BaseSystemObject implements IFSFunctionality {
     /**
      * @return Default FS configured NN address from loaded configuration
      */
-    public String getConfiguredNameNodeAdress() {
+    public String getConfiguredNameNodeAddress() {
         return config.get("fs.defaultFS");
     }
 

@@ -246,7 +246,7 @@ public class HiveBaseTest extends BaseFeature {
         hive = (Hive) SystemManagerImpl.getInstance().getSystemObject("hive");
 
         // get configured Name Node
-        configuredNameNodeAddress = hdfs.getConfiguredNameNodeAdress();
+        configuredNameNodeAddress = hdfs.getConfiguredNameNodeAddress();
 
         prepareData();
     }

@@ -12,8 +12,14 @@
 -- m/(ERROR|WARNING):.*javax.servlet.ServletException: java.lang.Exception:.*/
 -- s/javax.servlet.ServletException: //
 --
--- m/  Description  .*/
--- s/Description  .*/Description  DESCRIPTION/
+-- m/ +(d|D)escription  .*/
+-- s/ +(d|D)escription  .*/ Description DESCRIPTION/
+--
+-- m/ +Failed to obtain Avro schema from 'i_do_not_exist'/
+-- s/ +Failed to obtain Avro schema from 'i_do_not_exist'/ Failed to obtain Avro schema from 'i_do_not_exist'/
+--
+-- m/(E|e)xception (r|R)eport +(m|M)essage/
+-- s/(E|e)xception (r|R)eport +(m|M)essage/exception report message/
 --
 -- m/DETAIL/
 -- s/DETAIL/CONTEXT/

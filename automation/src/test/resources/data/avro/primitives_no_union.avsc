@@ -1,0 +1,35 @@
+{
+"type":"record",
+  "name":"testTableName",
+  "namespace":"com.example",
+  "doc":"",
+  "fields":[{
+    "name":"type_int",
+    "type":"int",
+    "doc":"int type"
+  },{
+    "name":"type_long",
+    "type":"long",
+    "doc":"long type"
+  },{
+    "name":"type_float",
+    "type":"float",
+    "doc":"float type"
+  },{
+    "name":"type_double",
+    "type":"double",
+    "doc":"double type"
+  },{
+    "name":"type_string",
+    "type":"string",
+    "doc":"string type"
+  },{
+    "name":"type_bytes",
+    "type":"bytes",
+    "doc":"bytes type"
+  },{
+    "name":"type_boolean",
+    "type":"boolean",
+    "doc":"bool type"
+  }]
+}
