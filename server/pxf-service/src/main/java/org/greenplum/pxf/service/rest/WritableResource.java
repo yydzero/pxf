@@ -22,9 +22,9 @@ package org.greenplum.pxf.service.rest;
 import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.Utilities;
-import org.greenplum.pxf.service.bridge.Bridge;
 import org.greenplum.pxf.service.HttpRequestParser;
 import org.greenplum.pxf.service.RequestParser;
+import org.greenplum.pxf.service.bridge.Bridge;
 import org.greenplum.pxf.service.bridge.BridgeFactory;
 import org.greenplum.pxf.service.bridge.SimpleBridgeFactory;
 
@@ -39,6 +39,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.DataInputStream;
 import java.io.InputStream;
+
+import static org.greenplum.pxf.api.model.RequestContext.RequestType;
 
 
 /*
@@ -122,7 +124,7 @@ public class WritableResource extends BaseResource {
                            @QueryParam("path") String path,
                            InputStream inputStream) throws Exception {
 
-        RequestContext context = parseRequest(headers);
+        RequestContext context = parseRequest(headers, RequestType.WRITE_BRIDGE);
         Bridge bridge = bridgeFactory.getWriteBridge(context);
 
         // THREAD-SAFE parameter has precedence

@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.Fragmenter;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.api.model.RequestContext.RequestType;
 import org.greenplum.pxf.api.utilities.FragmenterCacheFactory;
 import org.greenplum.pxf.api.utilities.FragmenterFactory;
 import org.greenplum.pxf.api.utilities.FragmentsResponse;
@@ -70,7 +71,7 @@ public class FragmenterResourceTest {
         context.setTransactionId("XID-XYZ-123456");
         context.setSegmentId(0);
 
-        when(parser.parseRequest(headersFromRequest1)).thenReturn(context);
+        when(parser.parseRequest(headersFromRequest1, RequestType.FRAGMENTER)).thenReturn(context);
         when(fragmenterFactory.getPlugin(context)).thenReturn(fragmenter1);
 
         new FragmenterResource(parser, fragmenterFactory, fragmenterCacheFactory)
@@ -148,8 +149,8 @@ public class FragmenterResourceTest {
         context2.setTransactionId("XID-XYZ-123456");
         context2.setSegmentId(1);
 
-        when(parser.parseRequest(headersFromRequest1)).thenReturn(context1);
-        when(parser.parseRequest(headersFromRequest2)).thenReturn(context2);
+        when(parser.parseRequest(headersFromRequest1, RequestType.FRAGMENTER)).thenReturn(context1);
+        when(parser.parseRequest(headersFromRequest2, RequestType.FRAGMENTER)).thenReturn(context2);
         when(fragmenterFactory.getPlugin(context1)).thenReturn(fragmenter1);
 
         when(fragmenter1.getFragments()).thenReturn(fragmentList);
@@ -187,8 +188,8 @@ public class FragmenterResourceTest {
         context2.setTransactionId("XID-XYZ-123456");
         context2.setSegmentId(1);
 
-        when(parser.parseRequest(headersFromRequest1)).thenReturn(context1);
-        when(parser.parseRequest(headersFromRequest2)).thenReturn(context2);
+        when(parser.parseRequest(headersFromRequest1, RequestType.FRAGMENTER)).thenReturn(context1);
+        when(parser.parseRequest(headersFromRequest2, RequestType.FRAGMENTER)).thenReturn(context2);
         when(fragmenterFactory.getPlugin(context1)).thenReturn(fragmenter1);
         when(fragmenterFactory.getPlugin(context2)).thenReturn(fragmenter2);
 
@@ -238,7 +239,7 @@ public class FragmenterResourceTest {
                 context.setSegmentId(index % 10);
 
                 when(cacheFactory.getCache()).thenReturn(fragmentCache);
-                when(requestParser.parseRequest(httpHeaders)).thenReturn(context);
+                when(requestParser.parseRequest(httpHeaders, RequestType.FRAGMENTER)).thenReturn(context);
                 when(factory.getPlugin(context)).thenReturn(fragmenter);
 
                 try {
@@ -284,8 +285,8 @@ public class FragmenterResourceTest {
         List<Fragment> fragmentList1 = new ArrayList<>();
         List<Fragment> fragmentList2 = new ArrayList<>();
 
-        when(parser.parseRequest(headersFromRequest1)).thenReturn(context1);
-        when(parser.parseRequest(headersFromRequest2)).thenReturn(context2);
+        when(parser.parseRequest(headersFromRequest1, RequestType.FRAGMENTER)).thenReturn(context1);
+        when(parser.parseRequest(headersFromRequest2, RequestType.FRAGMENTER)).thenReturn(context2);
         when(fragmenterFactory.getPlugin(context1)).thenReturn(fragmenter1);
         when(fragmenterFactory.getPlugin(context2)).thenReturn(fragmenter2);
 

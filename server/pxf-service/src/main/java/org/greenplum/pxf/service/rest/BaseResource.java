@@ -27,6 +27,7 @@ public abstract class BaseResource {
 
     /**
      * Creates an instance of the resource with a given request parser.
+     *
      * @param parser request parser
      */
     BaseResource(RequestParser<HttpHeaders> parser) {
@@ -35,10 +36,12 @@ public abstract class BaseResource {
 
     /**
      * Parses incoming request into request context
-     * @param headers the HTTP headers of incoming request
+     *
+     * @param headers     the HTTP headers of incoming request
+     * @param requestType type of request: read/write/fragmenter, etc.
      * @return parsed request context
      */
-    protected RequestContext parseRequest(HttpHeaders headers) {
-        return parser.parseRequest(headers);
+    protected RequestContext parseRequest(HttpHeaders headers, RequestContext.RequestType requestType) {
+        return parser.parseRequest(headers, requestType);
     }
 }

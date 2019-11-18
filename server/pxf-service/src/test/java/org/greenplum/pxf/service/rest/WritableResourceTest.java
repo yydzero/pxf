@@ -19,6 +19,7 @@ package org.greenplum.pxf.service.rest;
  */
 
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.api.model.RequestContext.RequestType;
 import org.greenplum.pxf.service.HttpRequestParser;
 import org.greenplum.pxf.service.bridge.BridgeFactory;
 import org.greenplum.pxf.service.bridge.WriteBridge;
@@ -54,11 +55,11 @@ public class WritableResourceTest {
     @Mock private WriteBridge mockBridge;
 
     @Before
-    public void before() throws Exception {
+    public void before() {
 
         writableResource = new WritableResource(mockParser, mockFactory);
 
-        when(mockParser.parseRequest(mockHeaders)).thenReturn(mockContext);
+        when(mockParser.parseRequest(mockHeaders, RequestType.WRITE_BRIDGE)).thenReturn(mockContext);
         when(mockFactory.getWriteBridge(mockContext)).thenReturn(mockBridge);
         when(mockContext.isThreadSafe()).thenReturn(true);
         when(mockBridge.isThreadSafe()).thenReturn(true);

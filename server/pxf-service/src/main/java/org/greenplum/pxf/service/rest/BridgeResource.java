@@ -20,7 +20,6 @@ package org.greenplum.pxf.service.rest;
  */
 
 import org.apache.catalina.connector.ClientAbortException;
-import org.greenplum.pxf.api.io.Text;
 import org.greenplum.pxf.api.io.Writable;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.service.HttpRequestParser;
@@ -97,7 +96,7 @@ public class BridgeResource extends BaseResource {
     public Response read(@Context final ServletContext servletContext,
                          @Context HttpHeaders headers) throws Exception {
 
-        RequestContext context = parseRequest(headers);
+        RequestContext context = parseRequest(headers, RequestContext.RequestType.READ_BRIDGE);
         Bridge bridge = bridgeFactory.getReadBridge(context);
 
         // THREAD-SAFE parameter has precedence

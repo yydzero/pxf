@@ -48,6 +48,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
+import static org.greenplum.pxf.api.model.RequestContext.RequestType;
+
 /**
  * Class enhances the API of the WEBHDFS REST server. Returns the data fragments
  * that a data resource is made of, enabling parallel processing of the data
@@ -105,7 +107,7 @@ public class FragmenterResource extends BaseResource {
 
         LOG.debug("Received FRAGMENTER call");
         startTime = System.currentTimeMillis();
-        final RequestContext context = parseRequest(headers);
+        final RequestContext context = parseRequest(headers, RequestType.FRAGMENTER);
         final String path = context.getDataSource();
         final String fragmenterCacheKey = getFragmenterCacheKey(context);
 
@@ -165,7 +167,7 @@ public class FragmenterResource extends BaseResource {
                                       @QueryParam("path") final String path)
             throws Exception {
 
-        RequestContext context = parseRequest(headers);
+        RequestContext context = parseRequest(headers, RequestType.FRAGMENTER);
 
         /* Create a fragmenter instance with API level parameters */
         final Fragmenter fragmenter = fragmenterFactory.getPlugin(context);

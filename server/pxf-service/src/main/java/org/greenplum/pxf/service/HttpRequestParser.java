@@ -63,7 +63,7 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
     }
 
     @Override
-    public RequestContext parseRequest(HttpHeaders request) {
+    public RequestContext parseRequest(HttpHeaders request, RequestContext.RequestType requestType) {
 
         RequestMap params = new RequestMap(request.getRequestHeaders());
 
@@ -74,6 +74,9 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
 
         // build new instance of RequestContext and fill it with parsed values
         RequestContext context = new RequestContext();
+
+        // whether we are in a fragmenter, read_bridge, or write_bridge scenario
+        context.setRequestType(requestType);
 
         // first of all, set profile and enrich parameters with information from specified profile
         String profile = params.removeUserProperty("PROFILE");
@@ -101,7 +104,6 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
         }
 
         context.setDataSource(params.removeProperty("DATA-DIR"));
-
 
         String filterString = params.removeOptionalProperty("FILTER");
         String hasFilter = params.removeProperty("HAS-FILTER");
