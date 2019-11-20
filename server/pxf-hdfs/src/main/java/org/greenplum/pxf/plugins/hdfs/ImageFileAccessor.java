@@ -56,6 +56,16 @@ public class ImageFileAccessor extends HdfsAtomicDataAccessor {
         }
         sb.append("}\"");
 
+        // ImageIO.read should read the image fully, so we can safely close the stream
+        try {
+            inputStream.close();
+        } catch (IOException ex) {
+            // do not error, just log error
+            LOG.error(String.format("%s-%s: Unable to close inputStream for %s",
+                    context.getTransactionId(), context.getServerName(), context.getDataSource()),
+                    ex);
+        }
+
         return new OneRow(null, sb.toString());
     }
 
