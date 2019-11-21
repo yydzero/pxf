@@ -2,7 +2,9 @@ package org.greenplum.pxf.plugins.hdfs;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.greenplum.pxf.api.model.Fragment;
+import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.PxfInputFormat;
 
 import java.util.ArrayList;
@@ -10,7 +12,14 @@ import java.util.List;
 
 public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
 
-    private static int batchSize = 10;
+    private int batchSize;
+
+    @Override
+    public void initialize(RequestContext context) {
+        super.initialize(context);
+        batchSize = Integer.valueOf(context.getOption("BATCH_SIZE"));
+    }
+
     /**
      * Gets the fragments for a data source URI that can appear as a file name,
      * a directory name or a wildcard. Returns the data fragments in JSON
