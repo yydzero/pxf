@@ -793,4 +793,14 @@ under the License.
         </plugins>
         <protocol>gs</protocol>
     </profile>
+    <profile>
+        <name>batch</name>
+        <description>This profile is suitable for using when batching image files</description>
+        <plugins>
+            <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
+            <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StringPassResolver</resolver>
+        </plugins>
+        <protocol>hdfs</protocol>
+    </profile>
 </profiles>
