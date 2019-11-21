@@ -19,6 +19,7 @@ package org.greenplum.pxf.plugins.hdfs;
  * under the License.
  */
 
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileSplit;
@@ -31,6 +32,8 @@ import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base class for enforcing the complete access of a file in one accessor.
@@ -46,14 +49,17 @@ import java.net.URI;
  * a specific file type should inherit from this class only if the file they are
  * reading does not support splitting: a protocol-buffer file, regular file, ...
  */
-public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Accessor {
-    InputStream inputStream;
+public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor {
+    List<InputStream> inputStreams;
+    List<Path> paths;
     private FileSplit fileSplit;
     protected URI uri;
 
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
+        paths = new ArrayList<>();
+        inputStreams = new ArrayList<>();
         fileSplit = HdfsUtilities.parseFileSplit(context);
     }
 
@@ -70,13 +76,16 @@ public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Acces
             return false;
         }
 
-        uri = URI.create(context.getDataSource());
         // input data stream, FileSystem.get actually
         // returns an FSDataInputStream
+        for (String s : context.getDataSource().split(",")) {
+            paths.add(new Path(s));
+        }
+        uri = URI.create(paths.get(0).toString());
         FileSystem fs = FileSystem.get(uri, configuration);
-        inputStream = fs.open(new Path(context.getDataSource()));
+        inputStreams.add(fs.open(new Path(context.getDataSource())));
 
-        return (inputStream != null);
+        return (inputStreams.size() > 0);
     }
 
     /**
@@ -102,9 +111,12 @@ public abstract class HdfsAtomicDataAccessor extends BasePlugin implements Acces
             return;
         }
 
-        if (inputStream != null) {
-            inputStream.close();
+        for (InputStream inputStream : inputStreams) {
+            if (inputStreams != null) {
+                inputStream.close();
+            }
         }
+
     }
 
     /*
