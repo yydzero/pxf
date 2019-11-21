@@ -794,7 +794,7 @@ under the License.
         <protocol>gs</protocol>
     </profile>
     <profile>
-        <name>batch</name>
+        <name>hdfs:batch</name>
         <description>This profile is suitable for using when batching image files</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
@@ -802,5 +802,39 @@ under the License.
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
         <protocol>hdfs</protocol>
+    </profile>
+    <profile>
+        <name>gs:batch</name>
+        <description>This profile is suitable for using when batching image files</description>
+        <plugins>
+            <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+        </plugins>
+        <protocol>gs</protocol>
+    </profile>
+    <profile>
+        <name>adl:batch</name>
+        <description>This profile is suitable for using when batching image files</description>
+        <plugins>
+            <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+        </plugins>
+        <protocol>adl</protocol>
+    </profile>
+    <profile>
+        <name>s3:batch</name>
+        <description>This profile is suitable for using when batching image files</description>
+        <plugins>
+            <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+        </plugins>
+        <protocol>s3a</protocol>
+        <optionMappings>
+            <mapping option="accesskey" property="fs.s3a.access.key"/>
+            <mapping option="secretkey" property="fs.s3a.secret.key"/>
+        </optionMappings>
     </profile>
 </profiles>
