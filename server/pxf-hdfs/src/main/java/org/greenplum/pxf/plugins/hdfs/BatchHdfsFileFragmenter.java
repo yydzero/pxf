@@ -35,13 +35,13 @@ public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
         final FileStatus[] fileList = pxfInputFormat.listStatus(jobConf);
 
         List<String> pathList = new ArrayList<>();
-        for (int i = 1; i < fileList.length + 1; i++) {
+        for (int i = 1; i <= fileList.length; i++) {
+            pathList.add(fileList[i-1].getPath().toUri().toString());
             if (i % batchSize == 0 || i == fileList.length) {
                 fragments.add(new Fragment(String.join(",", pathList)));
                 pathList.clear();
-                continue;
+                LOG.debug("Completed fragment batch #{}", (i - 1) / batchSize);
             }
-            pathList.add(fileList[i].getPath().toUri().toString());
         }
 
         LOG.debug("Total number of fragments = {}", fragments.size());

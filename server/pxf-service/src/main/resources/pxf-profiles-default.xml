@@ -798,7 +798,7 @@ under the License.
         <description>This profile is suitable for using when batching image files</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
         <protocol>hdfs</protocol>
