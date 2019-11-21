@@ -29,10 +29,13 @@ import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -51,14 +54,13 @@ import java.util.List;
  */
 public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor {
     List<InputStream> inputStreams;
-    List<Path> paths;
+    List<String> paths;
     private FileSplit fileSplit;
     protected URI uri;
 
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
-        paths = new ArrayList<>();
         inputStreams = new ArrayList<>();
         fileSplit = HdfsUtilities.parseFileSplit(context);
     }
@@ -78,12 +80,12 @@ public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements 
 
         // input data stream, FileSystem.get actually
         // returns an FSDataInputStream
-        for (String s : context.getDataSource().split(",")) {
-            paths.add(new Path(s));
-        }
-        uri = URI.create(paths.get(0).toString());
+        paths = new ArrayList<>(Arrays.asList(context.getDataSource().split(",")));
+        uri = URI.create(paths.get(0));
         FileSystem fs = FileSystem.get(uri, configuration);
-        inputStreams.add(fs.open(new Path(context.getDataSource())));
+        for (String p : paths) {
+            inputStreams.add(fs.open(new Path(p)));
+        }
 
         return (inputStreams.size() > 0);
     }

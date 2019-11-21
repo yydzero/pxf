@@ -12,7 +12,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-
+@SuppressWarnings("unchecked")
 public class ImageResolver extends BasePlugin implements Resolver {
     /**
      * Returns a Postgres-style array with RGB values
@@ -20,12 +20,6 @@ public class ImageResolver extends BasePlugin implements Resolver {
     @Override
     public List<OneField> getFields(OneRow row) {
         URI uri = (URI) row.getKey();
-        BufferedImage image = (BufferedImage) row.getData();
-        int w = image.getWidth();
-        int h = image.getHeight();
-
-        LOG.debug("Image size {}w {}h", w, h);
-
         Path path = Paths.get(uri.getPath());
 
         List<OneField> payload = new ArrayList<>();
@@ -34,6 +28,35 @@ public class ImageResolver extends BasePlugin implements Resolver {
         payload.add(new OneField(2, path.getFileName().toString()));
 
         StringBuilder sb = new StringBuilder();
+        Object data = row.getData();
+        if (data instanceof BufferedImage) {
+            BufferedImage image = (BufferedImage) row.getData();
+            processImage(sb, image);
+        } else if (data instanceof ArrayList) {
+            int cnt = 0;
+            final ArrayList<BufferedImage> images = (ArrayList) data;
+            sb.append("{");
+            for (BufferedImage image : images) {
+                processImage(sb, image);
+                if (++cnt == images.size()) {
+                    continue;
+                }
+                sb.append(",");
+            }
+            sb.append("}");
+        } else {
+            return null;
+        }
+
+        payload.add(new OneField(3, sb.toString()));
+        return payload;
+    }
+
+    private void processImage(StringBuilder sb, BufferedImage image) {
+        int w = image.getWidth();
+        int h = image.getHeight();
+
+        LOG.debug("Image size {}w {}h", w, h);
 
         sb.append("{");
 
@@ -51,10 +74,6 @@ public class ImageResolver extends BasePlugin implements Resolver {
             sb.append("}");
         }
         sb.append("}");
-
-        payload.add(new OneField(3, sb.toString()));
-        return payload;
-
     }
 
     /**
