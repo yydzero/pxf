@@ -5,7 +5,10 @@ import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.Resolver;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,27 +21,29 @@ public class ImageResolver extends BasePlugin implements Resolver {
      * Returns a Postgres-style array with RGB values
      */
     @Override
-    public List<OneField> getFields(OneRow row) {
+    public List<OneField> getFields(OneRow row) throws IOException {
         URI uri = (URI) row.getKey();
         Path path = Paths.get(uri.getPath());
 
         List<OneField> payload = new ArrayList<>();
         payload.add(new OneField(0, uri.toString()));
-        payload.add(new OneField(1, path.getParent().getFileName().toString()));
-        payload.add(new OneField(2, path.getFileName().toString()));
+        payload.add(new OneField(0, path.getParent().getFileName().toString()));
+        payload.add(new OneField(0, path.getFileName().toString()));
 
         StringBuilder sb = new StringBuilder();
         Object data = row.getData();
-        if (data instanceof BufferedImage) {
-            BufferedImage image = (BufferedImage) row.getData();
-            processImage(sb, image);
+        if (data instanceof InputStream) {
+            InputStream stream = (InputStream) row.getData();
+            processImage(sb, ImageIO.read(stream));
+            stream.close();
         } else if (data instanceof ArrayList) {
             int cnt = 0;
-            final ArrayList<BufferedImage> images = (ArrayList) data;
+            final ArrayList<InputStream> inputStreams = (ArrayList) data;
             sb.append("{");
-            for (BufferedImage image : images) {
-                processImage(sb, image);
-                if (++cnt == images.size()) {
+            for (InputStream stream : inputStreams) {
+                processImage(sb, ImageIO.read(stream));
+                stream.close();
+                if (++cnt == inputStreams.size()) {
                     continue;
                 }
                 sb.append(",");
@@ -48,11 +53,14 @@ public class ImageResolver extends BasePlugin implements Resolver {
             return null;
         }
 
-        payload.add(new OneField(3, sb.toString()));
+        payload.add(new OneField(0, sb.toString()));
         return payload;
     }
 
     private void processImage(StringBuilder sb, BufferedImage image) {
+        if (image == null) {
+            return;
+        }
         int w = image.getWidth();
         int h = image.getHeight();
 

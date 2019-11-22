@@ -114,11 +114,10 @@ public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements 
         }
 
         for (InputStream inputStream : inputStreams) {
-            if (inputStreams != null) {
+            if (inputStream != null) {
                 inputStream.close();
             }
         }
-
     }
 
     /*
