@@ -3,34 +3,19 @@ package org.greenplum.pxf.plugins.hdfs;
 
 import org.greenplum.pxf.api.OneRow;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.IOException;
 
 public class ImageFileAccessor extends HdfsAtomicDataAccessor {
-
+    private boolean served;
     @Override
     public OneRow readNextObject() throws IOException {
         /* check if working segment */
-        if (super.readNextObject() == null) {
+        if (served || super.readNextObject() == null) {
             return null;
         }
 
-        BufferedImage image = ImageIO.read(inputStream);
-
-        if (image == null) {
-            return null;
-        }
-        // ImageIO.read should read the image fully, so we can safely close the stream
-        try {
-            inputStream.close();
-        } catch (IOException ex) {
-            // do not error, just log error
-            LOG.error(String.format("%s-%s: Unable to close inputStream for %s",
-                    context.getTransactionId(), context.getServerName(), context.getDataSource()),
-                    ex);
-        }
-        return new OneRow(uri, image);
+        served = true;
+        return new OneRow(uri, inputStream);
     }
 
     @Override
