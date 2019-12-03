@@ -30,6 +30,8 @@ public class SimpleBridgeFactory implements BridgeFactory {
             bridge = new AggBridge(context);
         } else if (useVectorization(context)) {
             bridge = new ReadVectorizedBridge(context);
+        } else if (context.getProfile().matches(".*:batch$")) {
+            bridge = new BatchedImageReadBridge(context);
         } else {
             bridge = new ReadBridge(context);
         }
