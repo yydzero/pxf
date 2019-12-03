@@ -3,6 +3,7 @@ package org.greenplum.pxf.plugins.hdfs;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.BasePlugin;
+import org.greenplum.pxf.api.model.BatchResolver;
 import org.greenplum.pxf.api.model.Resolver;
 
 import javax.imageio.ImageIO;
@@ -16,7 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unchecked")
-public class ImageResolver extends BasePlugin implements Resolver {
+public class ImageResolver extends BasePlugin implements BatchResolver {
+    private int currentImage;
+    List<InputStream> inputStreams;
+
     /**
      * Returns a Postgres-style array with RGB values
      */
@@ -55,6 +59,45 @@ public class ImageResolver extends BasePlugin implements Resolver {
 
         payload.add(new OneField(0, sb.toString()));
         return payload;
+    }
+
+    @Override
+    public List<OneField> startBatch(OneRow row) {
+        URI uri = (URI) row.getKey();
+        Path path = Paths.get(uri.getPath());
+
+        List<OneField> payload = new ArrayList<>();
+        payload.add(new OneField(0, uri.toString()));
+        payload.add(new OneField(0, path.getParent().getFileName().toString()));
+        payload.add(new OneField(0, path.getFileName().toString()));
+
+        inputStreams = (ArrayList) row.getData();
+        return payload;
+    }
+
+    @Override
+    public byte[] getNextBatchedItem(OneRow row) {
+        if (currentImage == inputStreams.size()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (currentImage == 0) {
+            sb.append(",\"{");
+        }
+        InputStream stream = inputStreams.get(currentImage++);
+        try {
+            processImage(sb, ImageIO.read(stream));
+            stream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if (currentImage != inputStreams.size()) {
+            sb.append(",");
+        } else {
+            sb.append("}\"\n");
+        }
+
+        return sb.toString().getBytes();
     }
 
     private void processImage(StringBuilder sb, BufferedImage image) {

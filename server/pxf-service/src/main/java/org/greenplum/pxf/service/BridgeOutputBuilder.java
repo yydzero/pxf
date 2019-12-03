@@ -70,6 +70,7 @@ public class BridgeOutputBuilder {
     private boolean samplingEnabled;
     private boolean isPartialLine = false;
     private GreenplumCSV greenplumCSV;
+    private boolean addNewLine;
 
     /**
      * Constructs a BridgeOutputBuilder.
@@ -83,6 +84,11 @@ public class BridgeOutputBuilder {
         outputList = new LinkedList<>();
         makeErrorRecord();
         samplingEnabled = (this.context.getStatsSampleRatio() > 0);
+        addNewLine = true;
+        String profile = context.getProfile();
+        if (profile != null && profile.matches(".*:batch$")) {
+            addNewLine = false;
+        }
     }
 
     /**
@@ -325,7 +331,7 @@ public class BridgeOutputBuilder {
     void convertTextDataToLines(byte[] val) {
         int len = val.length;
         int start = 0;
-        int end = 0;
+        int end;
         byte[] line;
         BufferWritable writable;
 
@@ -445,6 +451,6 @@ public class BridgeOutputBuilder {
                     else
                         return greenplumCSV.toCsvField((String) field.val, true, true, true);
                 })
-                .collect(Collectors.joining(String.valueOf(greenplumCSV.getDelimiter()), "", greenplumCSV.getNewline()));
+                .collect(Collectors.joining(String.valueOf(greenplumCSV.getDelimiter()), "", addNewLine ? greenplumCSV.getNewline() : ""));
     }
 }
