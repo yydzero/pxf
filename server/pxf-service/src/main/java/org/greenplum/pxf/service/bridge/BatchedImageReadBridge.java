@@ -56,10 +56,7 @@ public class BatchedImageReadBridge extends BaseBridge {
                 outputQueue.add(null);
             }
         }
-        if (!outputQueue.isEmpty()) {
-            return outputQueue.pop();
-        }
-        return null;
+        return outputQueue.pop();
     }
 
     @Override

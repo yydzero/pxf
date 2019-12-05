@@ -89,7 +89,7 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
             processImage(sb, ImageIO.read(stream));
             stream.close();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.info(e.getMessage());
         }
         if (currentImage != inputStreams.size()) {
             sb.append(",");

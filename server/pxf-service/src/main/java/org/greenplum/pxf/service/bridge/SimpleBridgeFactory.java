@@ -1,6 +1,7 @@
 package org.greenplum.pxf.service.bridge;
 
 import org.greenplum.pxf.api.ReadVectorizedResolver;
+import org.greenplum.pxf.api.model.BatchResolver;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.Utilities;
 import org.slf4j.Logger;
@@ -23,17 +24,26 @@ public class SimpleBridgeFactory implements BridgeFactory {
     @Override
     public Bridge getReadBridge(RequestContext context) {
 
-        Bridge bridge;
+        Bridge bridge = null;
         if (context.getStatsSampleRatio() > 0) {
             bridge = new ReadSamplingBridge(context);
         } else if (Utilities.aggregateOptimizationsSupported(context)) {
             bridge = new AggBridge(context);
         } else if (useVectorization(context)) {
             bridge = new ReadVectorizedBridge(context);
-        } else if (context.getProfile().matches(".*:batch$")) {
-            bridge = new BatchedImageReadBridge(context);
         } else {
-            bridge = new ReadBridge(context);
+            final Class<?> resolverClass;
+            try {
+                resolverClass = Class.forName(context.getResolver());
+                if (BatchResolver.class.isAssignableFrom(resolverClass)) {
+                    context.setResolverClass(resolverClass);
+                    bridge = new BatchedImageReadBridge(context);
+                } else {
+                    bridge = new ReadBridge(context);
+                }
+            } catch (ClassNotFoundException e) {
+                LOG.info(e.getMessage());
+            }
         }
         return bridge;
     }
