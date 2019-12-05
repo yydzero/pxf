@@ -31,6 +31,7 @@ import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.io.GPDBWritable;
 import org.greenplum.pxf.api.io.Text;
 import org.greenplum.pxf.api.io.Writable;
+import org.greenplum.pxf.api.model.BatchResolver;
 import org.greenplum.pxf.api.model.GreenplumCSV;
 import org.greenplum.pxf.api.model.OutputFormat;
 import org.greenplum.pxf.api.model.RequestContext;
@@ -85,8 +86,8 @@ public class BridgeOutputBuilder {
         makeErrorRecord();
         samplingEnabled = (this.context.getStatsSampleRatio() > 0);
         addNewLine = true;
-        String profile = context.getProfile();
-        if (profile != null && profile.matches(".*:batch$")) {
+        Class<?> resolverClass = context.getResolverClass();
+        if (resolverClass != null && BatchResolver.class.isAssignableFrom(resolverClass)) {
             addNewLine = false;
         }
     }
