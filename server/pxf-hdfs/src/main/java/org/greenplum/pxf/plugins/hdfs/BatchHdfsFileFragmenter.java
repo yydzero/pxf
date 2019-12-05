@@ -13,10 +13,18 @@ public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
 
     private int batchSize;
 
+    public int getBatchSize() {
+        return batchSize;
+    }
+
     @Override
     public void initialize(RequestContext context) {
         super.initialize(context);
-        batchSize = Integer.valueOf(context.getOption("BATCH_SIZE"));
+        batchSize = 1;
+        final String batchSizeOption = context.getOption("BATCH_SIZE");
+        if (batchSizeOption != null) {
+            batchSize = Integer.valueOf(batchSizeOption);
+        }
     }
 
     /**
