@@ -20,6 +20,8 @@ import java.util.List;
 public class ImageResolver extends BasePlugin implements BatchResolver {
     private int currentImage;
     List<InputStream> inputStreams;
+    // number of images going over the wire at a time
+    private int imagesGroupSize = 25;
 
     /**
      * Returns a Postgres-style array with RGB values
@@ -84,17 +86,21 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         if (currentImage == 0) {
             sb.append(",\"{");
         }
-        InputStream stream = inputStreams.get(currentImage++);
-        try {
-            processImage(sb, ImageIO.read(stream));
-            stream.close();
-        } catch (IOException e) {
-            LOG.info(e.getMessage());
-        }
-        if (currentImage != inputStreams.size()) {
-            sb.append(",");
-        } else {
-            sb.append("}\"\n");
+        InputStream stream;
+        for (int i = 0; i < imagesGroupSize; i++) {
+            stream = inputStreams.get(currentImage++);
+            try {
+                processImage(sb, ImageIO.read(stream));
+                stream.close();
+            } catch (IOException e) {
+                LOG.info(e.getMessage());
+            }
+            if (currentImage != inputStreams.size()) {
+                sb.append(",");
+            } else {
+                sb.append("}\"\n");
+                break;
+            }
         }
 
         return sb.toString().getBytes();
