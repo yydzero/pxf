@@ -47,10 +47,10 @@ public class BatchedImageReadBridge extends BaseBridge {
                 row = accessor.readNextObject();
                 outputQueue = outputBuilder.makeOutput(((BatchResolver) resolver).startBatch(row));
             }
-            byte[] bytes = ((BatchResolver) resolver).getNextBatchedItem(row);
+            byte[] imageBytes = ((BatchResolver) resolver).getNextBatchedItem(row);
 
-            if (bytes != null) {
-                outputQueue.add(new BufferWritable(bytes));
+            if (imageBytes != null) {
+                outputQueue.add(new BufferWritable(imageBytes));
             } else {
                 rowDepleted = true;
                 outputQueue.add(null);
@@ -61,7 +61,7 @@ public class BatchedImageReadBridge extends BaseBridge {
 
     @Override
     public boolean isThreadSafe() {
-        return false;
+        return true;
     }
 
     @Override
