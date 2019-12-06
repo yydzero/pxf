@@ -8,6 +8,7 @@ import org.greenplum.pxf.api.model.Resolver;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -90,7 +91,7 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         for (int i = 0; i < imagesGroupSize; i++) {
             stream = inputStreams.get(currentImage++);
             try {
-                processImage(sb, ImageIO.read(stream));
+                processImage(sb, ImageIO.read(new BufferedInputStream(stream)));
                 stream.close();
             } catch (IOException e) {
                 LOG.info(e.getMessage());
@@ -125,7 +126,11 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
                 int pixel = image.getRGB(j, i);
                 sb
                         .append("{")
-                        .append(getRGBFromPixel(pixel))
+                        .append((pixel >> 16) & 0xff)
+                        .append(",")
+                        .append((pixel >> 8) & 0xff)
+                        .append(",")
+                        .append(pixel & 0xff)
                         .append("}");
             }
             sb.append("}");
@@ -144,11 +149,4 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         throw new UnsupportedOperationException();
     }
 
-    private String getRGBFromPixel(int pixel) {
-//        int alpha = (pixel >> 24) & 0xff;
-        int red = (pixel >> 16) & 0xff;
-        int green = (pixel >> 8) & 0xff;
-        int blue = (pixel) & 0xff;
-        return String.format("%d,%d,%d", red, green, blue);
-    }
 }
