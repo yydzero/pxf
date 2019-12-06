@@ -4,11 +4,9 @@ import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.BatchResolver;
-import org.greenplum.pxf.api.model.Resolver;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -21,8 +19,18 @@ import java.util.List;
 public class ImageResolver extends BasePlugin implements BatchResolver {
     private int currentImage;
     List<InputStream> inputStreams;
-    // number of images going over the wire at a time
-    private int imagesGroupSize = 25;
+    // cache of strings for RGB arrays going to Greenplum
+    private static String[] reds = new String[256];
+    private static String[] greens = new String[256];
+    private static String[] blues = new String[256];
+
+    static {
+        for (int i = 0; i < 256; i++) {
+            reds[i] = "{" + i;
+            greens[i] = "," + i + ",";
+            blues[i] = i + "}";
+        }
+    }
 
     /**
      * Returns a Postgres-style array with RGB values
@@ -83,25 +91,21 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         if (currentImage == inputStreams.size()) {
             return null;
         }
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(1024 * 3);
         if (currentImage == 0) {
             sb.append(",\"{");
         }
-        InputStream stream;
-        for (int i = 0; i < imagesGroupSize; i++) {
-            stream = inputStreams.get(currentImage++);
-            try {
-                processImage(sb, ImageIO.read(new BufferedInputStream(stream)));
-                stream.close();
-            } catch (IOException e) {
-                LOG.info(e.getMessage());
-            }
-            if (currentImage != inputStreams.size()) {
-                sb.append(",");
-            } else {
-                sb.append("}\"\n");
-                break;
-            }
+        InputStream stream = inputStreams.get(currentImage++);
+        try {
+            processImage(sb, ImageIO.read(stream));
+            stream.close();
+        } catch (IOException e) {
+            LOG.info(e.getMessage());
+        }
+        if (currentImage != inputStreams.size()) {
+            sb.append(",");
+        } else {
+            sb.append("}\"\n");
         }
 
         return sb.toString().getBytes();
@@ -117,24 +121,16 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         LOG.debug("Image size {}w {}h", w, h);
 
         sb.append("{");
-
         for (int i = 0; i < h; i++) {
-            if (i > 0) sb.append(",");
             sb.append("{");
             for (int j = 0; j < w; j++) {
-                if (j > 0) sb.append(",");
                 int pixel = image.getRGB(j, i);
-                sb
-                        .append("{")
-                        .append((pixel >> 16) & 0xff)
-                        .append(",")
-                        .append((pixel >> 8) & 0xff)
-                        .append(",")
-                        .append(pixel & 0xff)
-                        .append("}");
+                sb.append(reds[(pixel >> 16) & 0xff] + greens[(pixel >> 8) & 0xff] + blues[pixel & 0xff] + ",");
             }
-            sb.append("}");
+            sb.setLength(sb.length() - 1);
+            sb.append("},");
         }
+        sb.setLength(sb.length() - 1);
         sb.append("}");
     }
 
