@@ -104,12 +104,13 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         }
 
         LOG.debug("Image size {}w {}h", w, h);
-
+        int[] rgbArray = new int[w * h];
+        image.getRGB(0, 0, w, h, rgbArray, 0, w);
         sb.append("{");
         for (int i = 0; i < h; i++) {
             sb.append("{");
             for (int j = 0; j < w; j++) {
-                int pixel = image.getRGB(j, i);
+                int pixel = rgbArray[i * w + j];
                 sb.append(r[(pixel >> 16) & 0xff]).append(g[(pixel >> 8) & 0xff]).append(b[pixel & 0xff]).append(",");
             }
             sb.setLength(sb.length() - 1);
