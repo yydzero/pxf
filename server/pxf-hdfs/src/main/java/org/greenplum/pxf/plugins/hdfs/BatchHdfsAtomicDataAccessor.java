@@ -56,7 +56,6 @@ public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements 
     List<InputStream> inputStreams;
     List<String> paths;
     private FileSplit fileSplit;
-    protected URI uri;
 
     @Override
     public void initialize(RequestContext requestContext) {
@@ -81,8 +80,7 @@ public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements 
         // input data stream, FileSystem.get actually
         // returns an FSDataInputStream
         paths = new ArrayList<>(Arrays.asList(context.getDataSource().split(",")));
-        uri = URI.create(paths.get(0));
-        FileSystem fs = FileSystem.get(uri, configuration);
+        FileSystem fs = FileSystem.get(URI.create(paths.get(0)), configuration);
         for (String p : paths) {
             inputStreams.add(fs.open(new Path(p)));
         }

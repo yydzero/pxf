@@ -9,13 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BatchImageFileAccessor extends BatchHdfsAtomicDataAccessor {
-    private List<BufferedImage> images;
     private boolean served = false;
+
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
-        images = new ArrayList<>();
     }
+
     @Override
     public OneRow readNextObject() throws IOException {
         /* check if working segment */
@@ -24,21 +24,21 @@ public class BatchImageFileAccessor extends BatchHdfsAtomicDataAccessor {
         }
 
         served = true;
-        return new OneRow(uri, inputStreams);
+        return new OneRow(paths, inputStreams);
     }
 
     @Override
-    public boolean openForWrite() throws Exception {
+    public boolean openForWrite() {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public boolean writeNextObject(OneRow onerow) throws Exception {
+    public boolean writeNextObject(OneRow onerow) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void closeForWrite() throws Exception {
+    public void closeForWrite() {
         throw new UnsupportedOperationException();
     }
 
