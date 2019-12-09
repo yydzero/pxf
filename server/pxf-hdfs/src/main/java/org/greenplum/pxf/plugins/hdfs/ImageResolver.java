@@ -43,15 +43,27 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
      */
     @Override
     public List<OneField> startBatch(OneRow row) {
-        URI uri = (URI) row.getKey();
-        Path path = Paths.get(uri.getPath());
+        List<String> paths = (ArrayList) row.getKey();
+        inputStreams = (ArrayList) row.getData();
+
+        List<String> fullPaths = new ArrayList<>(paths.size());
+        List<String> parentDirs = new ArrayList<>(paths.size());
+        List<String> fileNames = new ArrayList<>(paths.size());
+
+        for (String pathString : paths) {
+            URI uri = URI.create(pathString);
+            Path path = Paths.get(uri.getPath());
+
+            fullPaths.add(uri.toString());
+            parentDirs.add(path.getParent().getFileName().toString());
+            fileNames.add(path.getFileName().toString());
+        }
 
         List<OneField> payload = new ArrayList<>();
-        payload.add(new OneField(0, uri.toString()));
-        payload.add(new OneField(0, path.getParent().getFileName().toString()));
-        payload.add(new OneField(0, path.getFileName().toString()));
+        payload.add(new OneField(0, "{" + String.join(",", fullPaths) + "}"));
+        payload.add(new OneField(0, "{" + String.join(",", parentDirs) + "}"));
+        payload.add(new OneField(0, "{" + String.join(",", fileNames) + "}"));
 
-        inputStreams = (ArrayList) row.getData();
         return payload;
     }
 
