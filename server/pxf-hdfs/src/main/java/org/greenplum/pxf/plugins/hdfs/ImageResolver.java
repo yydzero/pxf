@@ -39,34 +39,49 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
     }
 
     /**
-     * Returns a Postgres-style array with RGB values
+     * Returns Postgres-style arrays with full paths, parent directories, and names
+     * of image files.
      */
     @Override
     public List<OneField> startBatch(OneRow row) {
         List<String> paths = (ArrayList) row.getKey();
         inputStreams = (ArrayList) row.getData();
 
-        List<String> fullPaths = new ArrayList<>(paths.size());
-        List<String> parentDirs = new ArrayList<>(paths.size());
-        List<String> fileNames = new ArrayList<>(paths.size());
+        StringBuilder fullPaths = new StringBuilder("{");
+        StringBuilder parentDirs = new StringBuilder("{");
+        StringBuilder fileNames = new StringBuilder("{");
 
         for (String pathString : paths) {
             URI uri = URI.create(pathString);
             Path path = Paths.get(uri.getPath());
 
-            fullPaths.add(uri.toString());
-            parentDirs.add(path.getParent().getFileName().toString());
-            fileNames.add(path.getFileName().toString());
+            fullPaths.append(uri.toString()).append(",");
+            parentDirs.append(path.getParent().getFileName().toString()).append(",");
+            fileNames.append(path.getFileName().toString()).append(",");
         }
 
-        List<OneField> payload = new ArrayList<>();
-        payload.add(new OneField(0, "{" + String.join(",", fullPaths) + "}"));
-        payload.add(new OneField(0, "{" + String.join(",", parentDirs) + "}"));
-        payload.add(new OneField(0, "{" + String.join(",", fileNames) + "}"));
+        fullPaths.setLength(fullPaths.length() - 1);
+        parentDirs.setLength(parentDirs.length() - 1);
+        fileNames.setLength(fileNames.length() - 1);
 
-        return payload;
+        fullPaths.append("}");
+        parentDirs.append("}");
+        fileNames.append("}");
+
+        return new ArrayList<OneField>() {
+            {
+                add(new OneField(0, fullPaths.toString()));
+                add(new OneField(0, parentDirs.toString()));
+                add(new OneField(0, fileNames.toString()));
+            }
+        };
     }
 
+    /**
+     * Returns Postgres-style multi-dimensional array, piece by piece. Each
+     * time this method is called it returns another image, where multiple images
+     * will end up in the same tuple.
+     */
     @Override
     public byte[] getNextBatchedItem(OneRow row) {
         if (currentImage == inputStreams.size()) {
@@ -76,8 +91,9 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         InputStream stream = inputStreams.get(currentImage);
         try {
             BufferedImage image = ImageIO.read(stream);
-            int h = image.getHeight();
             int w = image.getWidth();
+            int h = image.getHeight();
+            LOG.debug("Image size {}w {}h", w, h);
             // avoid arrayCopy() in sb.append() by pre-calculating max image size
             sb = new StringBuilder(
                     w * h * 13 +  // each RGB is at most 13 chars: {255,255,255}
@@ -94,7 +110,7 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
             if (currentImage++ == 0) {
                 sb.append(",\"{");
             }
-            processImage(sb, image, h, w);
+            processImage(sb, image, w, h);
             stream.close();
         } catch (IOException e) {
             LOG.info(e.getMessage());
@@ -110,25 +126,21 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
         return sb.toString().getBytes();
     }
 
-    private void processImage(StringBuilder sb, BufferedImage image, int h, int w) {
+    private void processImage(StringBuilder sb, BufferedImage image, int w, int h) {
         if (image == null) {
             return;
         }
 
-        LOG.debug("Image size {}w {}h", w, h);
-        int[] rgbArray = new int[w * h];
-        image.getRGB(0, 0, w, h, rgbArray, 0, w);
-        sb.append("{");
-        for (int i = 0; i < h; i++) {
-            sb.append("{");
-            for (int j = 0; j < w; j++) {
-                int pixel = rgbArray[i * w + j];
-                sb.append(r[(pixel >> 16) & 0xff]).append(g[(pixel >> 8) & 0xff]).append(b[pixel & 0xff]).append(",");
+        sb.append("{{");
+        int cnt = 0;
+        for (int pixel : image.getRGB(0, 0, w, h, null, 0, w)) {
+            sb.append(r[(pixel >> 16) & 0xff]).append(g[(pixel >> 8) & 0xff]).append(b[pixel & 0xff]).append(",");
+            if (++cnt % w == 0) {
+                sb.setLength(sb.length() - 1);
+                sb.append("},{");
             }
-            sb.setLength(sb.length() - 1);
-            sb.append("},");
         }
-        sb.setLength(sb.length() - 1);
+        sb.setLength(sb.length() - 2);
         sb.append("}");
     }
 
