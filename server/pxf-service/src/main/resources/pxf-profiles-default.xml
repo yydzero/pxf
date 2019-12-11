@@ -755,7 +755,7 @@ under the License.
         <description>This profile is suitable for using when reading image files from HDFS</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchHdfsAtomicDataAccessor</accessor>
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
         <protocol>hdfs</protocol>
@@ -765,7 +765,7 @@ under the License.
         <description>This profile is suitable for using when reading image files from GCS</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchHdfsAtomicDataAccessor</accessor>
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
         <protocol>gs</protocol>
@@ -775,7 +775,7 @@ under the License.
         <description>This profile is suitable for using when reading image files from Azure Data Lake</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchHdfsAtomicDataAccessor</accessor>
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
         <protocol>adl</protocol>
@@ -785,7 +785,7 @@ under the License.
         <description>This profile is suitable for using when reading image files from Amazon S3</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
+            <accessor>org.greenplum.pxf.plugins.hdfs.BatchHdfsAtomicDataAccessor</accessor>
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
         <protocol>s3a</protocol>

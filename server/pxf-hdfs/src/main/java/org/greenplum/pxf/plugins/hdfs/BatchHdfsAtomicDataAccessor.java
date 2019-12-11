@@ -52,10 +52,11 @@ import java.util.List;
  * a specific file type should inherit from this class only if the file they are
  * reading does not support splitting: a protocol-buffer file, regular file, ...
  */
-public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor {
+public class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor {
     List<InputStream> inputStreams;
     List<String> paths;
     private FileSplit fileSplit;
+    private boolean served = false;
 
     @Override
     public void initialize(RequestContext requestContext) {
@@ -89,20 +90,6 @@ public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements 
     }
 
     /**
-     * Fetches one record from the file.
-     *
-     * @return a {@link OneRow} record as a Java object. Returns null if none.
-     */
-    @Override
-    public OneRow readNextObject() throws IOException {
-        if (!isWorkingSegment()) {
-            return null;
-        }
-
-        return new OneRow(null, new Object());
-    }
-
-    /**
      * Closes the access stream when finished reading the file
      */
     @Override
@@ -116,6 +103,32 @@ public abstract class BatchHdfsAtomicDataAccessor extends BasePlugin implements 
                 inputStream.close();
             }
         }
+    }
+
+    @Override
+    public OneRow readNextObject() throws IOException {
+        /* check if working segment */
+        if (served) {
+            return null;
+        }
+
+        served = true;
+        return new OneRow(paths, inputStreams);
+    }
+
+    @Override
+    public boolean openForWrite() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean writeNextObject(OneRow onerow) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void closeForWrite() {
+        throw new UnsupportedOperationException();
     }
 
     /*
