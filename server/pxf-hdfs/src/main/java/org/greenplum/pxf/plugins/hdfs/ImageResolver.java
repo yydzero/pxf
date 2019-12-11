@@ -23,15 +23,15 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
     private static String[] r = new String[256];
     private static String[] g = new String[256];
     private static String[] b = new String[256];
-
     static {
+        String intStr;
         for (int i = 0; i < 256; i++) {
-            r[i] = "{" + i;
-            g[i] = "," + i + ",";
-            b[i] = i + "}";
+            intStr = String.valueOf(i);
+            r[i] = "{" + intStr;
+            g[i] = "," + intStr + ",";
+            b[i] = intStr + "}";
         }
     }
-
 
     @Override
     public List<OneField> getFields(OneRow row) {
