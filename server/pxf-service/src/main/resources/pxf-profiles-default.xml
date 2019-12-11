@@ -752,50 +752,7 @@ under the License.
     <!-- IMAGE PROFILES -->
     <profile>
         <name>hdfs:image</name>
-        <description>This profile is suitable for using when reading image files</description>
-        <plugins>
-            <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
-        </plugins>
-    </profile>
-    <profile>
-        <name>s3:image</name>
-        <description>This profile is suitable for using when reading image files</description>
-        <plugins>
-            <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
-        </plugins>
-        <protocol>s3a</protocol>
-        <optionMappings>
-            <mapping option="accesskey" property="fs.s3a.access.key"/>
-            <mapping option="secretkey" property="fs.s3a.secret.key"/>
-        </optionMappings>
-    </profile>
-    <profile>
-        <name>adl:image</name>
-        <description>This profile is suitable for using when reading image files</description>
-        <plugins>
-            <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
-        </plugins>
-        <protocol>adl</protocol>
-    </profile>
-    <profile>
-        <name>gs:image</name>
-        <description>This profile is suitable for using when reading image files</description>
-        <plugins>
-            <fragmenter>org.greenplum.pxf.plugins.hdfs.HdfsFileFragmenter</fragmenter>
-            <accessor>org.greenplum.pxf.plugins.hdfs.ImageFileAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
-        </plugins>
-        <protocol>gs</protocol>
-    </profile>
-    <profile>
-        <name>hdfs:batch</name>
-        <description>This profile is suitable for using when batching image files</description>
+        <description>This profile is suitable for using when reading image files from HDFS</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
@@ -804,8 +761,8 @@ under the License.
         <protocol>hdfs</protocol>
     </profile>
     <profile>
-        <name>gs:batch</name>
-        <description>This profile is suitable for using when batching image files</description>
+        <name>gs:image</name>
+        <description>This profile is suitable for using when reading image files from GCS</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
@@ -814,8 +771,8 @@ under the License.
         <protocol>gs</protocol>
     </profile>
     <profile>
-        <name>adl:batch</name>
-        <description>This profile is suitable for using when batching image files</description>
+        <name>adl:image</name>
+        <description>This profile is suitable for using when reading image files from Azure Data Lake</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
@@ -824,8 +781,8 @@ under the License.
         <protocol>adl</protocol>
     </profile>
     <profile>
-        <name>s3:batch</name>
-        <description>This profile is suitable for using when batching image files</description>
+        <name>s3:image</name>
+        <description>This profile is suitable for using when reading image files from Amazon S3</description>
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.BatchImageFileAccessor</accessor>
