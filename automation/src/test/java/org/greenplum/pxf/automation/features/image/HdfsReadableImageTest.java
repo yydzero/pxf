@@ -3,6 +3,7 @@ package org.greenplum.pxf.automation.features.image;
 import org.greenplum.pxf.automation.features.BaseFeature;
 import org.greenplum.pxf.automation.structures.tables.basic.Table;
 import org.greenplum.pxf.automation.structures.tables.pxf.ReadableExternalTable;
+import org.greenplum.pxf.automation.utils.system.ProtocolEnum;
 import org.greenplum.pxf.automation.utils.system.ProtocolUtils;
 import org.testng.annotations.Test;
 
@@ -22,11 +23,13 @@ public class HdfsReadableImageTest extends BaseFeature {
     private String[] fullPaths;
     private String[] directories;
     private String[] names;
+    private ProtocolEnum protocol;
 
 
     @Override
     public void beforeClass() throws Exception {
         super.beforeClass();
+        protocol = ProtocolUtils.getProtocol();
         // path for storing data on HDFS (for processing by PXF)
         hdfsPath = hdfs.getWorkingDirectory() + "/readableImage";
         prepareData();
@@ -82,8 +85,8 @@ public class HdfsReadableImageTest extends BaseFeature {
             names[cnt] = String.format("%d.png", cnt);
             imageFiles[cnt] = new File(publicStage + "/" + names[cnt]);
             ImageIO.write(bi, "png", imageFiles[cnt]);
-            fullPaths[cnt] = hdfsPath + "/" + names[cnt];
-            hdfs.copyFromLocal(imageFiles[cnt].toString(), fullPaths[cnt]);
+            fullPaths[cnt] =  "/" + hdfsPath + "/" + names[cnt];
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "/" + names[cnt]);
             directories[cnt] = "readableImage";
             cnt++;
         }
@@ -126,7 +129,7 @@ public class HdfsReadableImageTest extends BaseFeature {
         final String[] imageTableFieldsList = {"fullpaths TEXT[]", "directories TEXT[]", "names TEXT[]", "images INT[]"};
         exTable.setFields(imageTableFieldsList);
         exTable.setPath(hdfsPath + "/*.png");
-        exTable.setProfile(ProtocolUtils.getProtocol().value() + ":image");
+        exTable.setProfile(protocol.value() + ":image");
         compareTable = new Table("compare_table", imageTableFieldsList);
         compareTable.setDistributionFields(new String[]{"names"});
     }
@@ -169,6 +172,5 @@ public class HdfsReadableImageTest extends BaseFeature {
                 throw new RuntimeException(String.format("Could not delete %s", fileToDelete));
             }
         }
-
     }
 }

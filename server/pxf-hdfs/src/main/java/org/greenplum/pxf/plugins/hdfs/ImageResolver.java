@@ -55,7 +55,7 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
             URI uri = URI.create(pathString);
             Path path = Paths.get(uri.getPath());
 
-            fullPaths.append(uri.toString()).append(",");
+            fullPaths.append(uri.getPath()).append(",");
             parentDirs.append(path.getParent().getFileName().toString()).append(",");
             fileNames.append(path.getFileName().toString()).append(",");
         }
