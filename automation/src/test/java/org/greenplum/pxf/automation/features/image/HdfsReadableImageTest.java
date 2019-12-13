@@ -85,7 +85,7 @@ public class HdfsReadableImageTest extends BaseFeature {
             names[cnt] = String.format("%d.png", cnt);
             imageFiles[cnt] = new File(publicStage + "/" + names[cnt]);
             ImageIO.write(bi, "png", imageFiles[cnt]);
-            fullPaths[cnt] =  "/" + hdfsPath + "/" + names[cnt];
+            fullPaths[cnt] = (protocol != ProtocolEnum.HDFS ? hdfsPath.replaceFirst("[^/]*/", "/") : "/" + hdfsPath) + "/" + names[cnt];
             hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "/" + names[cnt]);
             directories[cnt] = "readableImage";
             cnt++;
