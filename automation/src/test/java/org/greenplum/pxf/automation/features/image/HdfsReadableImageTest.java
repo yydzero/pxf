@@ -14,6 +14,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 public class HdfsReadableImageTest extends BaseFeature {
     private String hdfsPath;
@@ -50,38 +51,21 @@ public class HdfsReadableImageTest extends BaseFeature {
             put("b", 0);
         }};
 
-        for (int i = 0; i < w * h; i++) {
-            final int strength = i % w;
-            final int white = ((255 - strength) << maskOffsets.get("r"))
-                    | ((255 - strength) << maskOffsets.get("g"))
-                    | ((255 - strength)) << maskOffsets.get("b");
-            final int black = (strength << maskOffsets.get("r")) | (strength << maskOffsets.get("g")) | (strength << maskOffsets.get("b"));
-            final int r = strength << maskOffsets.get("r");
-            final int g = strength << maskOffsets.get("g");
-            final int b = strength << maskOffsets.get("b");
-            // gradients (colors fade from left to right)
-            // white -> black
-            bufferedImages[0].setRGB(i % w, i / w, white);
-            images[0].append("{").append(255 - strength).append(",").append(255 - strength).append(",").append(255 - strength).append("},");
-            // black -> white
-            bufferedImages[1].setRGB(i % w, i / w, black);
-            images[1].append("{").append(strength).append(",").append(strength).append(",").append(b).append("},");
-            // black -> red
-            bufferedImages[2].setRGB(i % w, i / w, r);
-            images[2].append("{").append(strength).append(",").append(0).append(",").append(0).append("},");
-            // black -> green
-            bufferedImages[3].setRGB(i % w, i / w, g);
-            images[3].append("{").append(0).append(",").append(strength).append(",").append(0).append("},");
-            // black -> blue
-            bufferedImages[4].setRGB(i % w, i / w, b);
-            images[4].append("{").append(0).append(",").append(0).append(",").append(b).append("},");
-            if ((i + 1) % w == 0) {
-                appendToImages(images, "},{", 1);
+        Random rand = new Random();
+        for (int j = 0; j < bufferedImages.length; j++) {
+            for (int i = 0; i < w * h; i++) {
+                final int r = rand.nextInt(255) << maskOffsets.get("r");
+                final int g = rand.nextInt(255) << maskOffsets.get("g");
+                final int b = rand.nextInt(255) << maskOffsets.get("b");
+                bufferedImages[j].setRGB(i % w, i / w, r + g + b);
+                images[j].append("{").append(r >> maskOffsets.get("r")).append(",").append(g >> maskOffsets.get("g")).append(",").append(b >> maskOffsets.get("b")).append("},");
+                if ((i + 1) % w == 0) {
+                    appendToImage(images[j], "},{", 1);
+                }
             }
-
         }
+
         appendToImages(images, "}", 2);
-        printSbs(images);
         publicStageDir = new File(publicStage);
         if (!publicStageDir.exists()) {
             if (!publicStageDir.mkdirs()) {
@@ -99,14 +83,6 @@ public class HdfsReadableImageTest extends BaseFeature {
         }
     }
 
-    private void printSbs(StringBuilder[] sbs) throws IOException {
-        BufferedWriter writer = new BufferedWriter(new FileWriter("/tmp/foobar.txt"));
-        for (StringBuilder sb : sbs) {
-            writer.write(sb.toString());
-        }
-        writer.close();
-    }
-
     private void appendToImages(StringBuilder[] sbs, String s, int offsetFromEnd) {
         if (sbs[0] == null) {
             for (int i = 0; i < sbs.length; i++) {
@@ -114,11 +90,17 @@ public class HdfsReadableImageTest extends BaseFeature {
             }
         }
         for (StringBuilder sb : sbs) {
-            sb.setLength(sb.length() - offsetFromEnd);
-            sb.append(s);
+            appendToImage(sb, s, offsetFromEnd);
         }
     }
 
+    private void appendToImage(StringBuilder sb, String s, int offsetFromEnd) {
+        if (sb == null) {
+            sb = new StringBuilder();
+        }
+        sb.setLength(sb.length() - offsetFromEnd);
+        sb.append(s);
+    }
 
     @Override
     public void beforeMethod() throws Exception {
