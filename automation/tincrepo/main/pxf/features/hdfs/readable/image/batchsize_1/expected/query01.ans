@@ -1,0 +1,13 @@
+-- @description query01 for PXF HDFS Readable images
+SELECT names FROM image_test_batchsize_1, compare_table_batchsize_1
+    WHERE image_test_batchsize_1.images = compare_table_batchsize_1.images
+    ORDER BY names;
+  names
+---------
+ {0.png}
+ {1.png}
+ {2.png}
+ {3.png}
+ {4.png}
+(5 rows)
+
