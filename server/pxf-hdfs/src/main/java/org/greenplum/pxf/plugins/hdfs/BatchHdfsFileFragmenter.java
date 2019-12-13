@@ -44,7 +44,7 @@ public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
 
         List<String> pathList = new ArrayList<>();
         for (int i = 1; i <= fileList.length; i++) {
-            pathList.add(fileList[i-1].getPath().toUri().toString());
+            pathList.add(fileList[i - 1].getPath().toUri().toString());
             if (i % batchSize == 0 || i == fileList.length) {
                 fragments.add(new Fragment(String.join(",", pathList)));
                 pathList.clear();
