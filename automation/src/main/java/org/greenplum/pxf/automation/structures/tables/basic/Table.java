@@ -32,12 +32,14 @@ public class Table {
     private String name;
     private String[] fields;
     private String[] distributionFields;
+    private boolean randomDistribution;
 
     private DataPattern dataPattern;
     private long numberOfLines = 0;
 
     public Table(String name, String[] fields) {
         this.name = name;
+        this.randomDistribution = false;
 
         if (fields != null) {
             this.fields = Arrays.copyOf(fields, fields.length);
@@ -48,6 +50,7 @@ public class Table {
 
     public Table(String name, String[] fields, DataPattern dataPattern) {
         this.name = name;
+        this.randomDistribution = false;
 
         if (fields != null) {
             this.fields = Arrays.copyOf(fields, fields.length);
@@ -79,6 +82,10 @@ public class Table {
     }
 
     protected String distribution() {
+        if (randomDistribution) {
+            return " DISTRIBUTED RANDOMLY";
+        }
+
         StringBuilder sb = new StringBuilder();
 
         if (getDistributionFields() != null && getDistributionFields().length > 0) {
@@ -163,6 +170,10 @@ public class Table {
         }
 
         data.add(row);
+    }
+
+    public void setRandomDistribution() {
+        randomDistribution = true;
     }
 
     /**
@@ -541,6 +552,7 @@ public class Table {
     }
 
     public void setDistributionFields(String[] distributionFields) {
+        randomDistribution = false;
         this.distributionFields = Arrays.copyOf(distributionFields, distributionFields.length);
     }
 
