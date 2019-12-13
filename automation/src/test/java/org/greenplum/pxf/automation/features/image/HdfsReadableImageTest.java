@@ -25,7 +25,6 @@ public class HdfsReadableImageTest extends BaseFeature {
     private String[] names;
     private ProtocolEnum protocol;
 
-
     @Override
     public void beforeClass() throws Exception {
         super.beforeClass();
@@ -87,6 +86,7 @@ public class HdfsReadableImageTest extends BaseFeature {
             ImageIO.write(bi, "png", imageFiles[cnt]);
             fullPaths[cnt] = (protocol != ProtocolEnum.HDFS ? hdfsPath.replaceFirst("[^/]*/", "/") : "/" + hdfsPath) + "/" + names[cnt];
             hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "/" + names[cnt]);
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "_extra_dir/" + names[cnt]);
             directories[cnt] = "readableImage";
             cnt++;
         }
@@ -126,12 +126,17 @@ public class HdfsReadableImageTest extends BaseFeature {
         exTable = new ReadableExternalTable("image_test", null, "", "CSV");
         exTable.setHost(pxfHost);
         exTable.setPort(pxfPort);
-        final String[] imageTableFieldsList = {"fullpaths TEXT[]", "directories TEXT[]", "names TEXT[]", "images INT[]"};
-        exTable.setFields(imageTableFieldsList);
+        final String[] imageTableFields = new String[]{
+                "fullpaths TEXT[]",
+                "directories TEXT[]",
+                "names TEXT[]",
+                "images INT[]"
+        };
+        exTable.setFields(imageTableFields);
         exTable.setPath(hdfsPath + "/*.png");
         exTable.setProfile(protocol.value() + ":image");
-        compareTable = new Table("compare_table", imageTableFieldsList);
-        compareTable.setDistributionFields(new String[]{"names"});
+        compareTable = new Table("compare_table", imageTableFields);
+        compareTable.setRandomDistribution();
     }
 
     /**
@@ -158,6 +163,40 @@ public class HdfsReadableImageTest extends BaseFeature {
 
         // Verify results
         runTincTest("pxf.features.hdfs.readable.image.batchsize_1.runTest");
+    }
+
+    /**
+     * Read a single image from HDFS
+     */
+    @Test(groups = {"features", "gpdb", "hcfs", "security"})
+    public void filesInDifferentDirectories() throws Exception {
+        exTable.setName("image_test_images_in_different_directories");
+        compareTable.setName("compare_table_images_in_different_directories");
+        int cnt = 0;
+        for (StringBuilder image : imagesPostgresArrays) {
+            compareTable.addRow(new String[]{
+                    "'{" + fullPaths[cnt] + "}'",
+                    "'{" + directories[cnt] + "}'",
+                    "'{" + names[cnt] + "}'",
+                    "'{" + image + "}'"
+            });
+            compareTable.addRow(new String[]{
+                    "'{" + fullPaths[cnt].replace("readableImage", "readableImage_extra_dir") + "}'",
+                    "'{" + directories[cnt] + "_extra_dir}'",
+                    "'{" + names[cnt] + "}'",
+                    "'{" + image + "}'"
+            });
+            cnt++;
+        }
+
+        // open up path to include extra directory
+        exTable.setPath(hdfsPath + "*/*.png");
+        gpdb.createTableAndVerify(exTable);
+        gpdb.createTableAndVerify(compareTable);
+        gpdb.runQuery(compareTable.constructInsertStmt());
+
+        // Verify results
+        runTincTest("pxf.features.hdfs.readable.image.images_in_different_directories.runTest");
     }
 
 
