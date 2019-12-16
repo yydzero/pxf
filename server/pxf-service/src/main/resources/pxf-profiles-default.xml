@@ -758,7 +758,6 @@ under the License.
             <accessor>org.greenplum.pxf.plugins.hdfs.BatchHdfsAtomicDataAccessor</accessor>
             <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
         </plugins>
-        <protocol>hdfs</protocol>
     </profile>
     <profile>
         <name>gs:image</name>
