@@ -169,7 +169,61 @@ public class HdfsReadableImageTest extends BaseFeature {
      * Read a single image from HDFS
      */
     @Test(groups = {"features", "gpdb", "hcfs", "security"})
+    public void smallBatchSize() throws Exception {
+        exTable.setName("image_test_small_batchsize");
+        exTable.setUserParameters(new String[]{"BATCH_SIZE=3"});
+        compareTable.setName("compare_table_small_batchsize");
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[0] + "," + fullPaths[1] + "," + fullPaths[2] + "}'",
+                "'{" + directories[0] + "," + directories[1] + "," + directories[2] + "}'",
+                "'{" + names[0] + "," + names[1] + "," + names[2] + "}'",
+                "'{" + imagesPostgresArrays[0] + "," + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "}'"
+        });
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[3] + "," + fullPaths[4] + "}'",
+                "'{" + directories[3] + "," + directories[4] + "}'",
+                "'{" + names[3] + "," + names[4] + "}'",
+                "'{" + imagesPostgresArrays[3] + "," + imagesPostgresArrays[4] + "}'"
+        });
+
+        gpdb.createTableAndVerify(exTable);
+        gpdb.createTableAndVerify(compareTable);
+        gpdb.runQuery(compareTable.constructInsertStmt());
+
+        // Verify results
+        runTincTest("pxf.features.hdfs.readable.image.small_batchsize.runTest");
+    }
+
+    /**
+     * Read a single image from HDFS
+     */
+    @Test(groups = {"features", "gpdb", "hcfs", "security"})
+    public void largeBatchSize() throws Exception {
+        exTable.setName("image_test_large_batchsize");
+        exTable.setUserParameters(new String[]{"BATCH_SIZE=10"});
+        compareTable.setName("compare_table_large_batchsize");
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[0] + "," + fullPaths[1] + "," + fullPaths[2] + "," + fullPaths[3] + "," + fullPaths[4] + "}'",
+                "'{" + directories[0] + "," + directories[1] + "," + directories[2] + "," + directories[3] + "," + directories[4] + "}'",
+                "'{" + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + "}'",
+                "'{" + imagesPostgresArrays[0] + "," + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "," + imagesPostgresArrays[3] + "," + imagesPostgresArrays[4] + "}'"
+        });
+
+        gpdb.createTableAndVerify(exTable);
+        gpdb.createTableAndVerify(compareTable);
+        gpdb.runQuery(compareTable.constructInsertStmt());
+
+        // Verify results
+        runTincTest("pxf.features.hdfs.readable.image.large_batchsize.runTest");
+    }
+
+    /**
+     * Read a single image from HDFS
+     */
+    @Test(groups = {"features", "gpdb", "hcfs", "security"})
     public void filesInDifferentDirectories() throws Exception {
+        // this test ensures that the different directories yield different
+        // image 'labels'
         exTable.setName("image_test_images_in_different_directories");
         compareTable.setName("compare_table_images_in_different_directories");
         int cnt = 0;
@@ -182,7 +236,7 @@ public class HdfsReadableImageTest extends BaseFeature {
             });
             compareTable.addRow(new String[]{
                     "'{" + fullPaths[cnt].replace("readableImage", "readableImage_extra_dir") + "}'",
-                    "'{" + directories[cnt] + "_extra_dir}'",
+                    "'{" + directories[cnt] + "_extra_dir}'", // different directory reflected in image 'label'
                     "'{" + names[cnt] + "}'",
                     "'{" + image + "}'"
             });
