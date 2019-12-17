@@ -7,6 +7,7 @@ import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.PxfInputFormat;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
@@ -23,7 +24,7 @@ public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
         batchSize = 1;
         final String batchSizeOption = context.getOption("BATCH_SIZE");
         if (batchSizeOption != null) {
-            batchSize = Integer.valueOf(batchSizeOption);
+            batchSize = Integer.parseInt(batchSizeOption);
         }
     }
 
@@ -54,7 +55,8 @@ public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
 
         LOG.debug("Total number of fragments = {}", fragments.size());
 
+        fragments.sort(Comparator.comparing(Fragment::getSourceName));
+
         return fragments;
     }
-
 }
