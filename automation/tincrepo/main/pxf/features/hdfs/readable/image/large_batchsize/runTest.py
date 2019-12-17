@@ -1,7 +1,7 @@
 from mpp.models import SQLTestCase
 from mpp.models import SQLConcurrencyTestCase
 
-class PxfHdfsImageTestBatchsize1(SQLConcurrencyTestCase):
+class PxfHdfsImageTestLargeBatchsize(SQLConcurrencyTestCase):
     """
     @product_version  gpdb: [1.3.1-]
     @db_name pxfautomation
