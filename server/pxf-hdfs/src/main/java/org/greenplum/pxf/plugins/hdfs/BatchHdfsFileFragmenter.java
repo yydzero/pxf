@@ -1,14 +1,13 @@
 package org.greenplum.pxf.plugins.hdfs;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.PxfInputFormat;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
 
@@ -41,14 +40,16 @@ public class BatchHdfsFileFragmenter extends HdfsDataFragmenter {
         PxfInputFormat pxfInputFormat = new PxfInputFormat();
         PxfInputFormat.setInputPaths(jobConf, path);
 
-        final FileStatus[] fileStatuses = pxfInputFormat.listStatus(jobConf);
+        final List<String> files = Arrays
+                .stream(pxfInputFormat.listStatus(jobConf))
+                .map(fs -> fs.getPath().toUri().toString())
+                .sorted()
+                .collect(Collectors.toList());
 
-        Arrays.sort(fileStatuses, Comparator.comparing(fs -> fs.getPath().toUri().toString()));
         StringBuilder pathList = new StringBuilder();
-        for (int i = 1; i <= fileStatuses.length; i++) {
-            pathList.append(fileStatuses[i - 1].getPath().toUri().toString()).append(",");
-            fileStatuses[i - 1] = null;
-            if (i % batchSize == 0 || i == fileStatuses.length) {
+        for (int i = 1; i <= files.size(); i++) {
+            pathList.append(files.set(i - 1, null)).append(",");
+            if (i % batchSize == 0 || i == files.size()) {
                 pathList.setLength(pathList.length() - 1);
                 fragments.add(new Fragment(pathList.toString()));
                 pathList.setLength(0);
