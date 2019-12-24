@@ -6,3 +6,4 @@
 server/*/out
 server/tmp
 server/pxf-cli/go/pkg
+concourse/pipelines/pxf_pipeline-dev*.yml
