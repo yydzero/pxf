@@ -7,6 +7,7 @@ import org.greenplum.pxf.api.model.BatchResolver;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.AccessorFactory;
 import org.greenplum.pxf.api.utilities.ResolverFactory;
+import org.greenplum.pxf.plugins.hdfs.BatchHdfsImageAccessor;
 import org.greenplum.pxf.service.BridgeOutputBuilder;
 
 import java.io.DataInputStream;
@@ -14,13 +15,13 @@ import java.util.Deque;
 import java.util.LinkedList;
 
 public class BatchedImageReadBridge extends BaseBridge {
-    final BridgeOutputBuilder outputBuilder;
+    private final BridgeOutputBuilder outputBuilder;
     private OneRow row;
     private boolean rowDepleted;
 
-    Deque<Writable> outputQueue = new LinkedList<>();
+    private Deque<Writable> outputQueue = new LinkedList<>();
 
-    public BatchedImageReadBridge(RequestContext context) {
+    BatchedImageReadBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
     }
 
@@ -47,13 +48,13 @@ public class BatchedImageReadBridge extends BaseBridge {
                 row = accessor.readNextObject();
                 outputQueue = outputBuilder.makeOutput(((BatchResolver) resolver).startBatch(row));
             }
-            byte[] imageBytes = ((BatchResolver) resolver).getNextBatchedItem(row);
+            byte[] imageBytes = ((BatchResolver) resolver).getNextBatchedItem(((BatchHdfsImageAccessor) accessor).nextImage());
 
             if (imageBytes != null) {
                 outputQueue.add(new BufferWritable(imageBytes));
             } else {
                 rowDepleted = true;
-                outputQueue.add(null);
+                outputQueue.add(null); // when this one is popped reading is known to be done
             }
         }
         return outputQueue.pop();

@@ -52,16 +52,16 @@ import java.util.List;
  * a specific file type should inherit from this class only if the file they are
  * reading does not support splitting: a protocol-buffer file, regular file, ...
  */
-public class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor {
-    List<InputStream> inputStreams;
+public class BatchHdfsImageAccessor extends BasePlugin implements Accessor {
     List<String> paths;
     private FileSplit fileSplit;
     private boolean served = false;
+    private int currentStream;
+    FileSystem fs;
 
     @Override
     public void initialize(RequestContext requestContext) {
         super.initialize(requestContext);
-        inputStreams = new ArrayList<>();
         fileSplit = HdfsUtilities.parseFileSplit(context);
     }
 
@@ -77,16 +77,14 @@ public class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor 
         if (!isWorkingSegment()) {
             return false;
         }
+        currentStream = 0;
 
         // input data stream, FileSystem.get actually
         // returns an FSDataInputStream
         paths = new ArrayList<>(Arrays.asList(context.getDataSource().split(",")));
-        FileSystem fs = FileSystem.get(URI.create(paths.get(0)), configuration);
-        for (String p : paths) {
-            inputStreams.add(fs.open(new Path(p)));
-        }
+        fs = FileSystem.get(URI.create(paths.get(0)), configuration);
 
-        return (inputStreams.size() > 0);
+        return (paths.size() > 0);
     }
 
     /**
@@ -98,22 +96,30 @@ public class BatchHdfsAtomicDataAccessor extends BasePlugin implements Accessor 
             return;
         }
 
-        for (InputStream inputStream : inputStreams) {
-            if (inputStream != null) {
-                inputStream.close();
-            }
+
+    }
+
+    public BufferedImage nextImage() throws IOException {
+        if (currentStream == paths.size()) {
+            return null;
+        }
+        try (InputStream inputStream = fs.open(new Path(paths.get(currentStream++)))) {
+            return ImageIO.read(inputStream);
+        } catch (IOException e) {
+            LOG.info(e.getMessage());
+            throw e;
         }
     }
 
     @Override
-    public OneRow readNextObject() throws IOException {
+    public OneRow readNextObject() {
         /* check if working segment */
         if (served) {
             return null;
         }
 
         served = true;
-        return new OneRow(paths, inputStreams);
+        return new OneRow(paths, this);
     }
 
     @Override

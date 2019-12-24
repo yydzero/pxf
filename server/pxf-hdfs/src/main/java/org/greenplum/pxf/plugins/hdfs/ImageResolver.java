@@ -5,10 +5,7 @@ import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.BatchResolver;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,11 +15,11 @@ import java.util.List;
 @SuppressWarnings("unchecked")
 public class ImageResolver extends BasePlugin implements BatchResolver {
     private int currentImage;
-    List<InputStream> inputStreams;
     // cache of strings for RGB arrays going to Greenplum
     private static String[] r = new String[256];
     private static String[] g = new String[256];
     private static String[] b = new String[256];
+
     static {
         String intStr;
         for (int i = 0; i < 256; i++) {
@@ -45,7 +42,6 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
     @Override
     public List<OneField> startBatch(OneRow row) {
         List<String> paths = (ArrayList) row.getKey();
-        inputStreams = (ArrayList) row.getData();
 
         StringBuilder fullPaths = new StringBuilder("{");
         StringBuilder parentDirs = new StringBuilder("{");
@@ -83,39 +79,30 @@ public class ImageResolver extends BasePlugin implements BatchResolver {
      * will end up in the same tuple.
      */
     @Override
-    public byte[] getNextBatchedItem(OneRow row) {
-        if (currentImage == inputStreams.size()) {
-            return null; // already sent over the last image
-        }
+    public byte[] getNextBatchedItem(Object item) {
         StringBuilder sb;
-        InputStream stream = inputStreams.get(currentImage);
-        try {
-            BufferedImage image = ImageIO.read(stream);
-            int w = image.getWidth();
-            int h = image.getHeight();
-            LOG.debug("Image size {}w {}h", w, h);
-            // avoid arrayCopy() in sb.append() by pre-calculating max image size
-            sb = new StringBuilder(
-                    w * h * 13 +  // each RGB is at most 13 chars: {255,255,255}
-                            (w - 1) * h + // commas separating RGBs
-                            h * 2 +       // curly braces surrounding each row of RGBs
-                            h - 1 +       // commas separating each row
-                            2 +           // outer curly braces for the image
-                            2 +           // any combination of image-separating commas and/or outer braces
-                            1 +           // opening CSV comma
-                            2 +           // double quote chars
-                            1             // newline
-            );
-            LOG.debug("Image length: {}, cap: {}", sb.length(), sb.capacity());
-            if (currentImage++ == 0) {
-                sb.append(",\"{");
-            }
-            processImage(sb, image, w, h);
-            stream.close();
-        } catch (IOException e) {
-            LOG.info(e.getMessage());
-            return null;
+
+        BufferedImage image = (BufferedImage) item;
+        int w = image.getWidth();
+        int h = image.getHeight();
+        LOG.debug("Image size {}w {}h", w, h);
+        // avoid arrayCopy() in sb.append() by pre-calculating max image size
+        sb = new StringBuilder(
+                w * h * 13 +  // each RGB is at most 13 chars: {255,255,255}
+                        (w - 1) * h + // commas separating RGBs
+                        h * 2 +       // curly braces surrounding each row of RGBs
+                        h - 1 +       // commas separating each row
+                        2 +           // outer curly braces for the image
+                        2 +           // any combination of image-separating commas and/or outer braces
+                        1 +           // opening CSV comma
+                        2 +           // double quote chars
+                        1             // newline
+        );
+        LOG.debug("Image length: {}, cap: {}", sb.length(), sb.capacity());
+        if (currentImage++ == 0) {
+            sb.append(",\"{");
         }
+        processImage(sb, image, w, h);
         if (currentImage != inputStreams.size()) {
             sb.append(",");
         } else {

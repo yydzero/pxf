@@ -45,7 +45,6 @@ public class BatchHdfsFileFragmenterTest {
 
     @Test
     public void testGetFragmentsBatchSizeNotGiven() throws Exception {
-
         context.setProfileScheme("localfile");
         context.setDataSource(path);
         batchHdfsFileFragmenter.initialize(context);
