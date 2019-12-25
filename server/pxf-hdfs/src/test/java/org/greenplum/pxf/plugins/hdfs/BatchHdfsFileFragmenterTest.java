@@ -25,6 +25,7 @@ public class BatchHdfsFileFragmenterTest {
         batchHdfsFileFragmenter = new BatchHdfsFileFragmenter();
         context = new RequestContext();
         context.setConfig("default");
+        context.setUser("user");
         path = Objects.requireNonNull(this.getClass().getClassLoader().getResource("csv/")).getPath();
     }
 
