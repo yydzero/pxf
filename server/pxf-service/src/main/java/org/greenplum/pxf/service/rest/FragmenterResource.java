@@ -27,8 +27,9 @@ import org.greenplum.pxf.api.model.Fragmenter;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.FragmenterCacheFactory;
 import org.greenplum.pxf.api.utilities.FragmenterFactory;
-import org.greenplum.pxf.api.utilities.FragmentsResponse;
 import org.greenplum.pxf.api.utilities.FragmentsResponseFormatter;
+import org.greenplum.pxf.api.utilities.SimpleFragmentsResponse;
+import org.greenplum.pxf.api.utilities.StreamingFragmentsResponse;
 import org.greenplum.pxf.api.utilities.Utilities;
 import org.greenplum.pxf.service.HttpRequestParser;
 import org.greenplum.pxf.service.RequestParser;
@@ -113,6 +114,14 @@ public class FragmenterResource extends BaseResource {
 
         LOG.debug("FRAGMENTER started for path \"{}\"", path);
 
+        final String streamFragments = context.getOption("STREAM_FRAGMENTS");
+        if (streamFragments != null && streamFragments.toLowerCase().equals("true")) {
+            context.setFragmenter("org.greenplum.pxf.plugins.hdfs.StreamingHdfsFileFragmenter");
+            return Response.ok(
+                    FragmentsResponseFormatter.formatStreamingFragmentsResponse(fragmenterFactory.getPlugin(context)),
+                    MediaType.APPLICATION_JSON_TYPE
+            ).build();
+        }
         List<Fragment> fragments;
 
         if (Utilities.isFragmenterCacheEnabled()) {
@@ -143,8 +152,8 @@ public class FragmenterResource extends BaseResource {
             fragments = getFragments(context);
         }
 
-        FragmentsResponse fragmentsResponse = FragmentsResponseFormatter.formatResponse(fragments, path);
-        return Response.ok(fragmentsResponse, MediaType.APPLICATION_JSON_TYPE).build();
+        SimpleFragmentsResponse simpleFragmentsResponse = (SimpleFragmentsResponse) FragmentsResponseFormatter.formatSimpleFragmentsResponse(fragments, path);
+        return Response.ok(simpleFragmentsResponse, MediaType.APPLICATION_JSON_TYPE).build();
     }
 
     /**
