@@ -87,6 +87,8 @@ public class HdfsReadableImageTest extends BaseFeature {
             fullPaths[cnt] = (protocol != ProtocolEnum.HDFS ? hdfsPath.replaceFirst("[^/]*/", "/") : "/" + hdfsPath) + "/" + names[cnt];
             hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "/" + names[cnt]);
             hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "_extra_dir/" + names[cnt]);
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage/dir1/" + names[cnt]);
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage/dir2/" + names[cnt]);
             directories[cnt] = "readableImage";
             cnt++;
         }
@@ -165,6 +167,37 @@ public class HdfsReadableImageTest extends BaseFeature {
         runTincTest("pxf.features.hdfs.readable.image.batchsize_1.runTest");
     }
 
+    @Test(groups = {"features", "gpdb", "hcfs", "security"})
+    public void batchSize1_streamingFragments() throws Exception {
+        exTable.setName("image_test_batchsize_1_streaming_fragments");
+        exTable.setUserParameters(new String[]{"STREAM_FRAGMENTS=true"});
+        exTable.setPath(hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage");
+        compareTable.setName("compare_table_batchsize_1_streaming_fragments");
+        int cnt = 0;
+        for (StringBuilder image : imagesPostgresArrays) {
+            compareTable.addRow(new String[]{
+                    "'{" + fullPaths[cnt].replace("readableImage", "streamingFragmentsReadableImage/dir1") + "}'",
+                    "'{dir1}'",
+                    "'{" + names[cnt] + "}'",
+                    "'{" + image + "}'"
+            });
+            compareTable.addRow(new String[]{
+                    "'{" + fullPaths[cnt].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
+                    "'{dir2}'",
+                    "'{" + names[cnt] + "}'",
+                    "'{" + image + "}'"
+            });
+            cnt++;
+        }
+
+        gpdb.createTableAndVerify(exTable);
+        gpdb.createTableAndVerify(compareTable);
+        gpdb.runQuery(compareTable.constructInsertStmt());
+
+        // Verify results
+        runTincTest("pxf.features.hdfs.readable.image.batchsize_1_streaming_fragments.runTest");
+    }
+
     /**
      * Read a single image from HDFS
      */
@@ -194,6 +227,51 @@ public class HdfsReadableImageTest extends BaseFeature {
         runTincTest("pxf.features.hdfs.readable.image.small_batchsize.runTest");
     }
 
+    @Test(groups = {"features", "gpdb", "hcfs", "security"})
+    public void smallBatchSize_streamingFragments() throws Exception {
+        exTable.setName("image_test_small_batchsize_streaming_fragments");
+        exTable.setUserParameters(new String[]{"BATCH_SIZE=3", "STREAM_FRAGMENTS=true"});
+        exTable.setPath(hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage");
+        compareTable.setName("compare_table_small_batchsize_streaming_fragments");
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[0].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[1].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[2].replace("readableImage", "streamingFragmentsReadableImage/dir1")
+                        + "}'",
+                "'{dir1,dir1,dir1}'",
+                "'{" + names[0] + "," + names[1] + "," + names[2] + "}'",
+                "'{" + imagesPostgresArrays[0] + "," + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "}'"
+        });
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[3].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[0].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
+                "'{dir1,dir1,dir2}'",
+                "'{" + names[3] + "," + names[4] + "," + names[0] + "}'",
+                "'{" + imagesPostgresArrays[3] + "," + imagesPostgresArrays[4] + "," + imagesPostgresArrays[0] + "}'"
+        });
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[1].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
+                        + fullPaths[2].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
+                        + fullPaths[3].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
+                "'{dir2,dir2,dir2}'",
+                "'{" + names[1] + "," + names[2] + "," + names[3] + "}'",
+                "'{" + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "," + imagesPostgresArrays[3] + "}'"
+        });
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
+                "'{dir2}'",
+                "'{" + names[4] + "}'",
+                "'{" + imagesPostgresArrays[4] + "}'"
+        });
+
+        gpdb.createTableAndVerify(exTable);
+        gpdb.createTableAndVerify(compareTable);
+        gpdb.runQuery(compareTable.constructInsertStmt());
+        // Verify results
+        runTincTest("pxf.features.hdfs.readable.image.small_batchsize_streaming_fragments.runTest");
+    }
+
     /**
      * Read a single image from HDFS
      */
@@ -206,7 +284,11 @@ public class HdfsReadableImageTest extends BaseFeature {
                 "'{" + fullPaths[0] + "," + fullPaths[1] + "," + fullPaths[2] + "," + fullPaths[3] + "," + fullPaths[4] + "}'",
                 "'{" + directories[0] + "," + directories[1] + "," + directories[2] + "," + directories[3] + "," + directories[4] + "}'",
                 "'{" + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + "}'",
-                "'{" + imagesPostgresArrays[0] + "," + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "," + imagesPostgresArrays[3] + "," + imagesPostgresArrays[4] + "}'"
+                "'{" + imagesPostgresArrays[0] + ","
+                        + imagesPostgresArrays[1] + ","
+                        + imagesPostgresArrays[2] + ","
+                        + imagesPostgresArrays[3] + ","
+                        + imagesPostgresArrays[4] + "}'"
         });
 
         gpdb.createTableAndVerify(exTable);
@@ -215,6 +297,46 @@ public class HdfsReadableImageTest extends BaseFeature {
 
         // Verify results
         runTincTest("pxf.features.hdfs.readable.image.large_batchsize.runTest");
+    }
+
+    @Test(groups = {"features", "gpdb", "hcfs", "security"})
+    public void largeBatchSize_streamingFragments() throws Exception {
+        exTable.setName("image_test_large_batchsize_streaming_fragments");
+        exTable.setUserParameters(new String[]{"BATCH_SIZE=10", "STREAM_FRAGMENTS=true"});
+        exTable.setPath(hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage");
+        compareTable.setName("compare_table_large_batchsize_streaming_fragments");
+        compareTable.addRow(new String[]{
+                "'{" + fullPaths[0].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[1].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[2].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[3].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
+                        + fullPaths[0].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
+                        + fullPaths[1].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
+                        + fullPaths[2].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
+                        + fullPaths[3].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
+                        + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
+                "'{dir1,dir1,dir1,dir1,dir1,dir2,dir2,dir2,dir2,dir2}'",
+                "'{" + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + ","
+                        + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + "}'",
+                "'{" + imagesPostgresArrays[0] + ","
+                        + imagesPostgresArrays[1] + ","
+                        + imagesPostgresArrays[2] + ","
+                        + imagesPostgresArrays[3] + ","
+                        + imagesPostgresArrays[4] + ","
+                        + imagesPostgresArrays[0] + ","
+                        + imagesPostgresArrays[1] + ","
+                        + imagesPostgresArrays[2] + ","
+                        + imagesPostgresArrays[3] + ","
+                        + imagesPostgresArrays[4] + "}'"
+        });
+
+        gpdb.createTableAndVerify(exTable);
+        gpdb.createTableAndVerify(compareTable);
+        gpdb.runQuery(compareTable.constructInsertStmt());
+
+        // Verify results
+        runTincTest("pxf.features.hdfs.readable.image.large_batchsize_streaming_fragments.runTest");
     }
 
     /**
