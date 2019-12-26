@@ -68,10 +68,6 @@ public class FragmentsResponseFormatter {
         return new SimpleFragmentsResponse(fragments);
     }
 
-    public static StreamingOutput formatStreamingFragmentsResponse(Fragmenter fragmenter) {
-        return new StreamingFragmentsResponse(fragmenter);
-    }
-
     /**
      * Updates the fragments' indexes so that it is incremented by sourceName.
      * (E.g.: {"a", 0}, {"a", 1}, {"b", 0} ... )

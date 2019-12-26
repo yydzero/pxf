@@ -77,11 +77,9 @@ public class StreamingFragmentsResponse implements StreamingOutput {
                     dos.write("]}".getBytes());
                     return;
                 }
-                StringBuilder result = new StringBuilder();
                 /* metaData and userData are automatically converted to Base64 */
-                result.append(prefix).append(mapper.writeValueAsString(fragments.get(0)));
+                dos.write((prefix + mapper.writeValueAsString(fragments.get(0))).getBytes());
                 prefix = ",";
-                dos.write(result.toString().getBytes());
             } catch (Exception e) {
                 e.printStackTrace();
             }

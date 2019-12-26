@@ -27,6 +27,8 @@ public class BatchHdfsFileFragmenterTest {
         context.setConfig("default");
         context.setUser("user");
         path = Objects.requireNonNull(this.getClass().getClassLoader().getResource("csv/")).getPath();
+        context.setProfileScheme("localfile");
+        context.setDataSource(path);
     }
 
     @Test
@@ -46,9 +48,6 @@ public class BatchHdfsFileFragmenterTest {
 
     @Test
     public void testGetFragmentsBatchSizeNotGiven() throws Exception {
-
-        context.setProfileScheme("localfile");
-        context.setDataSource(path);
         batchHdfsFileFragmenter.initialize(context);
         fragments = batchHdfsFileFragmenter.getFragments();
         correctFragments = new ArrayList<>();
@@ -65,8 +64,6 @@ public class BatchHdfsFileFragmenterTest {
     @Test
     public void testGetFragmentsLargerBatchSizeGiven() throws Exception {
         context.addOption("BATCH_SIZE", "100");
-        context.setProfileScheme("localfile");
-        context.setDataSource(path);
         batchHdfsFileFragmenter.initialize(context);
         fragments = batchHdfsFileFragmenter.getFragments();
         correctFragments = new ArrayList<>();
@@ -86,8 +83,6 @@ public class BatchHdfsFileFragmenterTest {
     @Test
     public void testGetFragmentsSmallerBatchSizeGiven() throws Exception {
         context.addOption("BATCH_SIZE", "2");
-        context.setProfileScheme("localfile");
-        context.setDataSource(path);
         batchHdfsFileFragmenter.initialize(context);
         fragments = batchHdfsFileFragmenter.getFragments();
         correctFragments = new ArrayList<>();
@@ -105,7 +100,7 @@ public class BatchHdfsFileFragmenterTest {
         assertFragmentListEquals(correctFragments, fragments);
     }
 
-    private void assertFragmentListEquals(List<Fragment> correctFragments, List<Fragment> fragments) {
+    private static void assertFragmentListEquals(List<Fragment> correctFragments, List<Fragment> fragments) {
         int cnt = 0;
         for (Fragment fragment : correctFragments) {
             assertEquals(fragment.getSourceName(), fragments.get(cnt++).getSourceName());

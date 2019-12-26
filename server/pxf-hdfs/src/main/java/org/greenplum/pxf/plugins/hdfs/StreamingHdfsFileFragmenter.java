@@ -19,6 +19,9 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
     private int currentDir = 0;
     private int currentFile = 0;
     PxfInputFormat pxfInputFormat = new PxfInputFormat();
+    public int getBatchSize() {
+        return batchSize;
+    }
 
     @Override
     public void initialize(RequestContext context) {

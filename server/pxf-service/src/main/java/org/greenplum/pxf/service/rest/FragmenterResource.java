@@ -118,7 +118,7 @@ public class FragmenterResource extends BaseResource {
         if (streamFragments != null && streamFragments.toLowerCase().equals("true")) {
             context.setFragmenter("org.greenplum.pxf.plugins.hdfs.StreamingHdfsFileFragmenter");
             return Response.ok(
-                    FragmentsResponseFormatter.formatStreamingFragmentsResponse(fragmenterFactory.getPlugin(context)),
+                    new StreamingFragmentsResponse(fragmenterFactory.getPlugin(context)),
                     MediaType.APPLICATION_JSON_TYPE
             ).build();
         }
