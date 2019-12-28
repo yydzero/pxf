@@ -5,9 +5,8 @@ import org.greenplum.pxf.api.OneRow;
 
 import java.util.List;
 
-public interface BatchResolver extends Resolver {
+public interface StreamingResolver extends Resolver {
+    String getNext();
 
-    List<OneField> startBatch(OneRow row);
-
-    byte[] getNextBatchedItem(OneRow row);
+    boolean hasNext();
 }

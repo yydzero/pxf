@@ -29,6 +29,8 @@ import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -50,12 +52,12 @@ import java.util.List;
  * a specific file type should inherit from this class only if the file they are
  * reading does not support splitting: a protocol-buffer file, regular file, ...
  */
-public class BatchHdfsImageAccessor extends BasePlugin implements Accessor {
+public class StreamingImageAccessor extends BasePlugin implements Accessor {
     List<InputStream> inputStreams;
     List<String> paths;
     private FileSplit fileSplit;
     private boolean served = false;
-    private int currentStream;
+    int currentImage = 0;
 
     @Override
     public void initialize(RequestContext requestContext) {
@@ -76,7 +78,6 @@ public class BatchHdfsImageAccessor extends BasePlugin implements Accessor {
         if (!isWorkingSegment()) {
             return false;
         }
-        currentStream = 0;
 
         // input data stream, FileSystem.get actually
         // returns an FSDataInputStream
@@ -105,12 +106,8 @@ public class BatchHdfsImageAccessor extends BasePlugin implements Accessor {
         }
     }
 
-    public InputStream nextStream() {
-        return inputStreams.get(currentStream++);
-    }
-
     @Override
-    public OneRow readNextObject() {
+    public OneRow readNextObject() throws IOException {
         /* check if working segment */
         if (served) {
             return null;
@@ -118,6 +115,23 @@ public class BatchHdfsImageAccessor extends BasePlugin implements Accessor {
 
         served = true;
         return new OneRow(paths, this);
+    }
+
+    public BufferedImage readNextImage() {
+        if (currentImage == inputStreams.size()) {
+            return null;
+        }
+
+        try (InputStream stream = inputStreams.get(currentImage++)){
+            return ImageIO.read(stream);
+        } catch (IOException e) {
+            LOG.info("Couldn't read image", e);
+            return null;
+        }
+    }
+
+    public boolean hasNext() {
+        return currentImage < inputStreams.size();
     }
 
     @Override

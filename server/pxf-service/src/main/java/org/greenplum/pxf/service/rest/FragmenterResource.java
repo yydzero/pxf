@@ -71,6 +71,7 @@ public class FragmenterResource extends BaseResource {
 
     // this flag is set to true when the thread processes the fragment call
     private boolean didThreadProcessFragmentCall;
+    private static final String STREAMING_FRAGMENTER = "org.greenplum.pxf.plugins.hdfs.StreamingHdfsFileFragmenter";
 
     public FragmenterResource() {
         this(HttpRequestParser.getInstance(), FragmenterFactory.getInstance(), FragmenterCacheFactory.getInstance());
@@ -114,17 +115,16 @@ public class FragmenterResource extends BaseResource {
 
         LOG.debug("FRAGMENTER started for path \"{}\"", path);
 
+        List<Fragment> fragments;
+
         final String streamFragments = context.getOption("STREAM_FRAGMENTS");
         if (streamFragments != null && streamFragments.toLowerCase().equals("true")) {
-            context.setFragmenter("org.greenplum.pxf.plugins.hdfs.StreamingHdfsFileFragmenter");
+            context.setFragmenter(STREAMING_FRAGMENTER);
             return Response.ok(
                     new StreamingFragmentsResponse(fragmenterFactory.getPlugin(context)),
                     MediaType.APPLICATION_JSON_TYPE
             ).build();
-        }
-        List<Fragment> fragments;
-
-        if (Utilities.isFragmenterCacheEnabled()) {
+        } else if (Utilities.isFragmenterCacheEnabled()) {
             try {
                 // We can't support lambdas here because asm version doesn't support it
                 fragments = fragmenterCacheFactory.getCache()
