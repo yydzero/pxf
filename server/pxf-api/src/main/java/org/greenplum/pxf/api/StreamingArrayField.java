@@ -1,11 +1,13 @@
 package org.greenplum.pxf.api;
 
+import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.StreamingResolver;
 
 public class StreamingArrayField extends ArrayField {
     StreamingResolver resolver;
 
     public StreamingArrayField(StreamingResolver streamingResolver) {
+        super(DataType.TEXTARRAY.getOID(), null);
         resolver = streamingResolver;
     }
 

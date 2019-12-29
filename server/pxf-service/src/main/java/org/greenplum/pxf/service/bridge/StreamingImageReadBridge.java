@@ -1,26 +1,17 @@
 package org.greenplum.pxf.service.bridge;
 
-import org.greenplum.pxf.api.OneRow;
-import org.greenplum.pxf.api.io.BufferWritable;
 import org.greenplum.pxf.api.io.Writable;
-import org.greenplum.pxf.api.model.StreamingResolver;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.AccessorFactory;
 import org.greenplum.pxf.api.utilities.ResolverFactory;
 import org.greenplum.pxf.service.BridgeOutputBuilder;
 
 import java.io.DataInputStream;
-import java.util.Deque;
 import java.util.Iterator;
-import java.util.LinkedList;
 
 public class StreamingImageReadBridge extends BaseBridge {
     final BridgeOutputBuilder outputBuilder;
-    Iterator<Writable> iterator;
-    private OneRow row;
-    private boolean rowDepleted;
-
-    Deque<Writable> outputQueue = new LinkedList<>();
+    Iterator<Writable> writableIterator;
 
     public StreamingImageReadBridge(RequestContext context) {
         this(context, AccessorFactory.getInstance(), ResolverFactory.getInstance());
@@ -28,7 +19,6 @@ public class StreamingImageReadBridge extends BaseBridge {
 
     StreamingImageReadBridge(RequestContext context, AccessorFactory accessorFactory, ResolverFactory resolverFactory) {
         super(context, accessorFactory, resolverFactory);
-        rowDepleted = true;
         outputBuilder = new BridgeOutputBuilder(context);
     }
 
@@ -39,15 +29,14 @@ public class StreamingImageReadBridge extends BaseBridge {
 
     @Override
     public Writable getNext() throws Exception {
-        if (iterator == null) {
-            row = accessor.readNextObject();
-            iterator = outputBuilder.makeStreamingOutput(resolver.getFields(row));
-        } else if (!iterator.hasNext()) {
-            iterator = null;
+        if (writableIterator == null) {
+            writableIterator = outputBuilder.makeStreamingOutput(resolver.getFields(accessor.readNextObject()));
+        } else if (!writableIterator.hasNext()) {
+            writableIterator = null;
             return null;
         }
 
-        return iterator.next();
+        return writableIterator.next();
     }
 
     @Override

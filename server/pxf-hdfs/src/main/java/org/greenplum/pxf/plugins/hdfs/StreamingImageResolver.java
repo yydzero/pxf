@@ -1,8 +1,10 @@
 package org.greenplum.pxf.plugins.hdfs;
 
+import org.greenplum.pxf.api.ArrayField;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
 import org.greenplum.pxf.api.StreamingArrayField;
+import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.Accessor;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.model.StreamingResolver;
@@ -15,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unchecked")
-public class ImageResolver extends BasePlugin implements StreamingResolver {
+public class StreamingImageResolver extends BasePlugin implements StreamingResolver {
     Accessor accessor;
     // cache of strings for RGB arrays going to Greenplum
     private static String[] r = new String[256];
@@ -38,36 +40,27 @@ public class ImageResolver extends BasePlugin implements StreamingResolver {
      */
     @Override
     public List<OneField> getFields(OneRow row) {
-        List<String> paths = (ArrayList) row.getKey();
+        List<String> paths = (ArrayList<String>) row.getKey();
         accessor = (StreamingImageAccessor) row.getData();
-
-        StringBuilder fullPaths = new StringBuilder("{");
-        StringBuilder parentDirs = new StringBuilder("{");
-        StringBuilder fileNames = new StringBuilder("{");
+        List<String> fullPaths = new ArrayList<>();
+        List<Path> parentDirs = new ArrayList<>();
+        List<Path> fileNames = new ArrayList<>();
 
         for (String pathString : paths) {
             URI uri = URI.create(pathString);
             Path path = Paths.get(uri.getPath());
 
-            fullPaths.append(uri.getPath()).append(",");
-            parentDirs.append(path.getParent().getFileName().toString()).append(",");
-            fileNames.append(path.getFileName().toString()).append(",");
+            fullPaths.add(uri.getPath());
+            parentDirs.add(path.getParent().getFileName());
+            fileNames.add(path.getFileName());
         }
-
-        fullPaths.setLength(fullPaths.length() - 1);
-        parentDirs.setLength(parentDirs.length() - 1);
-        fileNames.setLength(fileNames.length() - 1);
-
-        fullPaths.append("}");
-        parentDirs.append("}");
-        fileNames.append("}");
 
         return new ArrayList<OneField>() {
             {
-                add(new OneField(0, fullPaths.toString()));
-                add(new OneField(0, parentDirs.toString()));
-                add(new OneField(0, fileNames.toString()));
-                add(new StreamingArrayField(ImageResolver.this));
+                add(new ArrayField(DataType.TEXTARRAY.getOID(), fullPaths));
+                add(new ArrayField(DataType.TEXTARRAY.getOID(), parentDirs));
+                add(new ArrayField(DataType.TEXTARRAY.getOID(), fileNames));
+                add(new StreamingArrayField(StreamingImageResolver.this));
             }
         };
     }

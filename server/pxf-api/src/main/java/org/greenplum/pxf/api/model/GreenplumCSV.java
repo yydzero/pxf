@@ -13,12 +13,16 @@ public class GreenplumCSV {
     private static final char QUOTE = '"';
     private static final char ESCAPE = '"';
     private static final char DELIMITER = ',';
+    private static final char OPEN_ARRAY = '{';
+    private static final char CLOSE_ARRAY = '}';
     private static final String NEWLINE = "\n";
     private static final String VALUE_OF_NULL = "";
 
     private String valueOfNull;
     private char quote;
     private char escape;
+    private char openArray;
+    private char closeArray;
     private String newline;
     private Character delimiter;
 
@@ -31,6 +35,8 @@ public class GreenplumCSV {
         newline = NEWLINE;
         delimiter = DELIMITER;
         valueOfNull = VALUE_OF_NULL;
+        openArray = OPEN_ARRAY;
+        closeArray = CLOSE_ARRAY;
     }
 
     public String getValueOfNull() {
@@ -221,5 +227,13 @@ public class GreenplumCSV {
         if (appendQuoteChar) chars[pos] = quote;
 
         return new String(chars);
+    }
+
+    public char getOpenArray() {
+        return openArray;
+    }
+
+    public char getCloseArray() {
+        return closeArray;
     }
 }

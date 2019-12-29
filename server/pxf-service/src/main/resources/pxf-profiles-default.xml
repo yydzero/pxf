@@ -756,7 +756,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.StreamingImageAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StreamingImageResolver</resolver>
         </plugins>
     </profile>
     <profile>
@@ -765,7 +765,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.StreamingImageAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StreamingImageResolver</resolver>
         </plugins>
         <protocol>gs</protocol>
     </profile>
@@ -775,7 +775,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.StreamingImageAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StreamingImageResolver</resolver>
         </plugins>
         <protocol>adl</protocol>
     </profile>
@@ -785,7 +785,7 @@ under the License.
         <plugins>
             <fragmenter>org.greenplum.pxf.plugins.hdfs.BatchHdfsFileFragmenter</fragmenter>
             <accessor>org.greenplum.pxf.plugins.hdfs.StreamingImageAccessor</accessor>
-            <resolver>org.greenplum.pxf.plugins.hdfs.ImageResolver</resolver>
+            <resolver>org.greenplum.pxf.plugins.hdfs.StreamingImageResolver</resolver>
         </plugins>
         <protocol>s3a</protocol>
         <optionMappings>
