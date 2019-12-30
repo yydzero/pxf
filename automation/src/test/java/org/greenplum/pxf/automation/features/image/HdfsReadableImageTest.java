@@ -21,9 +21,10 @@ public class HdfsReadableImageTest extends BaseFeature {
     private StringBuilder[] imagesPostgresArrays;
     private Table compareTable;
     private String[] fullPaths;
-    private String[] directories;
-    private String[] names;
+    private String[] parentDirectories;
+    private String[] imageNames;
     private ProtocolEnum protocol;
+    private final static int COLOR_MAX = 256;
 
     @Override
     public void beforeClass() throws Exception {
@@ -38,8 +39,8 @@ public class HdfsReadableImageTest extends BaseFeature {
         BufferedImage[] bufferedImages = new BufferedImage[NUM_IMAGES];
         imageFiles = new File[NUM_IMAGES];
         fullPaths = new String[NUM_IMAGES];
-        directories = new String[NUM_IMAGES];
-        names = new String[NUM_IMAGES];
+        parentDirectories = new String[NUM_IMAGES];
+        imageNames = new String[NUM_IMAGES];
         int w = 256;
         int h = 128;
         for (int i = 0; i < NUM_IMAGES; i++) {
@@ -57,9 +58,9 @@ public class HdfsReadableImageTest extends BaseFeature {
         Random rand = new Random();
         for (int j = 0; j < NUM_IMAGES; j++) {
             for (int i = 0; i < w * h; i++) {
-                final int r = rand.nextInt(256) << maskOffsets.get("r");
-                final int g = rand.nextInt(256) << maskOffsets.get("g");
-                final int b = rand.nextInt(256) << maskOffsets.get("b");
+                final int r = rand.nextInt(COLOR_MAX) << maskOffsets.get("r");
+                final int g = rand.nextInt(COLOR_MAX) << maskOffsets.get("g");
+                final int b = rand.nextInt(COLOR_MAX) << maskOffsets.get("b");
                 bufferedImages[j].setRGB(i % w, i / w, r + g + b);
                 imagesPostgresArrays[j]
                         .append("{")
@@ -81,15 +82,15 @@ public class HdfsReadableImageTest extends BaseFeature {
 
         int cnt = 0;
         for (BufferedImage bi : bufferedImages) {
-            names[cnt] = String.format("%d.png", cnt);
-            imageFiles[cnt] = new File(publicStage + "/" + names[cnt]);
+            imageNames[cnt] = String.format("%d.png", cnt);
+            imageFiles[cnt] = new File(publicStage + "/" + imageNames[cnt]);
             ImageIO.write(bi, "png", imageFiles[cnt]);
-            fullPaths[cnt] = (protocol != ProtocolEnum.HDFS ? hdfsPath.replaceFirst("[^/]*/", "/") : "/" + hdfsPath) + "/" + names[cnt];
-            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "/" + names[cnt]);
-            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "_extra_dir/" + names[cnt]);
-            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage/dir1/" + names[cnt]);
-            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage/dir2/" + names[cnt]);
-            directories[cnt] = "readableImage";
+            fullPaths[cnt] = (protocol != ProtocolEnum.HDFS ? hdfsPath.replaceFirst("[^/]*/", "/") : "/" + hdfsPath) + "/" + imageNames[cnt];
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "/" + imageNames[cnt]);
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfsPath + "_extra_dir/" + imageNames[cnt]);
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage/dir1/" + imageNames[cnt]);
+            hdfs.copyFromLocal(imageFiles[cnt].toString(), hdfs.getWorkingDirectory() + "/streamingFragmentsReadableImage/dir2/" + imageNames[cnt]);
+            parentDirectories[cnt] = "readableImage";
             cnt++;
         }
     }
@@ -152,8 +153,8 @@ public class HdfsReadableImageTest extends BaseFeature {
         for (StringBuilder image : imagesPostgresArrays) {
             compareTable.addRow(new String[]{
                     "'{" + fullPaths[cnt] + "}'",
-                    "'{" + directories[cnt] + "}'",
-                    "'{" + names[cnt] + "}'",
+                    "'{" + parentDirectories[cnt] + "}'",
+                    "'{" + imageNames[cnt] + "}'",
                     "'{" + image + "}'"
             });
             cnt++;
@@ -178,13 +179,13 @@ public class HdfsReadableImageTest extends BaseFeature {
             compareTable.addRow(new String[]{
                     "'{" + fullPaths[cnt].replace("readableImage", "streamingFragmentsReadableImage/dir1") + "}'",
                     "'{dir1}'",
-                    "'{" + names[cnt] + "}'",
+                    "'{" + imageNames[cnt] + "}'",
                     "'{" + image + "}'"
             });
             compareTable.addRow(new String[]{
                     "'{" + fullPaths[cnt].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
                     "'{dir2}'",
-                    "'{" + names[cnt] + "}'",
+                    "'{" + imageNames[cnt] + "}'",
                     "'{" + image + "}'"
             });
             cnt++;
@@ -208,14 +209,14 @@ public class HdfsReadableImageTest extends BaseFeature {
         compareTable.setName("compare_table_small_batchsize");
         compareTable.addRow(new String[]{
                 "'{" + fullPaths[0] + "," + fullPaths[1] + "," + fullPaths[2] + "}'",
-                "'{" + directories[0] + "," + directories[1] + "," + directories[2] + "}'",
-                "'{" + names[0] + "," + names[1] + "," + names[2] + "}'",
+                "'{" + parentDirectories[0] + "," + parentDirectories[1] + "," + parentDirectories[2] + "}'",
+                "'{" + imageNames[0] + "," + imageNames[1] + "," + imageNames[2] + "}'",
                 "'{" + imagesPostgresArrays[0] + "," + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "}'"
         });
         compareTable.addRow(new String[]{
                 "'{" + fullPaths[3] + "," + fullPaths[4] + "}'",
-                "'{" + directories[3] + "," + directories[4] + "}'",
-                "'{" + names[3] + "," + names[4] + "}'",
+                "'{" + parentDirectories[3] + "," + parentDirectories[4] + "}'",
+                "'{" + imageNames[3] + "," + imageNames[4] + "}'",
                 "'{" + imagesPostgresArrays[3] + "," + imagesPostgresArrays[4] + "}'"
         });
 
@@ -239,7 +240,7 @@ public class HdfsReadableImageTest extends BaseFeature {
                         + fullPaths[2].replace("readableImage", "streamingFragmentsReadableImage/dir1")
                         + "}'",
                 "'{dir1,dir1,dir1}'",
-                "'{" + names[0] + "," + names[1] + "," + names[2] + "}'",
+                "'{" + imageNames[0] + "," + imageNames[1] + "," + imageNames[2] + "}'",
                 "'{" + imagesPostgresArrays[0] + "," + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "}'"
         });
         compareTable.addRow(new String[]{
@@ -247,7 +248,7 @@ public class HdfsReadableImageTest extends BaseFeature {
                         + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir1") + ","
                         + fullPaths[0].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
                 "'{dir1,dir1,dir2}'",
-                "'{" + names[3] + "," + names[4] + "," + names[0] + "}'",
+                "'{" + imageNames[3] + "," + imageNames[4] + "," + imageNames[0] + "}'",
                 "'{" + imagesPostgresArrays[3] + "," + imagesPostgresArrays[4] + "," + imagesPostgresArrays[0] + "}'"
         });
         compareTable.addRow(new String[]{
@@ -255,13 +256,13 @@ public class HdfsReadableImageTest extends BaseFeature {
                         + fullPaths[2].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
                         + fullPaths[3].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
                 "'{dir2,dir2,dir2}'",
-                "'{" + names[1] + "," + names[2] + "," + names[3] + "}'",
+                "'{" + imageNames[1] + "," + imageNames[2] + "," + imageNames[3] + "}'",
                 "'{" + imagesPostgresArrays[1] + "," + imagesPostgresArrays[2] + "," + imagesPostgresArrays[3] + "}'"
         });
         compareTable.addRow(new String[]{
                 "'{" + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
                 "'{dir2}'",
-                "'{" + names[4] + "}'",
+                "'{" + imageNames[4] + "}'",
                 "'{" + imagesPostgresArrays[4] + "}'"
         });
 
@@ -282,8 +283,8 @@ public class HdfsReadableImageTest extends BaseFeature {
         compareTable.setName("compare_table_large_batchsize");
         compareTable.addRow(new String[]{
                 "'{" + fullPaths[0] + "," + fullPaths[1] + "," + fullPaths[2] + "," + fullPaths[3] + "," + fullPaths[4] + "}'",
-                "'{" + directories[0] + "," + directories[1] + "," + directories[2] + "," + directories[3] + "," + directories[4] + "}'",
-                "'{" + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + "}'",
+                "'{" + parentDirectories[0] + "," + parentDirectories[1] + "," + parentDirectories[2] + "," + parentDirectories[3] + "," + parentDirectories[4] + "}'",
+                "'{" + imageNames[0] + "," + imageNames[1] + "," + imageNames[2] + "," + imageNames[3] + "," + imageNames[4] + "}'",
                 "'{" + imagesPostgresArrays[0] + ","
                         + imagesPostgresArrays[1] + ","
                         + imagesPostgresArrays[2] + ","
@@ -317,8 +318,8 @@ public class HdfsReadableImageTest extends BaseFeature {
                         + fullPaths[3].replace("readableImage", "streamingFragmentsReadableImage/dir2") + ","
                         + fullPaths[4].replace("readableImage", "streamingFragmentsReadableImage/dir2") + "}'",
                 "'{dir1,dir1,dir1,dir1,dir1,dir2,dir2,dir2,dir2,dir2}'",
-                "'{" + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + ","
-                        + names[0] + "," + names[1] + "," + names[2] + "," + names[3] + "," + names[4] + "}'",
+                "'{" + imageNames[0] + "," + imageNames[1] + "," + imageNames[2] + "," + imageNames[3] + "," + imageNames[4] + ","
+                        + imageNames[0] + "," + imageNames[1] + "," + imageNames[2] + "," + imageNames[3] + "," + imageNames[4] + "}'",
                 "'{" + imagesPostgresArrays[0] + ","
                         + imagesPostgresArrays[1] + ","
                         + imagesPostgresArrays[2] + ","
@@ -352,14 +353,14 @@ public class HdfsReadableImageTest extends BaseFeature {
         for (StringBuilder image : imagesPostgresArrays) {
             compareTable.addRow(new String[]{
                     "'{" + fullPaths[cnt] + "}'",
-                    "'{" + directories[cnt] + "}'",
-                    "'{" + names[cnt] + "}'",
+                    "'{" + parentDirectories[cnt] + "}'",
+                    "'{" + imageNames[cnt] + "}'",
                     "'{" + image + "}'"
             });
             compareTable.addRow(new String[]{
                     "'{" + fullPaths[cnt].replace("readableImage", "readableImage_extra_dir") + "}'",
-                    "'{" + directories[cnt] + "_extra_dir}'", // different directory reflected in image 'label'
-                    "'{" + names[cnt] + "}'",
+                    "'{" + parentDirectories[cnt] + "_extra_dir}'", // different directory reflected in image 'label'
+                    "'{" + imageNames[cnt] + "}'",
                     "'{" + image + "}'"
             });
             cnt++;

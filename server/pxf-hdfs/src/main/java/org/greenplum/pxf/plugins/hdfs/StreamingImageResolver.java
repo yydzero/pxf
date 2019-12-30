@@ -43,16 +43,16 @@ public class StreamingImageResolver extends BasePlugin implements StreamingResol
         List<String> paths = (ArrayList<String>) row.getKey();
         accessor = (StreamingImageAccessor) row.getData();
         List<String> fullPaths = new ArrayList<>();
-        List<Path> parentDirs = new ArrayList<>();
-        List<Path> fileNames = new ArrayList<>();
+        List<String> parentDirs = new ArrayList<>();
+        List<String> fileNames = new ArrayList<>();
 
         for (String pathString : paths) {
             URI uri = URI.create(pathString);
             Path path = Paths.get(uri.getPath());
 
             fullPaths.add(uri.getPath());
-            parentDirs.add(path.getParent().getFileName());
-            fileNames.add(path.getFileName());
+            parentDirs.add(path.getParent().getFileName().toString());
+            fileNames.add(path.getFileName().toString());
         }
 
         return new ArrayList<OneField>() {

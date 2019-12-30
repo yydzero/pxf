@@ -53,8 +53,8 @@ import java.util.List;
  * reading does not support splitting: a protocol-buffer file, regular file, ...
  */
 public class StreamingImageAccessor extends BasePlugin implements Accessor {
-    List<InputStream> inputStreams;
-    List<String> paths;
+    private List<InputStream> inputStreams;
+    private List<String> paths;
     private FileSplit fileSplit;
     private boolean served = false;
     int currentImage = 0;
@@ -107,7 +107,7 @@ public class StreamingImageAccessor extends BasePlugin implements Accessor {
     }
 
     @Override
-    public OneRow readNextObject() throws IOException {
+    public OneRow readNextObject() {
         /* check if working segment */
         if (served) {
             return null;
@@ -163,5 +163,13 @@ public class StreamingImageAccessor extends BasePlugin implements Accessor {
                 configuration,
                 context.getDataSource(),
                 context.getOption("COMPRESSION_CODEC"));
+    }
+
+    /**
+     *
+     * @return the list of input streams
+     */
+    public List<InputStream> getInputStreams() {
+        return inputStreams;
     }
 }
