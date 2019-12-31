@@ -1,9 +1,9 @@
 package org.greenplum.pxf.plugins.hdfs;
 
 import org.greenplum.pxf.api.ArrayField;
+import org.greenplum.pxf.api.ArrayStreamingField;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
-import org.greenplum.pxf.api.StreamingArrayField;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,8 +17,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class StreamingImageResolverTest {
@@ -90,13 +94,13 @@ public class StreamingImageResolverTest {
         assertTrue(((ArrayField) fields.get(1)).val instanceof List);
         assertTrue(fields.get(2) instanceof ArrayField);
         assertTrue(((ArrayField) fields.get(2)).val instanceof List);
-        assertTrue(fields.get(3) instanceof StreamingArrayField);
-        assertTrue(((StreamingArrayField) fields.get(3)).getResolver() instanceof StreamingImageResolver);
+        assertTrue(fields.get(3) instanceof ArrayStreamingField);
+        assertTrue(((ArrayStreamingField) fields.get(3)).getResolver() instanceof StreamingImageResolver);
 
         assertListEquals(paths, (List<?>) ((ArrayField) fields.get(0)).val);
         assertListEquals(parentDirs, (List<?>) ((ArrayField) fields.get(1)).val);
         assertListEquals(fileNames, (List<?>) ((ArrayField) fields.get(2)).val);
-        assertEquals(resolver, ((StreamingArrayField) fields.get(3)).getResolver());
+        assertEquals(resolver, ((ArrayStreamingField) fields.get(3)).getResolver());
     }
 
     @Test

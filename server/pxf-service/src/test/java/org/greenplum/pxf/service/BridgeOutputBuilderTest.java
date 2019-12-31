@@ -19,15 +19,13 @@ package org.greenplum.pxf.service;
  * under the License.
  */
 
-
 import org.greenplum.pxf.api.ArrayField;
+import org.greenplum.pxf.api.ArrayStreamingField;
 import org.greenplum.pxf.api.BadRecordException;
 import org.greenplum.pxf.api.GreenplumDateTime;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
-import org.greenplum.pxf.api.ScalarField;
-import org.greenplum.pxf.api.StreamingArrayField;
-import org.greenplum.pxf.api.StreamingScalarField;
+import org.greenplum.pxf.api.StreamingField;
 import org.greenplum.pxf.api.io.BufferWritable;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.io.GPDBWritable;
@@ -447,13 +445,13 @@ public class BridgeOutputBuilderTest {
     public void testMakeStreamingOutput() throws IOException {
         setStreamingResolver(new String[]{"FOO", "BAR", "BAZ"});
         records = new ArrayList<OneField>() {{
-            add(new ScalarField(DataType.FLOAT8.getOID(), 0.123456789));
+            add(new OneField(DataType.FLOAT8.getOID(), 0.123456789));
             add(new ArrayField(DataType.INT8ARRAY.getOID(), new ArrayList<Integer>() {{
                 add(100);
                 add(200);
                 add(300);
             }}));
-            add(new StreamingArrayField(resolver));
+            add(new ArrayStreamingField(resolver));
         }};
         builder = makeBuilder(new RequestContext());
         streamingOutput = builder.makeStreamingOutput(records);
@@ -468,8 +466,8 @@ public class BridgeOutputBuilderTest {
     public void testMakeStreamingOutput_StreamingFieldFirst() throws IOException {
         setStreamingResolver(new String[]{"FOO", "BAR", "BAZ"});
         records = new ArrayList<OneField>() {{
-            add(new StreamingArrayField(resolver));
-            add(new ScalarField(DataType.BOOLEAN.getOID(), true));
+            add(new ArrayStreamingField(resolver));
+            add(new OneField(DataType.BOOLEAN.getOID(), true));
             add(new ArrayField(DataType.TEXTARRAY.getOID(), new ArrayList<String>() {{
                 add("foo");
                 add("bar");
@@ -490,8 +488,8 @@ public class BridgeOutputBuilderTest {
     public void testMakeStreamingOutput_EscapeNeeded() throws IOException {
         setStreamingResolver(new String[]{"FOO", "BA\"R", "BAZ"});
         records = new ArrayList<OneField>() {{
-            add(new ScalarField(DataType.TEXT.getOID(), "just \"some text"));
-            add(new StreamingArrayField(resolver));
+            add(new OneField(DataType.TEXT.getOID(), "just \"some text"));
+            add(new ArrayStreamingField(resolver));
             add(new ArrayField(DataType.TEXTARRAY.getOID(), new ArrayList<String>() {{
                 add("foo");
                 add("bar");
@@ -511,13 +509,13 @@ public class BridgeOutputBuilderTest {
     public void testMakeStreamingOutput_StreamingScalarField() throws IOException {
         setStreamingResolver(new String[]{"FOO", "BA\"R", "BAZ"});
         records = new ArrayList<OneField>() {{
-            add(new ScalarField(DataType.BIGINT.getOID(), 1234567890));
+            add(new OneField(DataType.BIGINT.getOID(), 1234567890));
             add(new ArrayField(DataType.BOOLARRAY.getOID(), new ArrayList<Boolean>() {{
                 add(true);
                 add(false);
                 add(true);
             }}));
-            add(new StreamingScalarField(resolver));
+            add(new StreamingField(DataType.TEXT.getOID(), resolver));
         }};
         builder = makeBuilder(new RequestContext());
         streamingOutput = builder.makeStreamingOutput(records);
@@ -532,7 +530,7 @@ public class BridgeOutputBuilderTest {
     public void testMakeStreamingOutput_StreamingScalarField_StreamingFieldFirst() throws IOException {
         setStreamingResolver(new String[]{"FOO", "BA\"R", "BAZ"});
         records = new ArrayList<OneField>() {{
-            add(new StreamingScalarField(resolver));
+            add(new StreamingField(DataType.TEXT.getOID(), resolver));
             add(new ArrayField(DataType.FLOAT8ARRAY.getOID(), new ArrayList<Double>() {{
                 add(0.123456789);
                 add(1.123456789);

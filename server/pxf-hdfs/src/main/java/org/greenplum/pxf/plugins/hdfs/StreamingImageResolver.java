@@ -1,9 +1,9 @@
 package org.greenplum.pxf.plugins.hdfs;
 
 import org.greenplum.pxf.api.ArrayField;
+import org.greenplum.pxf.api.ArrayStreamingField;
 import org.greenplum.pxf.api.OneField;
 import org.greenplum.pxf.api.OneRow;
-import org.greenplum.pxf.api.StreamingArrayField;
 import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.Accessor;
 import org.greenplum.pxf.api.model.BasePlugin;
@@ -21,7 +21,7 @@ import java.util.List;
  * fetch and encode images into a string, one by one, placing multiple images into a single
  * field.
  *
- * It hands off a reference to itself in a StreamingArrayField so that the field can be used to
+ * It hands off a reference to itself in a ArrayStreamingField so that the field can be used to
  * call back to the StreamingImageResolver in the BridgeOutputBuilder class. The resolver in turn
  * calls back to the StreamingImageAccessor to fetch images when needed.
  */
@@ -69,7 +69,7 @@ public class StreamingImageResolver extends BasePlugin implements StreamingResol
                 add(new ArrayField(DataType.TEXTARRAY.getOID(), fullPaths));
                 add(new ArrayField(DataType.TEXTARRAY.getOID(), parentDirs));
                 add(new ArrayField(DataType.TEXTARRAY.getOID(), fileNames));
-                add(new StreamingArrayField(StreamingImageResolver.this));
+                add(new ArrayStreamingField(StreamingImageResolver.this));
             }
         };
     }
