@@ -169,28 +169,29 @@ public class BridgeOutputBuilder {
 
     /**
      * Can take a list of streaming and non-streaming fields, returning a lazy iterator
-     * over the data
+     * over the data. Only supports CSV format.
      *
-     * @param records List of fields to create an iterator over
+     * @param fields List of fields to create an iterator over
      * @return Lazy iterator of writables for the given record list
      */
-    public Iterator<Writable> makeStreamingOutput(List<OneField> records) {
+    public Iterator<Writable> makeStreamingOutput(List<OneField> fields) {
         return new Iterator<Writable>() {
-            int recordCount = 0;
-            int numRecords = records.size();
-            OneField currentField;
+            private int recordCount = 0;
+            private int numRecords = fields.size();
+            private OneField currentField;
+            private StreamingResolver resolver = null;
 
             @Override
             public boolean hasNext() {
                 if (numRecords > recordCount) {
-                    // we have more records left
+                    // we have more fields left
                     return true;
                 } else {
                     // we are on the last record, check if it's a streaming type
                     if (currentField instanceof StreamingArrayField) {
-                        return ((StreamingArrayField) currentField).hasNext();
+                        return ((StreamingArrayField) currentField).getResolver().hasNext();
                     } else if (currentField instanceof StreamingScalarField) {
-                        return ((StreamingScalarField) currentField).hasNext();
+                        return ((StreamingScalarField) currentField).getResolver().hasNext();
                     }
                     return false;
                 }
@@ -199,34 +200,43 @@ public class BridgeOutputBuilder {
             @Override
             public Writable next() {
                 String streamingArrayPrefix = "";
-                String streamingArraySuffix = ",";
+                String streamingArraySuffix = ","; // (separator between items in the array)
+                String streamingScalarPrefix = "";
+                String streamingScalarSuffix = ""; // (no separator between chunks of a scalar)
+                String csvDelimOrNewline = String.valueOf(greenplumCSV.getDelimiter());
+                StringBuilder sb;
 
-                if (numRecords > recordCount) {
-                    // we have more records
-                    currentField = records.get(recordCount++);
+                if (resolver == null && numRecords > recordCount) {
+                    // we have more fields, get the next field
+                    currentField = fields.get(recordCount++);
                     streamingArrayPrefix = greenplumCSV.getQuote() + String.valueOf(greenplumCSV.getOpenArray());
+                    streamingScalarPrefix += greenplumCSV.getQuote();
                 }
-                if (!(currentField instanceof StreamingScalarField) && !(currentField instanceof StreamingArrayField)) {
-                    // non-streaming cases are handled by usual methods
-                    String delim = (recordCount == numRecords) ? greenplumCSV.getNewline() : ",";
-                    return new BufferWritable((fieldToCSVElement(currentField) + delim).getBytes());
-                }
+                csvDelimOrNewline = (recordCount == numRecords) ? greenplumCSV.getNewline() : csvDelimOrNewline;
                 if (currentField instanceof StreamingArrayField) {
-                    StringBuilder streamingArray = new StringBuilder(streamingArrayPrefix);
-
-                    final StreamingResolver resolver = ((StreamingArrayField) currentField).getResolver();
-                    streamingArray.append(resolver.getNext());
+                    sb = new StringBuilder(streamingArrayPrefix);
+                    resolver = ((StreamingArrayField) currentField).getResolver();
+                    sb.append(greenplumCSV.toCsvField(resolver.next(), false, false, true));
                     if (!resolver.hasNext()) {
-                        streamingArraySuffix = String.valueOf(greenplumCSV.getCloseArray()) +
-                                greenplumCSV.getQuote() +
-                                greenplumCSV.getNewline();
+                        resolver = null;
+                        streamingArraySuffix = String.valueOf(greenplumCSV.getCloseArray()) + greenplumCSV.getQuote() + csvDelimOrNewline;
                     }
-                    streamingArray.append(streamingArraySuffix);
-                    return new BufferWritable((streamingArray.toString()).getBytes());
+                    sb.append(streamingArraySuffix);
+                } else if (currentField instanceof StreamingScalarField) {
+                    sb = new StringBuilder(streamingScalarPrefix);
+                    resolver = ((StreamingScalarField) currentField).getResolver();
+                    sb.append(greenplumCSV.toCsvField(resolver.next(), false, false, true));
+                    if (!resolver.hasNext()) {
+                        resolver = null;
+                        streamingScalarSuffix = greenplumCSV.getQuote() + csvDelimOrNewline;
+                    }
+                    sb.append(streamingScalarSuffix);
+                } else {
+                    // non-streaming cases are handled by usual methods
+                    sb = new StringBuilder((fieldToCSVElement(currentField))).append(csvDelimOrNewline);
                 }
 
-                // we have a StreamingScalarField
-                return new BufferWritable(((StreamingScalarField) currentField).getResolver().getNext().getBytes());
+                return new BufferWritable(sb.toString().getBytes());
             }
         };
     }

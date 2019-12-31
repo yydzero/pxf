@@ -103,9 +103,9 @@ public class StreamingImageResolverTest {
     public void testGetNext() {
         resolver.getFields(row);
         for (String image : imageStrings) {
-            assertEquals(image, resolver.getNext());
+            assertEquals(image, resolver.next());
         }
-        assertNull(resolver.getNext());
+        assertNull(resolver.next());
     }
 
     @Test

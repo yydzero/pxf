@@ -16,6 +16,15 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This implementation of StreamingResolver works with the StreamingImageAccessor to
+ * fetch and encode images into a string, one by one, placing multiple images into a single
+ * field.
+ *
+ * It hands off a reference to itself in a StreamingArrayField so that the field can be used to
+ * call back to the StreamingImageResolver in the BridgeOutputBuilder class. The resolver in turn
+ * calls back to the StreamingImageAccessor to fetch images when needed.
+ */
 @SuppressWarnings("unchecked")
 public class StreamingImageResolver extends BasePlugin implements StreamingResolver {
     Accessor accessor;
@@ -76,7 +85,7 @@ public class StreamingImageResolver extends BasePlugin implements StreamingResol
      * will end up in the same tuple.
      */
     @Override
-    public String getNext() {
+    public String next() {
         BufferedImage image = ((StreamingImageAccessor) accessor).readNextImage();
         if (image == null) {
             return null;

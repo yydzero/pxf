@@ -39,18 +39,9 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Base class for enforcing the complete access of a file in one accessor.
- * Since we are not accessing the file using the splittable API, but instead are
- * using the "simple" stream API, it means that we cannot fetch different parts
- * (splits) of the file in different segments. Instead each file access brings
- * the complete file. And, if several segments would access the same file, then
- * each one will return the whole file and we will observe in the query result,
- * each record appearing number_of_segments times. To avoid this we will only
- * have one segment (segment 0) working for this case - enforced with
- * isWorkingSegment() method. Naturally this is the less recommended working
- * mode since we are not making use of segment parallelism. HDFS accessors for
- * a specific file type should inherit from this class only if the file they are
- * reading does not support splitting: a protocol-buffer file, regular file, ...
+ * Accessor that can access multiple image files, treating the collection of images
+ * as a single row. It maintains a list of InputStreams which it opens in openForRead(),
+ * It hands off a reference to itself so that the StreamingImageResolver can fetch more images.
  */
 public class StreamingImageAccessor extends BasePlugin implements Accessor {
     private List<InputStream> inputStreams;
