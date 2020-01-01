@@ -13,7 +13,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 public class StreamingHdfsFileFragmenterTest {
-
     StreamingHdfsFileFragmenter streamingHdfsFileFragmenter;
     private List<Fragment> fragments;
     private RequestContext context;
@@ -51,27 +50,39 @@ public class StreamingHdfsFileFragmenterTest {
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/simple1.csv"), fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir1/1.csv"), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/simple2.csv"), fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir1/2.csv"), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/simple3.csv"), fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir1/3.csv"), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir2/simple1.csv"), fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir1/nested_dir/1.csv"), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir2/simple2.csv"), fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir1/nested_dir/2.csv"), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir2/simple3.csv"), fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir1/nested_dir/3.csv"), fragments);
+
+        fragments = streamingHdfsFileFragmenter.getFragments();
+        assertNotNull(fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir2/1.csv"), fragments);
+
+        fragments = streamingHdfsFileFragmenter.getFragments();
+        assertNotNull(fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir2/2.csv"), fragments);
+
+        fragments = streamingHdfsFileFragmenter.getFragments();
+        assertNotNull(fragments);
+        assertFragmentFromList(new Fragment("file://" + path + "dir2/3.csv"), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNull(fragments);
@@ -86,12 +97,15 @@ public class StreamingHdfsFileFragmenterTest {
 
         assertNotNull(fragments);
         assertFragmentFromList(new Fragment(
-                "file://" + path + "dir1/simple1.csv" + ","
-                        + "file://" + path + "dir1/simple2.csv" + ","
-                        + "file://" + path + "dir1/simple3.csv" + ","
-                        + "file://" + path + "dir2/simple1.csv" + ","
-                        + "file://" + path + "dir2/simple2.csv" + ","
-                        + "file://" + path + "dir2/simple3.csv"
+                "file://" + path + "dir1/1.csv" + ","
+                        + "file://" + path + "dir1/2.csv" + ","
+                        + "file://" + path + "dir1/3.csv" + ","
+                        + "file://" + path + "dir1/nested_dir/1.csv" + ","
+                        + "file://" + path + "dir1/nested_dir/2.csv" + ","
+                        + "file://" + path + "dir1/nested_dir/3.csv" + ","
+                        + "file://" + path + "dir2/1.csv" + ","
+                        + "file://" + path + "dir2/2.csv" + ","
+                        + "file://" + path + "dir2/3.csv"
         ), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
@@ -106,22 +120,35 @@ public class StreamingHdfsFileFragmenterTest {
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
         assertFragmentFromList(new Fragment(
-                "file://" + path + "dir1/simple1.csv" + ","
-                        + "file://" + path + "dir1/simple2.csv"
+                "file://" + path + "dir1/1.csv" + ","
+                        + "file://" + path + "dir1/2.csv"
         ), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
         assertFragmentFromList(new Fragment(
-                "file://" + path + "dir1/simple3.csv" + ","
-                        + "file://" + path + "dir2/simple1.csv"
+                "file://" + path + "dir1/3.csv" + ","
+                        + "file://" + path + "dir1/nested_dir/1.csv"
         ), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();
         assertNotNull(fragments);
         assertFragmentFromList(new Fragment(
-                "file://" + path + "dir2/simple2.csv" + ","
-                        + "file://" + path + "dir2/simple3.csv"
+                "file://" + path + "dir1/nested_dir/2.csv" + ","
+                        + "file://" + path + "dir1/nested_dir/3.csv"
+        ), fragments);
+
+        fragments = streamingHdfsFileFragmenter.getFragments();
+        assertNotNull(fragments);
+        assertFragmentFromList(new Fragment(
+                "file://" + path + "dir2/1.csv" + ","
+                        + "file://" + path + "dir2/2.csv"
+        ), fragments);
+
+        fragments = streamingHdfsFileFragmenter.getFragments();
+        assertNotNull(fragments);
+        assertFragmentFromList(new Fragment(
+                "file://" + path + "dir2/3.csv"
         ), fragments);
 
         fragments = streamingHdfsFileFragmenter.getFragments();

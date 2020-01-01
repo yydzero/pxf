@@ -1,24 +1,30 @@
 package org.greenplum.pxf.plugins.hdfs;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.RequestContext;
-import org.greenplum.pxf.plugins.hdfs.utilities.PxfInputFormat;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
     private int batchSize;
-    private List<String> files;
-    private List<String> dirs = new ArrayList<>();
+    private int chunkSize;
+    private List<String> files = new ArrayList<>();
+    private List<Path> dirs = new ArrayList<>();
     private int currentDir = 0;
     private int currentFile = 0;
-    PxfInputFormat pxfInputFormat = new PxfInputFormat();
+    FileSystem fs;
+
     public int getBatchSize() {
         return batchSize;
     }
@@ -26,29 +32,24 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
     @Override
     public void initialize(RequestContext context) {
         super.initialize(context);
+
         batchSize = 1;
         final String batchSizeOption = context.getOption("BATCH_SIZE");
         if (batchSizeOption != null) {
             batchSize = Integer.parseInt(batchSizeOption);
         }
-        files = new ArrayList<>(batchSize);
-        String fileName = hcfsType.getDataUri(jobConf, context);
-        Path path = new Path(fileName);
-
-        jobConf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", false);
-        PxfInputFormat.setInputPaths(jobConf, path);
-
+        chunkSize = batchSize;
+        String path = hcfsType.getDataUri(jobConf, context);
         try {
-            dirs = Arrays
-                    .stream(pxfInputFormat.listStatus(jobConf))
-                    .filter(FileStatus::isDirectory)
-                    .map(fs -> fs.getPath().toUri().toString())
-                    .sorted()
-                    .collect(Collectors.toList());
-            getMoreFiles(new Path(dirs.get(currentDir++)));
+            fs = FileSystem.get(new URI(path), jobConf);
+            getDirs(new Path(path));
+            dirs.sort(Comparator.comparing(Path::toString));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.info("Failed getting directories for path {}: {}", path, e);
+        } catch (URISyntaxException e) {
+            LOG.info("Failed getting URI for path {}: {}", path, e);
         }
+        jobConf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", false);
     }
 
     /**
@@ -58,19 +59,21 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
      */
     @Override
     public List<Fragment> getFragments() throws Exception {
-        if (currentDir == dirs.size() && currentFile == files.size()) {
-            return null;
-        }
-
         StringBuilder pathList = new StringBuilder();
-        for (int i = 0; i < batchSize; i++) {
+        for (int i = 0; i < chunkSize; i++) {
             if (currentFile == files.size()) {
                 if (currentDir == dirs.size()) {
                     break;
                 }
-                getMoreFiles(new Path(dirs.get(currentDir++)));
+                files.clear();
+                while (files.isEmpty()) {
+                    getMoreFiles();
+                }
             }
             pathList.append(files.set(currentFile++, null)).append(",");
+        }
+        if (pathList.length() == 0) {
+            return null;
         }
         pathList.setLength(pathList.length() - 1);
         return new ArrayList<Fragment>() {{
@@ -78,13 +81,27 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
         }};
     }
 
-    private void getMoreFiles(Path path) throws IOException {
-        PxfInputFormat.setInputPaths(jobConf, path);
+    private void getMoreFiles() throws IOException {
         currentFile = 0;
         files = Arrays
-                .stream(pxfInputFormat.listStatus(jobConf))
+                .stream(fs.listStatus(dirs.get(currentDir++)))
+                .filter(fs -> !fs.isDirectory())
                 .map(fs -> fs.getPath().toUri().toString())
                 .sorted()
                 .collect(Collectors.toList());
+    }
+
+    private void getDirs(Path path) throws IOException {
+        RemoteIterator<FileStatus> iterator = fs.listStatusIterator(path);
+        while (iterator.hasNext()) {
+            FileStatus fileStatus = iterator.next();
+            if (fileStatus.isDirectory()) {
+                Path curPath = fileStatus.getPath();
+                dirs.add(curPath);
+                if (fs.getContentSummary(curPath).getDirectoryCount() > 1) {
+                    getDirs(curPath);
+                }
+            }
+        }
     }
 }
