@@ -60,7 +60,6 @@ public class StreamingHdfsFileFragmenter extends BaseFragmenter implements Strea
         } catch (URISyntaxException e) {
             LOG.info("Failed getting URI for path {}: {}", path, e);
         }
-        jobConf.setBoolean("mapreduce.input.fileinputformat.input.dir.recursive", false);
     }
 
     /**
@@ -71,12 +70,9 @@ public class StreamingHdfsFileFragmenter extends BaseFragmenter implements Strea
         StringBuilder pathList = new StringBuilder();
         for (int i = 0; i < chunkSize; i++) {
             if (currentFile == files.size()) {
-                if (currentDir == dirs.size()) {
+                getMoreFiles();
+                if (currentFile == files.size() && currentDir == dirs.size()) {
                     break;
-                }
-                files.clear();
-                while (files.isEmpty()) {
-                    getMoreFiles();
                 }
             }
             pathList.append(files.set(currentFile++, null)).append(",");
@@ -91,22 +87,41 @@ public class StreamingHdfsFileFragmenter extends BaseFragmenter implements Strea
 
     @Override
     public boolean hasNext() {
-        return currentFile < files.size() || currentDir < dirs.size();
+        if (currentFile < files.size()) {
+            return true;
+        }
+        if (currentDir < dirs.size()) {
+            getMoreFiles();
+        }
+        return files.size() > 0 && currentFile < files.size();
     }
 
     private void getMoreFiles() {
         currentFile = 0;
-        final Path dir = dirs.get(currentDir++);
-        try {
-            files = Arrays
-                    .stream(fs.listStatus(dir))
-                    .filter(file -> !file.isDirectory())
-                    .map(file -> file.getPath().toUri().toString())
-                    .sorted()
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            LOG.info("Could not get list of FileStatus for directory {}: {}", dir, e);
+        files.clear();
+        while (currentDir < dirs.size() && files.isEmpty()) {
+            final Path dir = dirs.get(currentDir++);
+            try {
+                files = Arrays
+                        .stream(fs.listStatus(dir))
+                        .filter(file -> !file.isDirectory())
+                        .map(file -> file.getPath().toUri().toString())
+                        .sorted()
+                        .collect(Collectors.toList());
+            } catch (IOException e) {
+                LOG.info("Could not get list of FileStatus for directory {}: {}", dir, e);
+            }
         }
+    }
+
+    @Override
+    public int getChunkSize() {
+        return chunkSize;
+    }
+
+    @Override
+    public void setChunkSize(int chunkSize) {
+        this.chunkSize = chunkSize;
     }
 
     private void getDirs(Path path) throws IOException {
