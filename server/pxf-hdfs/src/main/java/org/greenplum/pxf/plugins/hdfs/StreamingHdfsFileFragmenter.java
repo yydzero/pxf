@@ -1,11 +1,16 @@
 package org.greenplum.pxf.plugins.hdfs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.mapred.JobConf;
+import org.greenplum.pxf.api.model.BaseFragmenter;
 import org.greenplum.pxf.api.model.Fragment;
+import org.greenplum.pxf.api.model.FragmentStats;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.api.model.StreamingFragmenter;
 
 import java.io.IOException;
 import java.net.URI;
@@ -16,13 +21,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
+public class StreamingHdfsFileFragmenter extends BaseFragmenter implements StreamingFragmenter {
     private int batchSize;
     private int chunkSize;
     private List<String> files = new ArrayList<>();
     private List<Path> dirs = new ArrayList<>();
     private int currentDir = 0;
     private int currentFile = 0;
+    HcfsType hcfsType;
+    Configuration jobConf;
     FileSystem fs;
 
     public int getBatchSize() {
@@ -32,6 +39,10 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
     @Override
     public void initialize(RequestContext context) {
         super.initialize(context);
+
+        // Check if the underlying configuration is for HDFS
+        hcfsType = HcfsType.getHcfsType(configuration, context);
+        jobConf = new JobConf(configuration, this.getClass());
 
         batchSize = 1;
         final String batchSizeOption = context.getOption("BATCH_SIZE");
@@ -53,12 +64,10 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
     }
 
     /**
-     * Gets a batch of fragments for a data source URI that can appear as a file name,
-     * a directory name or a wildcard. Returns the data fragments in JSON
-     * format.
+     * Gets a batch of files and returns it as a comma-separated list within a single Fragment.
      */
     @Override
-    public List<Fragment> getFragments() throws Exception {
+    public Fragment next() {
         StringBuilder pathList = new StringBuilder();
         for (int i = 0; i < chunkSize; i++) {
             if (currentFile == files.size()) {
@@ -76,19 +85,28 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
             return null;
         }
         pathList.setLength(pathList.length() - 1);
-        return new ArrayList<Fragment>() {{
-            add(new Fragment(pathList.toString()));
-        }};
+
+        return new Fragment(pathList.toString());
     }
 
-    private void getMoreFiles() throws IOException {
+    @Override
+    public boolean hasNext() {
+        return currentFile < files.size() || currentDir < dirs.size();
+    }
+
+    private void getMoreFiles() {
         currentFile = 0;
-        files = Arrays
-                .stream(fs.listStatus(dirs.get(currentDir++)))
-                .filter(fs -> !fs.isDirectory())
-                .map(fs -> fs.getPath().toUri().toString())
-                .sorted()
-                .collect(Collectors.toList());
+        final Path dir = dirs.get(currentDir++);
+        try {
+            files = Arrays
+                    .stream(fs.listStatus(dir))
+                    .filter(file -> !file.isDirectory())
+                    .map(file -> file.getPath().toUri().toString())
+                    .sorted()
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            LOG.info("Could not get list of FileStatus for directory {}: {}", dir, e);
+        }
     }
 
     private void getDirs(Path path) throws IOException {
@@ -103,5 +121,18 @@ public class StreamingHdfsFileFragmenter extends HdfsDataFragmenter {
                 }
             }
         }
+    }
+
+    /**
+     * Not implemented, see StreamingHdfsFileFragmenter#next() and StreamingHdfsFileFragmenter#hasNext()
+     */
+    @Override
+    public List<Fragment> getFragments() {
+        throw new UnsupportedOperationException("Operation getFragments is not supported, use next() and hasNext()");
+    }
+
+    @Override
+    public FragmentStats getFragmentStats() {
+        throw new UnsupportedOperationException("Operation getFragmentStats is not supported");
     }
 }

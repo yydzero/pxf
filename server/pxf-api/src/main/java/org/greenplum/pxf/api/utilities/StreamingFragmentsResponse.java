@@ -20,17 +20,16 @@ package org.greenplum.pxf.api.utilities;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.Fragmenter;
+import org.greenplum.pxf.api.model.StreamingFragmenter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 /**
  * Class for serializing fragments metadata in JSON format. The class implements
@@ -40,12 +39,15 @@ import java.util.List;
  */
 public class StreamingFragmentsResponse implements StreamingOutput {
 
-    // private static final Log Log = LogFactory.getLog(StreamingFragmentsResponse.class);
+    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
-    private Fragmenter fragmenter;
+    private StreamingFragmenter fragmenter;
 
     public StreamingFragmentsResponse(Fragmenter fragmenter) {
-        this.fragmenter = fragmenter;
+        if (!(StreamingFragmenter.class.isAssignableFrom(fragmenter.getClass()))) {
+            throw new RuntimeException("StreamingFragmentsResponse requires an implementation of StreamingFragmenter");
+        }
+        this.fragmenter = (StreamingFragmenter) fragmenter;
     }
 
     /**
@@ -62,27 +64,17 @@ public class StreamingFragmentsResponse implements StreamingOutput {
      * }]}</code>
      */
     @Override
-    public void write(OutputStream output) throws IOException,
-            WebApplicationException {
+    public void write(OutputStream output) throws IOException, WebApplicationException {
         DataOutputStream dos = new DataOutputStream(output);
         ObjectMapper mapper = new ObjectMapper();
 
         dos.write("{\"PXFFragments\":[".getBytes());
 
         String prefix = "";
-        while (true) {
-            try {
-                List<Fragment> fragments = fragmenter.getFragments();
-                if (fragments == null) {
-                    dos.write("]}".getBytes());
-                    return;
-                }
-                /* metaData and userData are automatically converted to Base64 */
-                dos.write((prefix + mapper.writeValueAsString(fragments.get(0))).getBytes());
-                prefix = ",";
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        while (fragmenter.hasNext()) {
+            dos.write((prefix + mapper.writeValueAsString(fragmenter.next())).getBytes());
+            prefix = ",";
         }
+        dos.write("]}".getBytes());
     }
 }

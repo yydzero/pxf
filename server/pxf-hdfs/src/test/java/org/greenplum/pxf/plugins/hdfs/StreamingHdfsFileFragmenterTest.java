@@ -5,16 +5,17 @@ import org.greenplum.pxf.api.model.RequestContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.List;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class StreamingHdfsFileFragmenterTest {
     StreamingHdfsFileFragmenter streamingHdfsFileFragmenter;
-    private List<Fragment> fragments;
+    private Fragment fragment;
     private RequestContext context;
     private String path;
 
@@ -48,44 +49,17 @@ public class StreamingHdfsFileFragmenterTest {
     public void testGetFragmentsBatchSizeNotGiven() throws Exception {
         streamingHdfsFileFragmenter.initialize(context);
 
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/1.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/2.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/3.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/nested_dir/1.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/nested_dir/2.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir1/nested_dir/3.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir2/1.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir2/2.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment("file://" + path + "dir2/3.csv"), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNull(fragments);
+        assertFragment(new Fragment("file://" + path + "dir1/1.csv"));
+        assertFragment(new Fragment("file://" + path + "dir1/2.csv"));
+        assertFragment(new Fragment("file://" + path + "dir1/3.csv"));
+        assertFragment(new Fragment("file://" + path + "dir1/nested_dir/1.csv"));
+        assertFragment(new Fragment("file://" + path + "dir1/nested_dir/2.csv"));
+        assertFragment(new Fragment("file://" + path + "dir1/nested_dir/3.csv"));
+        assertFragment(new Fragment("file://" + path + "dir2/1.csv"));
+        assertFragment(new Fragment("file://" + path + "dir2/2.csv"));
+        assertFragment(new Fragment("file://" + path + "dir2/3.csv"));
+        assertFalse(streamingHdfsFileFragmenter.hasNext());
+        assertNull(streamingHdfsFileFragmenter.next());
     }
 
     @Test
@@ -93,10 +67,7 @@ public class StreamingHdfsFileFragmenterTest {
         context.addOption("BATCH_SIZE", "100");
         streamingHdfsFileFragmenter.initialize(context);
 
-        fragments = streamingHdfsFileFragmenter.getFragments();
-
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment(
+        assertFragment(new Fragment(
                 "file://" + path + "dir1/1.csv" + ","
                         + "file://" + path + "dir1/2.csv" + ","
                         + "file://" + path + "dir1/3.csv" + ","
@@ -106,10 +77,9 @@ public class StreamingHdfsFileFragmenterTest {
                         + "file://" + path + "dir2/1.csv" + ","
                         + "file://" + path + "dir2/2.csv" + ","
                         + "file://" + path + "dir2/3.csv"
-        ), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNull(fragments);
+        ));
+        assertFalse(streamingHdfsFileFragmenter.hasNext());
+        assertNull(streamingHdfsFileFragmenter.next());
     }
 
     @Test
@@ -117,46 +87,33 @@ public class StreamingHdfsFileFragmenterTest {
         context.addOption("BATCH_SIZE", "2");
         streamingHdfsFileFragmenter.initialize(context);
 
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment(
+        assertFragment(new Fragment(
                 "file://" + path + "dir1/1.csv" + ","
                         + "file://" + path + "dir1/2.csv"
-        ), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment(
+        ));
+        assertFragment(new Fragment(
                 "file://" + path + "dir1/3.csv" + ","
                         + "file://" + path + "dir1/nested_dir/1.csv"
-        ), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment(
+        ));
+        assertFragment(new Fragment(
                 "file://" + path + "dir1/nested_dir/2.csv" + ","
                         + "file://" + path + "dir1/nested_dir/3.csv"
-        ), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment(
+        ));
+        assertFragment(new Fragment(
                 "file://" + path + "dir2/1.csv" + ","
                         + "file://" + path + "dir2/2.csv"
-        ), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNotNull(fragments);
-        assertFragmentFromList(new Fragment(
+        ));
+        assertFragment(new Fragment(
                 "file://" + path + "dir2/3.csv"
-        ), fragments);
-
-        fragments = streamingHdfsFileFragmenter.getFragments();
-        assertNull(fragments);
+        ));
+        assertFalse(streamingHdfsFileFragmenter.hasNext());
+        assertNull(streamingHdfsFileFragmenter.next());
     }
 
-    private static void assertFragmentFromList(Fragment correctFragment, List<Fragment> fragments) {
-        assertEquals(1, fragments.size());
-        assertEquals(correctFragment.getSourceName(), fragments.get(0).getSourceName());
+    private void assertFragment(Fragment correctFragment) {
+        assertTrue(streamingHdfsFileFragmenter.hasNext());
+        fragment = streamingHdfsFileFragmenter.next();
+        assertNotNull(fragment);
+        assertEquals(correctFragment.getSourceName(), fragment.getSourceName());
     }
 }
