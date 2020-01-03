@@ -161,7 +161,7 @@ public class FragmenterResourceTest {
                 .getFragments(servletContext, headersFromRequest2);
 
         verify(fragmenter1, times(1)).getFragments();
-        verify(fragmenterFactory, never()).getPlugin(context2);
+        verify(fragmenterFactory, times(1)).getPlugin(context2);
 
         assertNotNull(response1);
         assertNotNull(response2);

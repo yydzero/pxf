@@ -20,7 +20,6 @@ package org.greenplum.pxf.api.utilities;
  */
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.greenplum.pxf.api.model.Fragmenter;
 import org.greenplum.pxf.api.model.StreamingFragmenter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,11 +42,8 @@ public class StreamingFragmentsResponse implements StreamingOutput {
 
     private StreamingFragmenter fragmenter;
 
-    public StreamingFragmentsResponse(Fragmenter fragmenter) {
-        if (!(StreamingFragmenter.class.isAssignableFrom(fragmenter.getClass()))) {
-            throw new RuntimeException("StreamingFragmentsResponse requires an implementation of StreamingFragmenter");
-        }
-        this.fragmenter = (StreamingFragmenter) fragmenter;
+    public StreamingFragmentsResponse(StreamingFragmenter fragmenter) {
+        this.fragmenter = fragmenter;
     }
 
     /**

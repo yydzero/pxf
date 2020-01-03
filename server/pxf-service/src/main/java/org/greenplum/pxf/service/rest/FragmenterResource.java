@@ -25,6 +25,7 @@ import org.greenplum.pxf.api.model.Fragment;
 import org.greenplum.pxf.api.model.FragmentStats;
 import org.greenplum.pxf.api.model.Fragmenter;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.api.model.StreamingFragmenter;
 import org.greenplum.pxf.api.utilities.FragmenterCacheFactory;
 import org.greenplum.pxf.api.utilities.FragmenterFactory;
 import org.greenplum.pxf.api.utilities.FragmentsResponseFormatter;
@@ -71,7 +72,6 @@ public class FragmenterResource extends BaseResource {
 
     // this flag is set to true when the thread processes the fragment call
     private boolean didThreadProcessFragmentCall;
-    private static final String STREAMING_FRAGMENTER = "org.greenplum.pxf.plugins.hdfs.StreamingHdfsFileFragmenter";
 
     public FragmenterResource() {
         this(HttpRequestParser.getInstance(), FragmenterFactory.getInstance(), FragmenterCacheFactory.getInstance());
@@ -117,13 +117,10 @@ public class FragmenterResource extends BaseResource {
 
         List<Fragment> fragments;
 
-        final String streamFragments = context.getOption("STREAM_FRAGMENTS");
-        if (streamFragments != null && streamFragments.toLowerCase().equals("true")) {
-            context.setFragmenter(STREAMING_FRAGMENTER);
-            return Response.ok(
-                    new StreamingFragmentsResponse(fragmenterFactory.getPlugin(context)),
-                    MediaType.APPLICATION_JSON_TYPE
-            ).build();
+        Fragmenter fragmenter = fragmenterFactory.getPlugin(context);
+        if (fragmenter != null && StreamingFragmenter.class.isAssignableFrom(fragmenter.getClass())) {
+            return Response.ok(new StreamingFragmentsResponse((StreamingFragmenter) fragmenter),
+                    MediaType.APPLICATION_JSON_TYPE).build();
         } else if (Utilities.isFragmenterCacheEnabled()) {
             try {
                 // We can't support lambdas here because asm version doesn't support it
