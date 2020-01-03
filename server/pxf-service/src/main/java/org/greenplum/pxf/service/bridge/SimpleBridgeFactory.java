@@ -1,8 +1,8 @@
 package org.greenplum.pxf.service.bridge;
 
 import org.greenplum.pxf.api.ReadVectorizedResolver;
-import org.greenplum.pxf.api.model.StreamingResolver;
 import org.greenplum.pxf.api.model.RequestContext;
+import org.greenplum.pxf.api.model.StreamingResolver;
 import org.greenplum.pxf.api.utilities.Utilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,6 @@ public class SimpleBridgeFactory implements BridgeFactory {
             try {
                 resolverClass = Class.forName(context.getResolver());
                 if (StreamingResolver.class.isAssignableFrom(resolverClass)) {
-                    context.setResolverClass(resolverClass);
                     bridge = new StreamingImageReadBridge(context);
                 } else {
                     bridge = new ReadBridge(context);

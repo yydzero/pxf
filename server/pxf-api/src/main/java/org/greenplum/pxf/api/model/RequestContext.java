@@ -43,7 +43,6 @@ public class RequestContext {
      * are in a read, write or fragmenter call.
      */
     private RequestType requestType;
-    private Class<?> resolverClass;
 
     public RequestType getRequestType() {
         return requestType;
@@ -51,19 +50,10 @@ public class RequestContext {
 
     /**
      * The request type can be set when parsing http parameters, etc.
-     *
-     * @see org.greenplum.pxf.service.HttpRequestParser#parseRequest()
+     * {@link org.greenplum.pxf.service.HttpRequestParser#parseRequest()}
      */
     public void setRequestType(RequestType requestType) {
         this.requestType = requestType;
-    }
-
-    public void setResolverClass(Class<?> resolverClass) {
-        this.resolverClass = resolverClass;
-    }
-
-    public Class<?> getResolverClass() {
-        return resolverClass;
     }
 
     public enum RequestType {
