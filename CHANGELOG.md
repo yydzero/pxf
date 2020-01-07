@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.10.1 (01/07/2020)
+
+#### Enhancements:
+
+- [#276](https://github.com/greenplum-db/pxf/pull/276) Refactor filter parser code (Non-user facing)
+
+#### Bug Fixes:
+
+- [#283](https://github.com/greenplum-db/pxf/pull/283) Fix parquet write decimal
+- [#280](https://github.com/greenplum-db/pxf/pull/280) Introduced pxf.session.user property and JDBC conn pool qualifier
+
+---
+
 ## 5.10.0 (12/02/2019)
 
 #### Enhancements:
