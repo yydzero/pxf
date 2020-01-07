@@ -50,7 +50,6 @@ import org.greenplum.pxf.api.UnsupportedTypeException;
 import org.greenplum.pxf.api.filter.FilterParser;
 import org.greenplum.pxf.api.filter.Node;
 import org.greenplum.pxf.api.filter.Operator;
-import org.greenplum.pxf.api.filter.SupportedOperatorPruner;
 import org.greenplum.pxf.api.filter.TreeTraverser;
 import org.greenplum.pxf.api.filter.TreeVisitor;
 import org.greenplum.pxf.api.io.DataType;
@@ -58,6 +57,7 @@ import org.greenplum.pxf.api.model.Accessor;
 import org.greenplum.pxf.api.model.BasePlugin;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.plugins.hdfs.parquet.ParquetRecordFilterBuilder;
+import org.greenplum.pxf.plugins.hdfs.parquet.SupportedParquetPrimitiveTypePruner;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
 import java.io.IOException;
@@ -112,7 +112,6 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             Operator.NOT
     );
 
-    private static final TreeVisitor PRUNER = new SupportedOperatorPruner(SUPPORTED_OPERATORS);
     private static final TreeTraverser TRAVERSER = new TreeTraverser();
 
     private ParquetReader<Group> fileReader;
@@ -136,10 +135,15 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     public boolean openForRead() throws IOException {
         file = new Path(context.getDataSource());
         FileSplit fileSplit = HdfsUtilities.parseFileSplit(context);
+
+        // Read the original schema from the parquet file
+        MessageType originalSchema = getSchema(file);
+        // Get a map of the column name to Types for the given schema
+        Map<String, Type> originalFieldsMap = getOriginalFieldsMap(originalSchema);
         // Get the read schema in case of column projection
-        MessageType readSchema = getReadSchema(file);
+        MessageType readSchema = buildReadSchema(originalFieldsMap, originalSchema);
         // Get the record filter in case of predicate push-down
-        FilterCompat.Filter recordFilter = getRecordFilter(context.getFilterString(), readSchema);
+        FilterCompat.Filter recordFilter = getRecordFilter(context.getFilterString(), originalFieldsMap, readSchema);
 
         // add column projection
         configuration.set(PARQUET_READ_SCHEMA, readSchema.toString());
@@ -277,17 +281,20 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     /**
      * Returns the parquet record filter for the given filter string
      *
-     * @param filterString the filter string
-     * @param schema       the parquet schema
+     * @param filterString      the filter string
+     * @param originalFieldsMap a map of field names to types
+     * @param schema            the parquet schema
      * @return the parquet record filter for the given filter string
      */
-    private FilterCompat.Filter getRecordFilter(String filterString, MessageType schema) {
+    private FilterCompat.Filter getRecordFilter(String filterString, Map<String, Type> originalFieldsMap, MessageType schema) {
         if (StringUtils.isBlank(filterString)) {
             return FilterCompat.NOOP;
         }
 
         ParquetRecordFilterBuilder filterBuilder = new ParquetRecordFilterBuilder(
-                context.getTupleDescription(), schema);
+                context.getTupleDescription(), originalFieldsMap);
+        TreeVisitor pruner = new SupportedParquetPrimitiveTypePruner(
+                context.getTupleDescription(), originalFieldsMap, SUPPORTED_OPERATORS);
 
         try {
             // Parse the filter string into a expression tree Node
@@ -295,7 +302,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             // Prune the parsed tree with valid supported operators and then
             // traverse the pruned tree with the ParquetRecordFilterBuilder to
             // produce a record filter for parquet
-            TRAVERSER.traverse(root, PRUNER, filterBuilder);
+            TRAVERSER.traverse(root, pruner, filterBuilder);
             return filterBuilder.getRecordFilter();
         } catch (Exception e) {
             LOG.error(String.format("%s-%d: %s--%s Unable to generate Parquet Record Filter for filter",
@@ -308,13 +315,13 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     }
 
     /**
-     * Opens the parquet file and retrieves the footer from the file.
+     * Reads the original schema from the parquet file.
      *
      * @param parquetFile the path to the parquet file
-     * @return the read schema for the query
-     * @throws IOException
+     * @return the original schema from the parquet file
+     * @throws IOException when there's an IOException while reading the schema
      */
-    private MessageType getReadSchema(Path parquetFile) throws IOException {
+    private MessageType getSchema(Path parquetFile) throws IOException {
         ParquetReadOptions parquetReadOptions = HadoopReadOptions
                 .builder(configuration)
                 .build();
@@ -322,24 +329,25 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         try (ParquetFileReader parquetFileReader =
                      ParquetFileReader.open(inputFile, parquetReadOptions)) {
             ParquetMetadata metadata = parquetFileReader.getFooter();
-            MessageType schema = metadata.getFileMetaData().getSchema();
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Reading file {} with {} records in {} RowGroups",
                         parquetFile.getName(), parquetFileReader.getRecordCount(),
                         parquetFileReader.getRowGroups().size());
             }
-            return buildReadSchema(schema);
+            return metadata.getFileMetaData().getSchema();
         } catch (Exception e) {
             throw new IOException(e);
         }
     }
 
     /**
-     * Generates a read schema when there is column projection
+     * Builds a map of names to Types from the original schema, the map allows
+     * easy access from a given column name to the schema {@link Type}.
      *
-     * @param originalSchema the original read schema
+     * @param originalSchema the original schema of the parquet file
+     * @return a map of field names to types
      */
-    private MessageType buildReadSchema(MessageType originalSchema) {
+    private Map<String, Type> getOriginalFieldsMap(MessageType originalSchema) {
         Map<String, Type> originalFields = new HashMap<>(originalSchema.getFieldCount() * 2);
 
         // We need to add the original name and lower cased name to
@@ -353,6 +361,16 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             originalFields.put(columnName.toLowerCase(), t);
         });
 
+        return originalFields;
+    }
+
+    /**
+     * Generates a read schema when there is column projection
+     *
+     * @param originalFields a map of field names to types
+     * @param originalSchema the original read schema
+     */
+    private MessageType buildReadSchema(Map<String, Type> originalFields, MessageType originalSchema) {
         List<Type> projectedFields = context.getTupleDescription().stream()
                 .filter(ColumnDescriptor::isProjected)
                 .map(c -> {

@@ -3,7 +3,6 @@ package org.greenplum.pxf.plugins.hdfs.parquet;
 import org.apache.parquet.filter2.compat.FilterCompat;
 import org.apache.parquet.filter2.predicate.FilterPredicate;
 import org.apache.parquet.io.api.Binary;
-import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
@@ -20,7 +19,6 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -53,20 +51,20 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
+    private final Map<String, Type> fields;
     private final List<ColumnDescriptor> columnDescriptors;
-    private Deque<FilterPredicate> filterQueue;
-    private Map<String, Type> fields;
+    private final Deque<FilterPredicate> filterQueue;
 
     /**
      * Constructor
      *
      * @param columnDescriptors the list of column descriptors
-     * @param schema            the parquet schema
+     * @param originalFields    a map of field names to types
      */
-    public ParquetRecordFilterBuilder(List<ColumnDescriptor> columnDescriptors, MessageType schema) {
+    public ParquetRecordFilterBuilder(List<ColumnDescriptor> columnDescriptors, Map<String, Type> originalFields) {
         this.columnDescriptors = columnDescriptors;
         this.filterQueue = new LinkedList<>();
-        populateFields(schema);
+        this.fields = originalFields;
     }
 
     @Override
@@ -160,8 +158,7 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
             }
         }
 
-        int columnIndex = columnIndexOperand.index();
-        ColumnDescriptor columnDescriptor = columnDescriptors.get(columnIndex);
+        ColumnDescriptor columnDescriptor = columnDescriptors.get(columnIndexOperand.index());
         String filterColumnName = columnDescriptor.columnName();
         Type type = fields.get(filterColumnName);
 
@@ -396,20 +393,6 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
                 throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
                         columnName, parquetType));
         }
-    }
-
-    private void populateFields(MessageType schema) {
-        fields = new HashMap<>(schema.getFieldCount() * 2);
-        // We need to add the original name and lower cased name to
-        // the map to support mixed case where in GPDB the column name
-        // was created with quotes i.e "mIxEd CaSe". When quotes are not
-        // used to create a table in GPDB, the name of the column will
-        // always come in lower-case
-        schema.getFields().forEach(t -> {
-            String columnName = t.getName();
-            fields.put(columnName, t);
-            fields.put(columnName.toLowerCase(), t);
-        });
     }
 
     private Integer getIntegerForINT32(OriginalType originalType, String value) {
