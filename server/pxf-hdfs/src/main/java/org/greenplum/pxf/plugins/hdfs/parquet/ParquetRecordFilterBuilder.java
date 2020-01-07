@@ -247,7 +247,7 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
 
             default:
                 throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, operand.getDataType()));
+                        columnName, parquetType));
         }
     }
 
@@ -275,7 +275,7 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
 
             default:
                 throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, operand.getDataType()));
+                        columnName, parquetType));
         }
     }
 
@@ -331,7 +331,7 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
 
             default:
                 throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, operand.getDataType()));
+                        columnName, parquetType));
         }
     }
 

@@ -24,8 +24,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Base64;
 
-import static java.lang.Math.pow;
-
 /**
  * Converter for Parquet types and values into PXF data types and values.
  */

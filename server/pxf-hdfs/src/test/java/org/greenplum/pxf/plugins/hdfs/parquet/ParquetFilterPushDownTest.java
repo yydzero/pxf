@@ -98,8 +98,8 @@ public class ParquetFilterPushDownTest {
 
     @Test
     public void testNoFilter() throws Exception {
-        int[] expectedRows = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
-        helper(expectedRows);
+        // all rows are expected
+        helper(COL1);
     }
 
     @Test
@@ -548,6 +548,49 @@ public class ParquetFilterPushDownTest {
     }
 
     @Test
+    public void testByteAFilter() throws Exception {
+        // bin = '1'
+        int[] expectedRows = {1, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+        context.setFilterString("a8c25s1d1o5");
+        helper(expectedRows);
+
+        // bin < '1'
+        expectedRows = new int[]{10};
+        context.setFilterString("a8c25s1d1o1");
+        helper(expectedRows);
+
+        // bin > '1'
+        expectedRows = new int[]{2, 3, 4, 5, 6, 7, 8, 9};
+        context.setFilterString("a8c25s1d1o2");
+        helper(expectedRows);
+
+        // bin <= '1'
+        expectedRows = new int[]{1, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+        context.setFilterString("a8c25s1d1o3");
+        helper(expectedRows);
+
+        // bin >= '1'
+        expectedRows = new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+        context.setFilterString("a8c25s1d1o4");
+        helper(expectedRows);
+
+        // bin <> '1'
+        expectedRows = new int[]{2, 3, 4, 5, 6, 7, 8, 9, 10, 25};
+        context.setFilterString("a8c25s1d1o6");
+        helper(expectedRows);
+
+        // bin IS NULL
+        expectedRows = new int[]{25};
+        context.setFilterString("a8o8");
+        helper(expectedRows);
+
+        // bin IS NOT NULL
+        expectedRows = new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+        context.setFilterString("a8o9");
+        helper(expectedRows);
+    }
+
+    @Test
     public void testDateAndAmtFilter() throws Exception {
         // cdate > '2019-12-02' and cdate < '2019-12-12' and amt > 1500
         int[] expectedRows = {5, 6, 7, 8, 9, 10, 11};
@@ -588,12 +631,27 @@ public class ParquetFilterPushDownTest {
     }
 
     @Test
-    public void testUnsupportedOperationFilter() throws Exception {
+    public void testUnsupportedINT96Filter() throws Exception {
+        // tm = '2013-07-23 21:00:00'
+        context.setFilterString("a6c1114s19d2013-07-23 21:00:00o5");
+        // all rows are expected
+        helper(COL1);
+    }
+
+    @Test
+    public void testUnsupportedFixedLenByteArrayFilter() throws Exception {
+        // dec2 = 0
+        context.setFilterString("a14c23s1d0o5");
+        // all rows are expected
+        helper(COL1);
+    }
+
+    @Test
+    public void testUnsupportedInOperationFilter() throws Exception {
         // a16 in (11, 12)
-        int[] expectedRows = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
         context.setFilterString("a16m1007s2d11s2d12o10");
         // all rows are expected
-        helper(expectedRows);
+        helper(COL1);
     }
 
     private void helper(int[] expectedRows) throws Exception {
