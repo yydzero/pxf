@@ -22,6 +22,7 @@ public class ParquetTest extends BaseFeature {
     private static final String PARQUET_WRITE_PRIMITIVES_GZIP_CLASSNAME = "parquet_write_primitives_gzip_classname";
     private static final String PARQUET_WRITE_PRIMITIVES_V2 = "parquet_write_primitives_v2";
     private static final String PARQUET_PRIMITIVE_TYPES = "parquet_primitive_types";
+    private static final String PARQUET_TYPES = "parquet_types.parquet";
     private static final String PARQUET_UNDEFINED_PRECISION_NUMERIC_FILE = "undefined_precision_numeric.parquet";
     private static final String PARQUET_NUMERIC_FILE = "numeric.parquet";
     private static final String UNDEFINED_PRECISION_NUMERIC_FILENAME = "undefined_precision_numeric.csv";
@@ -42,6 +43,26 @@ public class ParquetTest extends BaseFeature {
             "sml   SMALLINT",
             "c1    CHAR(3)",
             "bin   BYTEA"
+    };
+
+    private static final String[] PARQUET_TYPES_COLUMNS = new String[]{
+            "id      integer",
+            "name    text",
+            "cdate   date",
+            "amt     double precision",
+            "grade   text",
+            "b       boolean",
+            "tm      timestamp without time zone",
+            "bg      bigint",
+            "bin     bytea",
+            "sml     smallint",
+            "r       real",
+            "vc1     character varying(5)",
+            "c1      character(3)",
+            "dec1    numeric",
+            "dec2    numeric(5,2)",
+            "dec3    numeric(13,5)",
+            "num1    integer"
     };
 
     private static final String[] PARQUET_TABLE_DECIMAL_COLUMNS = new String[]{
@@ -79,6 +100,7 @@ public class ParquetTest extends BaseFeature {
         hdfs.copyFromLocal(resourcePath + PARQUET_PRIMITIVE_TYPES, hdfsPath + PARQUET_PRIMITIVE_TYPES);
         hdfs.copyFromLocal(resourcePath + PARQUET_UNDEFINED_PRECISION_NUMERIC_FILE, hdfsPath + PARQUET_UNDEFINED_PRECISION_NUMERIC_FILE);
         hdfs.copyFromLocal(resourcePath + PARQUET_NUMERIC_FILE, hdfsPath + PARQUET_NUMERIC_FILE);
+        hdfs.copyFromLocal(resourcePath + PARQUET_TYPES, hdfsPath + PARQUET_TYPES);
 
         Table gpdbUndefinedPrecisionNumericTable = new Table(NUMERIC_UNDEFINED_PRECISION_TABLE, UNDEFINED_PRECISION_NUMERIC);
         gpdbUndefinedPrecisionNumericTable.setDistributionFields(new String[]{"description"});
@@ -225,6 +247,20 @@ public class ParquetTest extends BaseFeature {
         gpdb.createTableAndVerify(exTable);
 
         runTincTest("pxf.features.parquet.decimal.numeric.runTest");
+    }
+
+    @Test(groups = {"features", "gpdb", "security", "hcfs"})
+    public void parquetPredicatePushDown() throws Exception {
+
+        exTable = new ReadableExternalTable("parquet_types_hcfs_r",
+                PARQUET_TYPES_COLUMNS, hdfsPath + PARQUET_TYPES, "custom");
+        exTable.setHost(pxfHost);
+        exTable.setPort(pxfPort);
+        exTable.setFormatter("pxfwritable_import");
+        exTable.setProfile(ProtocolUtils.getProtocol().value() + ":parquet");
+        gpdb.createTableAndVerify(exTable);
+
+        runTincTest("pxf.features.parquet.pushdown.runTest");
     }
 
     private void runWriteScenario(String writeTableName, String readTableName,

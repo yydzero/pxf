@@ -773,7 +773,7 @@ public class ParquetFilterPushDownTest {
 
             Instant timestamp = Instant.parse(COL7[row]); // UTC
             ZonedDateTime localTime = timestamp.atZone(ZoneId.systemDefault());
-            String localTimestampString = localTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")); // should be "2013-07-13 21:00:05" in PST
+            String localTimestampString = localTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
             assertEquals("Row " + row, localTimestampString, fieldList.get(6).val);
         } else {
