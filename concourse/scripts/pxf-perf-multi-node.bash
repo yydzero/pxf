@@ -205,10 +205,20 @@ EOF
     sync_configuration
 }
 
-function create_gcs_tables() {
+function create_gcs_text_tables() {
     local name=${1}
+    local run_id=${2}
+    # create text tables
     readable_external_table_text_query "${name}" "pxf://data-gpdb-ud-tpch/${SCALE}/lineitem_data/?PROFILE=gs:text&SERVER=gsbenchmark"
-    writable_external_table_text_query "${name}" "pxf://data-gpdb-ud-pxf-benchmark/output/${SCALE}/${UUID}/?PROFILE=gs:text&SERVER=gsbenchmark"
+    writable_external_table_text_query "${name}" "pxf://data-gpdb-ud-pxf-benchmark/output/${SCALE}/${UUID}-${run_id}/?PROFILE=gs:text&SERVER=gsbenchmark"
+}
+
+function create_gcs_parquet_tables() {
+    local name=${1}
+    local run_id=${2}
+    # create parquet tables
+    readable_external_table_parquet_query "${name}" "pxf://data-gpdb-ud-pxf-benchmark/gs-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=gs:parquet&SERVER=gsbenchmark"
+    writable_external_table_parquet_query "${name}" "pxf://data-gpdb-ud-pxf-benchmark/gs-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=gs:parquet&SERVER=gsbenchmark"
 }
 
 function create_gphdfs_tables() {
@@ -425,7 +435,13 @@ function main() {
 
     if [[ ${BENCHMARK_GCS} == true ]]; then
         configure_gcs_server
-        run_text_benchmark create_gcs_tables "gcs" "GOOGLE CLOUD STORAGE"
+        if [[ ${concurrency} == 1 ]]; then
+            run_text_benchmark create_gcs_text_tables "gcs" "GOOGLE CLOUD STORAGE" "0"
+            run_parquet_benchmark create_gcs_parquet_tables "gcs" "GOOGLE CLOUD STORAGE" "0"
+        else
+            run_concurrent_benchmark run_text_benchmark create_gcs_text_tables "gcs" "GOOGLE CLOUD STORAGE" "${concurrency}"
+            run_concurrent_benchmark run_parquet_benchmark create_gcs_parquet_tables "gcs" "GOOGLE CLOUD STORAGE" "${concurrency}"
+        fi
     fi
 
     if [[ ${BENCHMARK_GPHDFS} == true ]]; then
