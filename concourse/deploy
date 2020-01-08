@@ -72,6 +72,9 @@ def how_to_use_generated_pipeline_message():
     cmd += '    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_ud.yml \\\n'
     cmd += '    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_ud_kerberos.yml \\\n'
 
+    if ARGS.gpdb_branch != '5X_STABLE':
+        cmd += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb-6X_STABLE-release-secrets.prod.yml \\\n'
+
     if ARGS.pipeline_type == 'pxf':
         cmd += '    -l ' + ARGS.YML_FILE + ' \\\n'
     elif ARGS.pipeline_type == 'release':
@@ -79,7 +82,6 @@ def how_to_use_generated_pipeline_message():
             cmd += '    -l ~/workspace/gp-continuous-integration/secrets/pxf-release-5x.prod.yml \\\n'
         else:
             # 6x and master share the same secrets at the moment
-            cmd += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb-6X_STABLE-release-secrets.prod.yml \\\n'
             cmd += '    -l ~/workspace/gp-continuous-integration/secrets/pxf-release-6x.prod.yml \\\n'
             cmd += '    -v gcs-bucket-resources-prod=pivotal-gpdb-concourse-resources-prod\\\n'
 

@@ -476,30 +476,30 @@ resources:
 - name: libquicklz-centos6
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    regexp: centos6/libquicklz-(\d.*)\.el6\.x86_64\.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/libquicklz-(1\.5\.0-.*)-1.el6.x86_64.rpm
 
 - name: libsigar-centos6
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    regexp: centos6/sigar-rhel6_x86_64-(.*)\.targz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/sigar-rhel6_x86_64-(1\.6\.5-.*).targz
 
 - name: libquicklz-devel-centos6
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gcs-key))
-    regexp: centos6/libquicklz-devel-(\d.*)\.el6\.x86_64\.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/libquicklz-devel-(1\.5\.0-.*)-1.el6.x86_64.rpm
 
 - name: python-centos6
   type: gcs
   source:
-    bucket: gp-internal-artifacts
-    json_key: ((gcs-key))
-    versioned_file: centos6/python-2.7.12.tar.gz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos6/python-(2\.7\.12-.*).tar.gz
 
 {% endif %}
 
@@ -527,20 +527,20 @@ jobs:
     - get: python-tarball
       resource: python-centos6
 {% endif %}
+{% if gpdb_branch == '5X_STABLE' %}
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: gpdb-centos6-build
     params:
-{% if gpdb_branch == '5X_STABLE' %}
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
       IVYREPO_USER: {{ivyrepo_user}}
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
-{% endif %}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
       TASK_OS: centos
       TASK_OS_VERSION: 6
+{% endif %}
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     image: gpdb-centos6-build
