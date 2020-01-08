@@ -30,13 +30,14 @@ import org.apache.parquet.ParquetReadOptions;
 import org.apache.parquet.column.ParquetProperties.WriterVersion;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.filter2.compat.FilterCompat;
+import org.apache.parquet.format.converter.ParquetMetadataConverter;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.hadoop.example.GroupWriteSupport;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
-import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import org.apache.parquet.hadoop.metadata.FileMetaData;
 import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.apache.parquet.schema.DecimalMetadata;
 import org.apache.parquet.schema.MessageType;
@@ -137,7 +138,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         FileSplit fileSplit = HdfsUtilities.parseFileSplit(context);
 
         // Read the original schema from the parquet file
-        MessageType originalSchema = getSchema(file);
+        MessageType originalSchema = getSchema(file, fileSplit);
         // Get a map of the column name to Types for the given schema
         Map<String, Type> originalFieldsMap = getOriginalFieldsMap(originalSchema);
         // Get the read schema in case of column projection
@@ -318,23 +319,28 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
      * Reads the original schema from the parquet file.
      *
      * @param parquetFile the path to the parquet file
+     * @param fileSplit   the file split we are accessing
      * @return the original schema from the parquet file
      * @throws IOException when there's an IOException while reading the schema
      */
-    private MessageType getSchema(Path parquetFile) throws IOException {
+    private MessageType getSchema(Path parquetFile, FileSplit fileSplit) throws IOException {
+
+        ParquetMetadataConverter.MetadataFilter filter = ParquetMetadataConverter.range(
+                fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength());
         ParquetReadOptions parquetReadOptions = HadoopReadOptions
                 .builder(configuration)
+                .withMetadataFilter(filter)
                 .build();
         HadoopInputFile inputFile = HadoopInputFile.fromPath(parquetFile, configuration);
         try (ParquetFileReader parquetFileReader =
                      ParquetFileReader.open(inputFile, parquetReadOptions)) {
-            ParquetMetadata metadata = parquetFileReader.getFooter();
+            FileMetaData metadata = parquetFileReader.getFileMetaData();
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Reading file {} with {} records in {} RowGroups",
                         parquetFile.getName(), parquetFileReader.getRecordCount(),
                         parquetFileReader.getRowGroups().size());
             }
-            return metadata.getFileMetaData().getSchema();
+            return metadata.getSchema();
         } catch (Exception e) {
             throw new IOException(e);
         }
