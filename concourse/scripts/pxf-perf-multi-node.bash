@@ -423,6 +423,8 @@ function main() {
     create_database_and_schema
     initial_data_load
 
+    concurrency=${BENCHMARK_CONCURRENCY:-1}
+
     if [[ ${BENCHMARK_ADL} == true ]]; then
         configure_adl_server
         run_text_benchmark create_adl_tables "ADL" "AZURE DATA LAKE"
@@ -450,7 +452,6 @@ function main() {
         validate_write_to_external "gphdfs" "gphdfs://${HADOOP_HOSTNAME}:8020/tmp/lineitem_gphdfs_write/"
     fi
 
-    concurrency=${BENCHMARK_CONCURRENCY:-1}
     if [[ ${BENCHMARK_S3_EXTENSION} == true ]]; then
         configure_s3_extension
         if [[ ${concurrency} == 1 ]]; then
