@@ -193,7 +193,7 @@ select id, amt, b from parquet_types_hcfs_r where cdate > '2019-12-19' OR ( cdat
 select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' as tm, bg, bin, sml, r, vc1, c1, dec1, dec2, dec3, num1 from parquet_types_hcfs_r where cdate > '2019-12-20' OR amt < 1500;
 
 -- filter by timestamp (not pushed)
-select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' as tm, bg, bin, sml, r, vc1, c1, dec1, dec2, dec3, num1 from parquet_types_hcfs_r where tm = '2013-07-23 21:00:00';
+select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' as tm, bg, bin, sml, r, vc1, c1, dec1, dec2, dec3, num1 from parquet_types_hcfs_r where CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' = '2013-07-23 21:00:00';
 
 -- filter by decimal (not pushed)
 select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' as tm, bg, bin, sml, r, vc1, c1, dec1, dec2, dec3, num1 from parquet_types_hcfs_r where dec2 = 0;

@@ -1370,7 +1370,7 @@ select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT T
 (7 rows)
 
 -- filter by timestamp (not pushed)
-select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' as tm, bg, bin, sml, r, vc1, c1, dec1, dec2, dec3, num1 from parquet_types_hcfs_r where tm = '2013-07-23 21:00:00';
+select id, name, cdate, amt, grade, b, CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' as tm, bg, bin, sml, r, vc1, c1, dec1, dec2, dec3, num1 from parquet_types_hcfs_r where CAST(tm AS TIMESTAMP WITH TIME ZONE) AT TIME ZONE 'PDT' = '2013-07-23 21:00:00';
  id |        name         |   cdate    | amt  |   grade   | b |         tm          |     bg      | bin |  sml  |  r  |  vc1  | c1  |         dec1         |  dec2   |   dec3    | num1 
 ----+---------------------+------------+------+-----------+---+---------------------+-------------+-----+-------+-----+-------+-----+----------------------+---------+-----------+------
  11 | row11               | 2019-12-11 | 2200 | good      | f | 2013-07-23 21:00:00 |  2147483657 | 1   |   -40 | 7.7 | s_16  | UAH | 0.123456789000000000 | -789.00 |  -1.00000 |   11
