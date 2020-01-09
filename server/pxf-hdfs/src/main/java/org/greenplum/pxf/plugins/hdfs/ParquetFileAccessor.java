@@ -69,6 +69,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.parquet.hadoop.api.ReadSupport.PARQUET_READ_SCHEMA;
@@ -127,6 +128,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     private WriterVersion parquetVersion;
     private CodecFactory codecFactory = CodecFactory.getInstance();
 
+    private List<Long> readList = new ArrayList<>();
+
     /**
      * Opens the resource for read.
      *
@@ -167,7 +170,10 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
      */
     @Override
     public OneRow readNextObject() throws IOException {
+        final long then = System.nanoTime();
         Group group = fileReader.read();
+        final long nanos = System.nanoTime() - then;
+        readList.add(nanos);
 
         if (group != null) {
             rowsRead++;
@@ -193,6 +199,10 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         if (fileReader != null) {
             fileReader.close();
         }
+
+        long average = readList.stream().mapToLong(Long::longValue).sum() / (long) readList.size();
+
+        LOG.info("Read average speed: " + average + " nanoseconds");
     }
 
     /**
@@ -325,6 +335,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
      */
     private MessageType getSchema(Path parquetFile, FileSplit fileSplit) throws IOException {
 
+        final long then = System.nanoTime();
         ParquetMetadataConverter.MetadataFilter filter = ParquetMetadataConverter.range(
                 fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength());
         ParquetReadOptions parquetReadOptions = HadoopReadOptions
@@ -340,6 +351,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
                         parquetFile.getName(), parquetFileReader.getRecordCount(),
                         parquetFileReader.getRowGroups().size());
             }
+            final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
+            LOG.info("Read schema in " + millis + "ms");
             return metadata.getSchema();
         } catch (Exception e) {
             throw new IOException(e);
