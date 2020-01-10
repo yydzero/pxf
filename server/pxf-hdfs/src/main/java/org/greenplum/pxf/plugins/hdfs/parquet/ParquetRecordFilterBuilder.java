@@ -1,10 +1,11 @@
 package org.greenplum.pxf.plugins.hdfs.parquet;
 
 import org.apache.parquet.filter2.compat.FilterCompat;
+import org.apache.parquet.filter2.predicate.FilterApi;
 import org.apache.parquet.filter2.predicate.FilterPredicate;
+import org.apache.parquet.filter2.predicate.Operators;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.OriginalType;
-import org.apache.parquet.schema.PrimitiveType;
 import org.apache.parquet.schema.Type;
 import org.greenplum.pxf.api.filter.ColumnIndexOperandNode;
 import org.greenplum.pxf.api.filter.Node;
@@ -22,21 +23,16 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 import static org.apache.parquet.filter2.predicate.FilterApi.and;
 import static org.apache.parquet.filter2.predicate.FilterApi.binaryColumn;
 import static org.apache.parquet.filter2.predicate.FilterApi.booleanColumn;
 import static org.apache.parquet.filter2.predicate.FilterApi.doubleColumn;
-import static org.apache.parquet.filter2.predicate.FilterApi.eq;
 import static org.apache.parquet.filter2.predicate.FilterApi.floatColumn;
-import static org.apache.parquet.filter2.predicate.FilterApi.gt;
-import static org.apache.parquet.filter2.predicate.FilterApi.gtEq;
 import static org.apache.parquet.filter2.predicate.FilterApi.intColumn;
 import static org.apache.parquet.filter2.predicate.FilterApi.longColumn;
-import static org.apache.parquet.filter2.predicate.FilterApi.lt;
-import static org.apache.parquet.filter2.predicate.FilterApi.ltEq;
 import static org.apache.parquet.filter2.predicate.FilterApi.not;
-import static org.apache.parquet.filter2.predicate.FilterApi.notEq;
 import static org.apache.parquet.filter2.predicate.FilterApi.or;
 
 /**
@@ -165,244 +161,113 @@ public class ParquetRecordFilterBuilder implements TreeVisitor {
         // INT96 and FIXED_LEN_BYTE_ARRAY cannot be pushed down
         // for more details look at org.apache.parquet.filter2.dictionarylevel.DictionaryFilter#expandDictionary
         // where INT96 and FIXED_LEN_BYTE_ARRAY are not dictionary values
-
         FilterPredicate simpleFilter;
-        switch (operator) {
-            case IS_NULL:
-            case EQUALS:
-            case NOOP:
-                // NOT boolean wraps a NOOP
-                //       NOT
-                //        |
-                //       NOOP
-                //        |
-                //    ---------
-                //   |         |
-                //   4        true
-                // that needs to be replaced with equals
-                simpleFilter = getEquals(type.getName(),
-                        type.asPrimitiveType().getPrimitiveTypeName(),
-                        type.getOriginalType(),
-                        valueOperand);
+        switch (type.asPrimitiveType().getPrimitiveTypeName()) {
+            case INT32:
+                simpleFilter = ParquetRecordFilterBuilder.<Integer, Operators.IntColumn>getOperatorWithLtGtSupport(operator)
+                        .apply(intColumn(type.getName()), getIntegerForINT32(type.getOriginalType(), valueOperand));
                 break;
-            case LESS_THAN:
-                simpleFilter = getLessThan(type.getName(),
-                        type.asPrimitiveType().getPrimitiveTypeName(),
-                        type.getOriginalType(),
-                        valueOperand);
+
+            case INT64:
+                simpleFilter = ParquetRecordFilterBuilder.<Long, Operators.LongColumn>getOperatorWithLtGtSupport(operator)
+                        .apply(longColumn(type.getName()), valueOperand == null ? null : Long.parseLong(valueOperand.toString()));
                 break;
-            case GREATER_THAN:
-                simpleFilter = getGreaterThan(type.getName(),
-                        type.asPrimitiveType().getPrimitiveTypeName(),
-                        type.getOriginalType(),
-                        valueOperand);
+
+            case BINARY:
+                simpleFilter = ParquetRecordFilterBuilder.<Binary, Operators.BinaryColumn>getOperatorWithLtGtSupport(operator)
+                        .apply(binaryColumn(type.getName()), valueOperand == null ? null : Binary.fromString(valueOperand.toString()));
                 break;
-            case LESS_THAN_OR_EQUAL:
-                simpleFilter = getLessThanOrEqual(type.getName(),
-                        type.asPrimitiveType().getPrimitiveTypeName(),
-                        type.getOriginalType(),
-                        valueOperand);
+
+            case BOOLEAN:
+                // Boolean does not SupportsLtGt
+                simpleFilter = ParquetRecordFilterBuilder.<Boolean, Operators.BooleanColumn>getOperatorWithEqNotEqSupport(operator)
+                        .apply(booleanColumn(type.getName()), valueOperand == null ? null : Boolean.parseBoolean(valueOperand.toString()));
                 break;
-            case GREATER_THAN_OR_EQUAL:
-                simpleFilter = getGreaterThanOrEqual(type.getName(),
-                        type.asPrimitiveType().getPrimitiveTypeName(),
-                        type.getOriginalType(),
-                        valueOperand);
+
+            case FLOAT:
+                simpleFilter = ParquetRecordFilterBuilder.<Float, Operators.FloatColumn>getOperatorWithLtGtSupport(operator)
+                        .apply(floatColumn(type.getName()), valueOperand == null ? null : Float.parseFloat(valueOperand.toString()));
                 break;
-            case IS_NOT_NULL:
-            case NOT_EQUALS:
-                simpleFilter = getNotEquals(type.getName(),
-                        type.asPrimitiveType().getPrimitiveTypeName(),
-                        type.getOriginalType(),
-                        valueOperand);
+
+            case DOUBLE:
+                simpleFilter = ParquetRecordFilterBuilder.<Double, Operators.DoubleColumn>getOperatorWithLtGtSupport(operator)
+                        .apply(doubleColumn(type.getName()), valueOperand == null ? null : Double.parseDouble(valueOperand.toString()));
                 break;
+
             default:
-                throw new UnsupportedOperationException("not supported " + operator);
+                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
+                        type.getName(), type.asPrimitiveType().getPrimitiveTypeName()));
         }
 
         filterQueue.push(simpleFilter);
     }
 
-    private FilterPredicate getLessThan(String columnName,
-                                        PrimitiveType.PrimitiveTypeName parquetType,
-                                        OriginalType originalType,
-                                        OperandNode operand) {
-        String value = operand.toString();
-
-        switch (parquetType) {
-            case INT32:
-                return lt(intColumn(columnName), getIntegerForINT32(originalType, value));
-
-            case INT64:
-                return lt(longColumn(columnName), Long.parseLong(value));
-
-            case BINARY:
-                return lt(binaryColumn(columnName), Binary.fromString(value));
-
-            case FLOAT:
-                return lt(floatColumn(columnName), Float.parseFloat(value));
-
-            case DOUBLE:
-                return lt(doubleColumn(columnName), Double.parseDouble(value));
+    /**
+     * Returns the FilterPredicate function that supports equals and not equals
+     * for the given operator
+     *
+     * @param operator the operator
+     * @param <T>      the type
+     * @param <C>      the column type
+     * @return the FilterPredicate function
+     */
+    private static <T extends Comparable<T>, C extends Operators.Column<T> & Operators.SupportsEqNotEq> BiFunction<C, T, FilterPredicate> getOperatorWithEqNotEqSupport(Operator operator) {
+        switch (operator) {
+            case IS_NULL:
+            case EQUALS:
+            case NOOP:
+                return FilterApi::eq;
+            // NOT boolean wraps a NOOP
+            //       NOT
+            //        |
+            //       NOOP
+            //        |
+            //    ---------
+            //   |         |
+            //   4        true
+            // that needs to be replaced with equals
+            case IS_NOT_NULL:
+            case NOT_EQUALS:
+                return FilterApi::notEq;
 
             default:
-                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, parquetType));
+                throw new UnsupportedOperationException("not supported " + operator);
         }
     }
 
-    private FilterPredicate getLessThanOrEqual(String columnName,
-                                               PrimitiveType.PrimitiveTypeName parquetType,
-                                               OriginalType originalType,
-                                               OperandNode operand) {
-        String value = operand.toString();
+    /**
+     * Returns the FilterPredicate function that supports less than /
+     * greater than for the given operator
+     *
+     * @param operator the operator
+     * @param <T>      the type
+     * @param <C>      the column type
+     * @return the FilterPredicate function
+     */
+    private static <T extends Comparable<T>, C extends Operators.Column<T> & Operators.SupportsLtGt> BiFunction<C, T, FilterPredicate> getOperatorWithLtGtSupport(Operator operator) {
 
-        switch (parquetType) {
-            case INT32:
-                return ltEq(intColumn(columnName), getIntegerForINT32(originalType, value));
-
-            case INT64:
-                return ltEq(longColumn(columnName), Long.parseLong(value));
-
-            case BINARY:
-                return ltEq(binaryColumn(columnName), Binary.fromString(value));
-
-            case FLOAT:
-                return ltEq(floatColumn(columnName), Float.parseFloat(value));
-
-            case DOUBLE:
-                return ltEq(doubleColumn(columnName), Double.parseDouble(value));
-
+        switch (operator) {
+            case LESS_THAN:
+                return FilterApi::lt;
+            case GREATER_THAN:
+                return FilterApi::gt;
+            case LESS_THAN_OR_EQUAL:
+                return FilterApi::ltEq;
+            case GREATER_THAN_OR_EQUAL:
+                return FilterApi::gtEq;
             default:
-                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, parquetType));
+                return getOperatorWithEqNotEqSupport(operator);
         }
     }
 
-    private FilterPredicate getGreaterThan(String columnName,
-                                           PrimitiveType.PrimitiveTypeName parquetType,
-                                           OriginalType originalType,
-                                           OperandNode operand) {
-        String value = operand.toString();
-
-        switch (parquetType) {
-            case INT32:
-                return gt(intColumn(columnName), getIntegerForINT32(originalType, value));
-
-            case INT64:
-                return gt(longColumn(columnName), Long.parseLong(value));
-
-            case BINARY:
-                return gt(binaryColumn(columnName), Binary.fromString(value));
-
-            case FLOAT:
-                return gt(floatColumn(columnName), Float.parseFloat(value));
-
-            case DOUBLE:
-                return gt(doubleColumn(columnName), Double.parseDouble(value));
-
-            default:
-                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, parquetType));
-        }
-    }
-
-    private FilterPredicate getGreaterThanOrEqual(String columnName,
-                                                  PrimitiveType.PrimitiveTypeName parquetType,
-                                                  OriginalType originalType,
-                                                  OperandNode operand) {
-        String value = operand.toString();
-
-        switch (parquetType) {
-            case INT32:
-                return gtEq(intColumn(columnName), getIntegerForINT32(originalType, value));
-
-            case INT64:
-                return gtEq(longColumn(columnName), Long.parseLong(value));
-
-            case BINARY:
-                return gtEq(binaryColumn(columnName), Binary.fromString(value));
-
-            case FLOAT:
-                return gtEq(floatColumn(columnName), Float.parseFloat(value));
-
-            case DOUBLE:
-                return gtEq(doubleColumn(columnName), Double.parseDouble(value));
-
-            default:
-                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, parquetType));
-        }
-    }
-
-    private FilterPredicate getEquals(String columnName,
-                                      PrimitiveType.PrimitiveTypeName parquetType,
-                                      OriginalType originalType,
-                                      OperandNode operand) {
-        String value = operand == null ? null : operand.toString();
-        switch (parquetType) {
-            case INT32:
-                return eq(intColumn(columnName), getIntegerForINT32(originalType, value));
-
-            case INT64:
-                return eq(longColumn(columnName), value == null ? null : Long.parseLong(value));
-
-            case BOOLEAN:
-                return eq(booleanColumn(columnName), value == null ? null : Boolean.parseBoolean(value));
-
-            case BINARY:
-                return eq(binaryColumn(columnName), value == null ? null : Binary.fromString(value));
-
-            case FLOAT:
-                return eq(floatColumn(columnName), value == null ? null : Float.parseFloat(value));
-
-            case DOUBLE:
-                return eq(doubleColumn(columnName), value == null ? null : Double.parseDouble(value));
-
-            default:
-                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, parquetType));
-        }
-    }
-
-    private FilterPredicate getNotEquals(String columnName,
-                                         PrimitiveType.PrimitiveTypeName parquetType,
-                                         OriginalType originalType,
-                                         OperandNode operand) {
-        String value = operand == null ? null : operand.toString();
-        switch (parquetType) {
-            case INT32:
-                return notEq(intColumn(columnName), getIntegerForINT32(originalType, value));
-
-            case INT64:
-                return notEq(longColumn(columnName), value == null ? null : Long.parseLong(value));
-
-            case BOOLEAN:
-                return notEq(booleanColumn(columnName), value == null ? null : Boolean.parseBoolean(value));
-
-            case BINARY:
-                return notEq(binaryColumn(columnName), value == null ? null : Binary.fromString(value));
-
-            case FLOAT:
-                return notEq(floatColumn(columnName), value == null ? null : Float.parseFloat(value));
-
-            case DOUBLE:
-                return notEq(doubleColumn(columnName), value == null ? null : Double.parseDouble(value));
-
-            default:
-                throw new UnsupportedOperationException(String.format("Column %s of type %s is not supported",
-                        columnName, parquetType));
-        }
-    }
-
-    private Integer getIntegerForINT32(OriginalType originalType, String value) {
-        if (value == null) return null;
+    private static Integer getIntegerForINT32(OriginalType originalType, OperandNode valueOperand) {
+        if (valueOperand == null) return null;
         if (originalType == OriginalType.DATE) {
             // Number of days since epoch
-            LocalDate localDateValue = LocalDate.parse(value);
+            LocalDate localDateValue = LocalDate.parse(valueOperand.toString());
             LocalDate epoch = LocalDate.ofEpochDay(0);
             return (int) ChronoUnit.DAYS.between(epoch, localDateValue);
         }
-        return Integer.parseInt(value);
+        return Integer.parseInt(valueOperand.toString());
     }
 }
