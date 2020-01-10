@@ -20,7 +20,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,7 +28,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class ParquetFilterPushDownTest {
+public class ParquetFilterPushDownTest extends ParquetBaseTest {
 
     // From resources/parquet/parquet_types.csv
     private static final int[] COL1 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
@@ -56,29 +55,11 @@ public class ParquetFilterPushDownTest {
 
     @Before
     public void setup() throws Exception {
+        super.setup();
 
         accessor = new ParquetFileAccessor();
         resolver = new ParquetResolver();
         context = new RequestContext();
-
-        List<ColumnDescriptor> columnDescriptors = new ArrayList<>();
-        columnDescriptors.add(new ColumnDescriptor("id", DataType.INTEGER.getOID(), 0, "int4", null));
-        columnDescriptors.add(new ColumnDescriptor("name", DataType.TEXT.getOID(), 1, "text", null));
-        columnDescriptors.add(new ColumnDescriptor("cdate", DataType.DATE.getOID(), 2, "date", null));
-        columnDescriptors.add(new ColumnDescriptor("amt", DataType.FLOAT8.getOID(), 3, "float8", null));
-        columnDescriptors.add(new ColumnDescriptor("grade", DataType.TEXT.getOID(), 4, "text", null));
-        columnDescriptors.add(new ColumnDescriptor("b", DataType.BOOLEAN.getOID(), 5, "bool", null));
-        columnDescriptors.add(new ColumnDescriptor("tm", DataType.TIMESTAMP.getOID(), 6, "timestamp", null));
-        columnDescriptors.add(new ColumnDescriptor("bg", DataType.BIGINT.getOID(), 7, "bigint", null));
-        columnDescriptors.add(new ColumnDescriptor("bin", DataType.BYTEA.getOID(), 8, "bytea", null));
-        columnDescriptors.add(new ColumnDescriptor("sml", DataType.SMALLINT.getOID(), 9, "int2", null));
-        columnDescriptors.add(new ColumnDescriptor("r", DataType.REAL.getOID(), 10, "real", null));
-        columnDescriptors.add(new ColumnDescriptor("vc1", DataType.VARCHAR.getOID(), 11, "varchar", new Integer[]{5}));
-        columnDescriptors.add(new ColumnDescriptor("c1", DataType.BPCHAR.getOID(), 12, "char", new Integer[]{3}));
-        columnDescriptors.add(new ColumnDescriptor("dec1", DataType.NUMERIC.getOID(), 13, "numeric", null));
-        columnDescriptors.add(new ColumnDescriptor("dec2", DataType.NUMERIC.getOID(), 14, "numeric", new Integer[]{5, 2}));
-        columnDescriptors.add(new ColumnDescriptor("dec3", DataType.NUMERIC.getOID(), 15, "numeric", new Integer[]{13, 5}));
-        columnDescriptors.add(new ColumnDescriptor("num1", DataType.INTEGER.getOID(), 16, "int", null));
 
         String path = Objects.requireNonNull(getClass().getClassLoader().getResource("parquet/parquet_types.parquet")).getPath();
 
