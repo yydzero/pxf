@@ -128,7 +128,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     private WriterVersion parquetVersion;
     private CodecFactory codecFactory = CodecFactory.getInstance();
 
-    private List<Long> readList = new ArrayList<>();
+    private long totalReadTimeInNanos;
 
     /**
      * Opens the resource for read.
@@ -173,7 +173,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         final long then = System.nanoTime();
         Group group = fileReader.read();
         final long nanos = System.nanoTime() - then;
-        readList.add(nanos);
+        totalReadTimeInNanos += nanos;
 
         if (group != null) {
             rowsRead++;
@@ -191,18 +191,22 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     public void closeForRead() throws IOException {
 
         totalRowsRead += rowsRead;
-        LOG.debug("Segment {}: Read TOTAL of {} rows from file {} on server {}",
-                context.getSegmentId(),
-                totalRowsRead,
-                context.getDataSource(),
-                context.getServerName());
+
+        if (LOG.isDebugEnabled()) {
+            final long millis = TimeUnit.NANOSECONDS.toMillis(totalReadTimeInNanos);
+            long average = totalReadTimeInNanos / totalRowsRead;
+            LOG.debug("{}-{}: Read TOTAL of {} rows from file {} on server {} in {} ms. Average speed: {} nanoseconds",
+                    context.getTransactionId(),
+                    context.getSegmentId(),
+                    totalRowsRead,
+                    context.getDataSource(),
+                    context.getServerName(),
+                    millis,
+                    average);
+        }
         if (fileReader != null) {
             fileReader.close();
         }
-
-        long average = readList.stream().mapToLong(Long::longValue).sum() / (long) readList.size();
-
-        LOG.info("Read average speed: " + average + " nanoseconds");
     }
 
     /**
@@ -228,14 +232,15 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
         dictionarySize = context.getOption("DICTIONARY_PAGE_SIZE", DEFAULT_DICTIONARY_PAGE_SIZE);
         String parquetVerStr = context.getOption("PARQUET_VERSION");
         parquetVersion = parquetVerStr != null ? WriterVersion.fromString(parquetVerStr.toLowerCase()) : DEFAULT_PARQUET_VERSION;
-        LOG.debug("Parquet options: PAGE_SIZE = {}, ROWGROUP_SIZE = {}, DICTIONARY_PAGE_SIZE = {}, PARQUET_VERSION = {}",
-                pageSize, rowGroupSize, dictionarySize, parquetVersion);
+        LOG.debug("{}-{}: Parquet options: PAGE_SIZE = {}, ROWGROUP_SIZE = {}, DICTIONARY_PAGE_SIZE = {}, PARQUET_VERSION = {}",
+                context.getTransactionId(), context.getSegmentId(), pageSize, rowGroupSize, dictionarySize, parquetVersion);
 
         // Read schema file, if given
         String schemaFile = context.getOption("SCHEMA");
         MessageType schema = (schemaFile != null) ? readSchemaFile(schemaFile) :
                 generateParquetSchema(context.getTupleDescription());
-        LOG.debug("Schema fields = {}", schema.getFields());
+        LOG.debug("{}-{}: Schema fields = {}", context.getTransactionId(),
+                context.getSegmentId(), schema.getFields());
         GroupWriteSupport.setSchema(schema, configuration);
         groupWriteSupport = new GroupWriteSupport();
 
@@ -282,7 +287,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
             parquetWriter.close();
             totalRowsWritten += rowsWritten;
         }
-        LOG.debug("Segment {}: writer closed, wrote a TOTAL of {} rows to {} on server {}",
+        LOG.debug("{}-{}: writer closed, wrote a TOTAL of {} rows to {} on server {}",
+                context.getTransactionId(),
                 context.getSegmentId(),
                 totalRowsWritten,
                 context.getDataSource(),
@@ -347,12 +353,14 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
                      ParquetFileReader.open(inputFile, parquetReadOptions)) {
             FileMetaData metadata = parquetFileReader.getFileMetaData();
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Reading file {} with {} records in {} RowGroups",
+                LOG.debug("{}-{}: Reading file {} with {} records in {} RowGroups",
+                        context.getTransactionId(), context.getSegmentId(),
                         parquetFile.getName(), parquetFileReader.getRecordCount(),
                         parquetFileReader.getRowGroups().size());
             }
             final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
-            LOG.info("Read schema in " + millis + "ms");
+            LOG.debug("{}-{}: Read schema in {} ms", context.getTransactionId(),
+                    context.getSegmentId(), millis);
             return metadata.getSchema();
         } catch (Exception e) {
             throw new IOException(e);
@@ -408,7 +416,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
 
         String fileName = filePrefix + "." + fileIndex;
         fileName += codecName.getExtension() + ".parquet";
-        LOG.debug("Creating file {}", fileName);
+        LOG.debug("{}-{}: Creating file {}", context.getTransactionId(),
+                context.getSegmentId(), fileName);
         file = new Path(fileName);
         fs = FileSystem.get(URI.create(fileName), configuration);
         HdfsUtilities.validateFile(file, fs);
@@ -424,8 +433,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
      */
     private MessageType readSchemaFile(String schemaFile)
             throws IOException {
-
-        LOG.debug("Using parquet schema from given schema file {}", schemaFile);
+        LOG.debug("{}-{}: Using parquet schema from given schema file {}", context.getTransactionId(),
+                context.getSegmentId(), schemaFile);
         try (InputStream inputStream = fs.open(new Path(schemaFile))) {
             return MessageTypeParser.parseMessageType(IOUtils.toString(inputStream));
         }
@@ -435,8 +444,8 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
      * Generate parquet schema using column descriptors
      */
     private MessageType generateParquetSchema(List<ColumnDescriptor> columns) {
-
-        LOG.debug("Generating parquet schema for write using {}", columns);
+        LOG.debug("{}-{}: Generating parquet schema for write using {}", context.getTransactionId(),
+                context.getSegmentId(), columns);
         List<Type> fields = new ArrayList<>();
         for (ColumnDescriptor column : columns) {
             String columnName = column.columnName();
