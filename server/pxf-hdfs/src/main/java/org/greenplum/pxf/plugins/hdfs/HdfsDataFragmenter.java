@@ -33,7 +33,9 @@ import org.greenplum.pxf.plugins.hdfs.utilities.PxfInputFormat;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Fragmenter class for HDFS data resources.
@@ -104,20 +106,21 @@ public class HdfsDataFragmenter extends BaseFragmenter {
         PxfInputFormat pxfInputFormat = new PxfInputFormat();
         PxfInputFormat.setInputPaths(jobConf, path);
         InputSplit[] splits = pxfInputFormat.getSplits(jobConf, 1);
-        List<InputSplit> result = new ArrayList<>();
+
+        if (splits == null) return new ArrayList<>();
 
         /*
          * HD-2547: If the file is empty, an empty split is returned: no
          * locations and no length.
          */
-        if (splits != null) {
-            for (InputSplit split : splits) {
-                if (split.getLength() > 0) {
-                    result.add(split);
-                }
-            }
-        }
-
-        return result;
+        return Arrays.stream(splits)
+                .filter(s -> {
+                    try {
+                        return s.getLength() > 0;
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .collect(Collectors.toList());
     }
 }
