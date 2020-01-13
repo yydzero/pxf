@@ -280,12 +280,16 @@ function create_s3_extension_tables() {
 function configure_s3_server() {
     # We need to create s3-site.xml and provide AWS credentials
     S3_SERVER_DIR="${PXF_SERVER_DIR}/s3benchmark"
+    # Special configuration for reading parquet files
+    S3_SERVER_DIR_PARQUET="${PXF_SERVER_DIR}/s3benchmarkparquet"
     # Make a backup of core-site and update it with the S3 core-site
     gpssh -u gpadmin -h mdw -v -s -e "mkdir -p $S3_SERVER_DIR && cp ${PXF_CONF_DIR}/templates/s3-site.xml $S3_SERVER_DIR"
     gpssh -u gpadmin -h mdw -v -s -e "sed -i \"s|YOUR_AWS_ACCESS_KEY_ID|${AWS_ACCESS_KEY_ID}|\" $S3_SERVER_DIR/s3-site.xml"
     gpssh -u gpadmin -h mdw -v -s -e "sed -i \"s|YOUR_AWS_SECRET_ACCESS_KEY|${AWS_SECRET_ACCESS_KEY}|\" $S3_SERVER_DIR/s3-site.xml"
+
+    cp -R $S3_SERVER_DIR $S3_SERVER_DIR_PARQUET
     # Improves reading from parquet files for S3
-    gpssh -u gpadmin -h mdw -v -s -e "sed -i \"s|</configuration>|<property><name>fs.s3a.experimental.input.fadvise</name><value>random</value></property></configuration>|\" $S3_SERVER_DIR/s3-site.xml"
+    gpssh -u gpadmin -h mdw -v -s -e "sed -i \"s|</configuration>|<property><name>fs.s3a.experimental.input.fadvise</name><value>random</value></property></configuration>|\" $S3_SERVER_DIR_PARQUET/s3-site.xml"
     sync_configuration
 }
 
@@ -301,8 +305,8 @@ function create_s3_parquet_tables() {
     local name=${1}
     local run_id=${2}
     # create parquet tables
-    readable_external_table_parquet_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:parquet&SERVER=s3benchmark"
-    writable_external_table_parquet_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:parquet&SERVER=s3benchmark"
+    readable_external_table_parquet_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:parquet&SERVER=s3benchmarkparquet"
+    writable_external_table_parquet_query "${name}" "pxf://gpdb-ud-pxf-benchmark/s3-profile-parquet-test/output/${SCALE}/${UUID}-${run_id}/?PROFILE=s3:parquet&SERVER=s3benchmarkparquet"
 }
 
 function configure_wasb_server() {
