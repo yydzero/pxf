@@ -5,6 +5,7 @@ import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.parquet.schema.MessageType;
 import org.greenplum.pxf.api.model.Fragment;
+import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.plugins.hdfs.HdfsDataFragmenter;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
@@ -19,11 +20,10 @@ public class ParquetDataFragmenter extends HdfsDataFragmenter {
 
     private ParquetSchemaUtility parquetSchemaUtility;
 
-    /**
-     * Default constructor
-     */
-    public ParquetDataFragmenter() {
-        this.parquetSchemaUtility = new ParquetSchemaUtility();
+    @Override
+    public void initialize(RequestContext context) {
+        super.initialize(context);
+        this.parquetSchemaUtility = new ParquetSchemaUtility(context);
     }
 
     /**
@@ -47,7 +47,10 @@ public class ParquetDataFragmenter extends HdfsDataFragmenter {
             if (schemaData == null) {
                 MessageType readSchema = parquetSchemaUtility
                         .getReadSchema(fsp, configuration, context.getTupleDescription());
-                schemaData = readSchema.toString().getBytes(StandardCharsets.UTF_8);
+                String readSchemaString = readSchema.toString();
+                schemaData = readSchemaString.getBytes(StandardCharsets.UTF_8);
+                LOG.debug("{}-{}: Read schema for all fragments is: {}",
+                        context.getTransactionId(), context.getSegmentId(), readSchemaString);
             }
 
             /*
