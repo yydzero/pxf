@@ -46,13 +46,13 @@ public class BasePlugin implements Plugin {
     /**
      * Initialize the plugin for the incoming request
      *
-     * @param requestContext data provided in the request
+     * @param context data provided in the request
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        this.context = requestContext;
+    public void initialize(RequestContext context) {
+        this.context = context;
         this.configuration = configurationFactory.
-                initConfiguration(context.getConfig(), context.getServerName(), context.getUser(), context.getAdditionalConfigProps());
+                initConfiguration(this.context.getConfig(), this.context.getServerName(), this.context.getUser(), this.context.getAdditionalConfigProps());
         this.initialized = true;
     }
 
