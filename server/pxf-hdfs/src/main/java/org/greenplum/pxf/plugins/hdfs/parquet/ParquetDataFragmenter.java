@@ -49,7 +49,7 @@ public class ParquetDataFragmenter extends HdfsDataFragmenter {
                         .getReadSchema(fsp, configuration, context.getTupleDescription());
                 String readSchemaString = readSchema.toString();
                 schemaData = readSchemaString.getBytes(StandardCharsets.UTF_8);
-                LOG.debug("{}-{}: Read schema for all fragments is: {}",
+                LOG.trace("{}-{}: Read schema for all fragments is: {}",
                         context.getTransactionId(), context.getSegmentId(), readSchemaString);
             }
 
