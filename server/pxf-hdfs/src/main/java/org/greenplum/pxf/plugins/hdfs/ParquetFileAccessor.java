@@ -89,6 +89,7 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     );
 
     private static final TreeTraverser TRAVERSER = new TreeTraverser();
+    public static final String S3_EXPERIMENTAL_INPUT_FADVISE = "fs.s3a.experimental.input.fadvise";
 
     private ParquetReader<Group> fileReader;
     private CompressionCodecName codecName;
@@ -105,11 +106,15 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
     private long totalReadTimeInNanos;
 
     private ParquetSchemaUtility parquetSchemaUtility;
+    protected HcfsType hcfsType;
 
     @Override
     public void initialize(RequestContext context) {
         super.initialize(context);
         this.parquetSchemaUtility = new ParquetSchemaUtility(context);
+
+        // Check if the underlying configuration is for HDFS
+        hcfsType = HcfsType.getHcfsType(configuration, context);
     }
 
     /**
@@ -141,6 +146,40 @@ public class ParquetFileAccessor extends BasePlugin implements Accessor {
 
         // add column projection
         configuration.set(PARQUET_READ_SCHEMA, readSchema.toString());
+
+        if (hcfsType == HcfsType.S3 || hcfsType == HcfsType.S3A || hcfsType == HcfsType.S3N) {
+            // optimization
+            if (StringUtils.isBlank(configuration.get(S3_EXPERIMENTAL_INPUT_FADVISE))) {
+                // TODO: confirm that with projection we can take advantage of random access
+                if (context.hasColumnProjection() || recordFilter != FilterCompat.NOOP) {
+                    // Optimized for random IO, specifically the Hadoop
+                    // `PositionedReadable` operations — though `seek(offset);
+                    // read(byte_buffer)` also benefits.
+                    //
+                    // Rather than ask for the whole file, the range of the
+                    // HTTP request is set to that of the length of data
+                    // desired in the `read` operation - rounded up to the
+                    // readahead value set in `setReadahead()` if necessary.
+                    //
+                    // By reducing the cost of closing existing HTTP requests,
+                    // this is highly efficient for file IO accessing a binary
+                    // file through a series of PositionedReadable.read() and
+                    // PositionedReadable.readFully() calls. Sequential reading
+                    // of a file is expensive, as now many HTTP requests must
+                    // be made to read through the file.
+                    configuration.set(S3_EXPERIMENTAL_INPUT_FADVISE, "random");
+                } else {
+                    // Read through the file, possibly with some short forward
+                    // seeks. he whole document is requested in a single HTTP
+                    // request; forward seeks within the readahead range are
+                    // supported by skipping over the intermediate data.
+                    //
+                    // This leads to maximum read throughput, but with very
+                    // expensive backward seeks.
+                    configuration.set(S3_EXPERIMENTAL_INPUT_FADVISE, "sequential");
+                }
+            }
+        }
 
         fileReader = ParquetReader.builder(new GroupReadSupport(), file)
                 .withConf(configuration)
