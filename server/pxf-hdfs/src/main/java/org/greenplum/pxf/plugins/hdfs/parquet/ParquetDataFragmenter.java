@@ -44,14 +44,14 @@ public class ParquetDataFragmenter extends HdfsDataFragmenter {
             String filepath = fsp.getPath().toString();
             String[] hosts = fsp.getLocations();
 
-            if (schemaData == null) {
-                MessageType readSchema = parquetSchemaUtility
-                        .getReadSchema(fsp, configuration, context.getTupleDescription());
-                String readSchemaString = readSchema.toString();
-                schemaData = readSchemaString.getBytes(StandardCharsets.UTF_8);
-                LOG.trace("{}-{}: Read schema for all fragments is: {}",
-                        context.getTransactionId(), context.getSegmentId(), readSchemaString);
-            }
+//            if (schemaData == null) {
+//                MessageType readSchema = parquetSchemaUtility
+//                        .getReadSchema(fsp, configuration, context.getTupleDescription());
+//                String readSchemaString = readSchema.toString();
+//                schemaData = readSchemaString.getBytes(StandardCharsets.UTF_8);
+//                LOG.trace("{}-{}: Read schema for all fragments is: {}",
+//                        context.getTransactionId(), context.getSegmentId(), readSchemaString);
+//            }
 
             /*
              * metadata information includes: file split's start, length and
