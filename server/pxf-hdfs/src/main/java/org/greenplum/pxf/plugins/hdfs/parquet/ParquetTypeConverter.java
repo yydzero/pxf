@@ -272,7 +272,7 @@ public enum ParquetTypeConverter {
      * Converts a "timestamp with time zone" string to a INT96 byte array.
      * Supports microseconds for timestamps
      *
-     * @param timestampWithTimeZoneString
+     * @param timestampWithTimeZoneString the greenplum string representation of the timestamp with timezone
      * @return Binary format of the timestamp with time zone string
      */
     public static Binary getBinaryFromTimestampWithTimeZone(String timestampWithTimeZoneString) {
