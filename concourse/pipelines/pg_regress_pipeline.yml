@@ -41,30 +41,30 @@ resources:
 - name: libquicklz-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gp-internal-artifacts-service-account-key))
-    regexp: centos7/libquicklz-(\d.*)\.el7\.x86_64\.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/libquicklz-(\d.*)\.el7\.x86_64\.rpm
 
 - name: python-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gp-internal-artifacts-service-account-key))
-    versioned_file: centos7/python-2.7.12.tar.gz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: gp-internal-artifacts/centos7/python-2.7.12.tar.gz
 
 - name: libquicklz-devel-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gp-internal-artifacts-service-account-key))
-    regexp: centos7/libquicklz-devel-(\d.*)\.el7\.x86_64\.rpm
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/libquicklz-devel-(\d.*)\.el7\.x86_64\.rpm
 
 - name: libsigar-centos7
   type: gcs
   source:
-    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
-    json_key: ((gp-internal-artifacts-service-account-key))
-    regexp: centos7/sigar-rhel7_x86_64-(.*)\.targz
+    bucket: ((gcs-bucket))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: gp-internal-artifacts/centos7/sigar-rhel7_x86_64-(.*)\.targz
 
 - name: pxf_tarball
   type: s3
@@ -88,9 +88,9 @@ jobs:
 
 - name: compile_pxf
   plan:
-  - get: pxf_src
-    trigger: true
   - in_parallel:
+    - get: pxf_src
+      trigger: true
     - get: gpdb_src
       trigger: true
     - get: gpdb-pxf-dev-centos7
