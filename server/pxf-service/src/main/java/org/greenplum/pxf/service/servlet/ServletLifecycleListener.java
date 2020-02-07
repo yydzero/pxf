@@ -20,6 +20,7 @@ package org.greenplum.pxf.service.servlet;
  */
 
 
+import org.greenplum.pxf.api.ExecutorServiceProvider;
 import org.greenplum.pxf.service.utilities.Log4jConfigure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,24 +35,25 @@ public class ServletLifecycleListener implements ServletContextListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(ServletContextListener.class);
 
-	/**
-	 * Called after the webapp has been initialized.
-	 *
-	 * 1. Initializes log4j.
-	 */
-	@Override
-	public void contextInitialized(ServletContextEvent event) {
-		// 1. Initialize log4j:
-		Log4jConfigure.configure(event);
+    /**
+     * Called after the webapp has been initialized.
+     *
+     * <p>1. Initializes log4j.
+     */
+    @Override
+    public void contextInitialized(ServletContextEvent event) {
+        // 1. Initialize log4j:
+        Log4jConfigure.configure(event);
 
-		LOG.info("PXF server webapp initialized");
-	}
+        LOG.info("PXF server webapp initialized");
+    }
 
-	/**
-	 * Called before the webapp is about to go down
-	 */
-	@Override
-	public void contextDestroyed(ServletContextEvent event) {
-		LOG.info("PXF server webapp is about to go down");
-	}
+    /**
+     * Called before the webapp is about to go down
+     */
+    @Override
+    public void contextDestroyed(ServletContextEvent event) {
+        LOG.info("PXF server webapp is about to go down");
+        ExecutorServiceProvider.shutdown();
+    }
 }

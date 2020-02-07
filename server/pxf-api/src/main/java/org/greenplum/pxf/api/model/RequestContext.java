@@ -59,6 +59,8 @@ public class RequestContext {
         FRAGMENTER,
         READ_BRIDGE,
         WRITE_BRIDGE,
+        READ_CONTROLLER,
+        WRITE_CONTROLLER
     };
 
     // ----- NAMED PROPERTIES -----

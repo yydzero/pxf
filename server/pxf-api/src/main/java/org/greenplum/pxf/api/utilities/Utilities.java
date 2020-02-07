@@ -31,11 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
@@ -48,6 +47,7 @@ public class Utilities {
     private static final String PROPERTY_KEY_FRAGMENTER_CACHE = "pxf.service.fragmenter.cache.enabled";
     private static final char[] PROHIBITED_CHARS = new char[]{'/', '\\', '.', ' ', ',', ';'};
     private static final String[] HOSTS = new String[]{"localhost"};
+    public static final String DEFAULT_CHARSET = "UTF-8";
 
     /**
      * Returns a decoded base64 byte[], or throws an error if the base64 string is invalid
@@ -331,5 +331,15 @@ public class Utilities {
     public static boolean isSecurityEnabled(Configuration configuration) {
         return SecurityUtil.getAuthenticationMethod(configuration) !=
                 UserGroupInformation.AuthenticationMethod.SIMPLE;
+    }
+
+    /**
+     * Returns the UTF-8 encoded byte array representation of the input string
+     *
+     * @param value the string to encode
+     * @return the UTF-8 encoded byte array representation of the input string
+     */
+    public static byte[] getUtf8Bytes(String value) throws UnsupportedEncodingException {
+        return value.getBytes(DEFAULT_CHARSET);
     }
 }
