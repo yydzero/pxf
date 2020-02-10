@@ -1,5 +1,7 @@
 package org.greenplum.pxf.plugins.hdfs;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.parquet.example.data.Group;
@@ -8,10 +10,13 @@ import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.example.GroupReadSupport;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
+import org.greenplum.pxf.api.OneField;
+import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.model.BaseProcessor;
 import org.greenplum.pxf.api.model.QuerySplit;
 import org.greenplum.pxf.api.model.QuerySplitter;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
+import org.greenplum.pxf.plugins.hdfs.parquet.ParquetTypeConverter;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 
 import java.io.IOException;
@@ -21,10 +26,13 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.parquet.hadoop.api.ReadSupport.PARQUET_READ_SCHEMA;
+import static org.apache.parquet.schema.Type.Repetition.REPEATED;
 
 public class ParquetProcessor extends BaseProcessor<Group> {
 
     private long rowsRead, totalRowsRead;
+    private ObjectMapper mapper = new ObjectMapper();
+    private MessageType readSchema;
 
     /**
      * Records the total read time in nanoseconds
@@ -42,7 +50,7 @@ public class ParquetProcessor extends BaseProcessor<Group> {
         Map<String, Type> originalFieldsMap = getOriginalFieldsMap(originalSchema);
         // Get the read schema. This is either the full set or a subset (in
         // case of column projection) of the greenplum schema.
-        MessageType readSchema = buildReadSchema(originalFieldsMap, originalSchema);
+        readSchema = buildReadSchema(originalFieldsMap, originalSchema);
         // Get the record filter in case of predicate push-down
         FilterCompat.Filter recordFilter = getRecordFilter(context.getFilterString(), originalFieldsMap, readSchema);
 
@@ -116,8 +124,8 @@ public class ParquetProcessor extends BaseProcessor<Group> {
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
         for (int i = 0; i < tupleDescription.size(); i++) {
             ColumnDescriptor columnDescriptor = tupleDescription.get(i);
-            if (columnDescriptor.isProjected() && schema.getType(columnIndex).isPrimitive()) {
-                oneField = resolvePrimitive(row, columnIndex, schema.getType(columnIndex), 0);
+            if (columnDescriptor.isProjected() && readSchema.getType(columnIndex).isPrimitive()) {
+                results[i] = resolvePrimitive(row, columnIndex, readSchema.getType(columnIndex), 0);
                 columnIndex++;
             } else {
                 throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
@@ -129,5 +137,41 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     @Override
     public QuerySplitter getQuerySplitter() {
         return new HcfsDataSplitter();
+    }
+
+    private Object resolvePrimitive(Group group, int columnIndex, Type type, int level) {
+        Object value;
+
+        // get type converter based on the primitive type
+        ParquetTypeConverter converter = ParquetTypeConverter.from(type.asPrimitiveType());
+
+        // determine how many values for the primitive are present in the column
+        int repetitionCount = group.getFieldRepetitionCount(columnIndex);
+
+        // at the top level (top field), non-repeated primitives will convert to typed OneField
+        if (level == 0 && type.getRepetition() != REPEATED) {
+            value = repetitionCount == 0 ? null : converter.getValue(group, columnIndex, 0, type);
+        } else if (type.getRepetition() == REPEATED) {
+            // repeated primitive at any level will convert into JSON
+            ArrayNode jsonArray = mapper.createArrayNode();
+            for (int repeatIndex = 0; repeatIndex < repetitionCount; repeatIndex++) {
+                converter.addValueToJsonArray(group, columnIndex, repeatIndex, type, jsonArray);
+            }
+            // but will become a string only at top level
+            if (level == 0) {
+                try {
+                    value = mapper.writeValueAsString(jsonArray);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to serialize repeated parquet type " + type.asPrimitiveType().getName(), e);
+                }
+            } else {
+                // just return the array node within OneField container
+                value = jsonArray;
+            }
+        } else {
+            // level > 0 and type != REPEATED -- primitive type as a member of complex group -- NOT YET SUPPORTED
+            throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
+        }
+        return value;
     }
 }
