@@ -59,6 +59,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         final String resource = context.getDataSource();
         final ExecutorService executor = ExecutorServiceProvider.get(context);
         final QuerySplitter splitter = getQuerySplitter();
+        final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
         splitter.initialize(context);
 
         final BlockingDeque<T> outputQueue = querySession.getOutputQueue();
@@ -75,11 +76,12 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
             // we need to submit more work only if the output queue has slots available
             while (querySession.isActive()) {
-                while (splitter.hasNext() && querySession.isActive() && querySession.activeTaskCount() < THRESHOLD) {
+                while (splitter.hasNext() && querySession.isActive() && querySession.activeTaskCount() < threshold) {
                     // Queue more work
                     QuerySplit split = splitter.next();
 
                     if (doesSegmentProcessThisSplit(split)) {
+                        LOG.info("Submitting {} to the pool", getUniqueResourceName(split));
                         // Increase the number of jobs submitted to the executor
                         querySession.registerTask();
                         executor.execute(() -> {
@@ -117,16 +119,15 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
                 T tuple = outputQueue.poll(50, TimeUnit.MILLISECONDS);
 
-                if (tuple == null && !querySession.hasPendingTasks() && outputQueue.isEmpty()) {
+                if (tuple != null) {
+                    writeTuple(serializer, tuple);
+                    recordCount++;
+                } else if (!querySession.hasPendingTasks() && outputQueue.isEmpty()) {
                     LOG.info("{}-{}: {}-- queue {} size {}, is queue empty {}", context.getTransactionId(),
                             context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue),
                             outputQueue.size(), outputQueue.isEmpty());
                     break;
                 }
-
-                // output queue is a blocking queue
-                writeTuple(serializer, tuple);
-                recordCount++;
             }
 
             if (querySession.isQueryErrored()) {
@@ -196,8 +197,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
         // TODO: append any identification for metadata (i.e. split offsets, partitioning for jdbc)
-        return context.getSegmentId() == split.getResource().hashCode() % context.getTotalSegments();
+        return context.getSegmentId() == getUniqueResourceName(split).hashCode() % context.getTotalSegments();
     }
+
+    protected abstract String getUniqueResourceName(QuerySplit split);
 
     /**
      * Process the current split and return an iterator to retrieve rows

@@ -44,7 +44,7 @@ public class CsvSerializer extends BaseSerializer {
         } else {
             // TODO: best effort to resolve the field to the greenplum datatype
             if (DataType.isTextForm(dataType.getOID()) && !DataType.isArrayType(dataType.getOID()) && field instanceof String) {
-                valueHandlerProvider.resolve(dataType).handle(buffer,
+                valueHandlerProvider.resolve(DataType.TEXT).handle(buffer,
                         greenplumCSV.toCsvField((String) field, true, true, true));
             } else {
                 valueHandlerProvider.resolve(dataType).handle(buffer, field);

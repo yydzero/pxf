@@ -1,6 +1,5 @@
 package org.greenplum.pxf.api.utilities;
 
-import org.greenplum.pxf.api.examples.DemoProcessor;
 import org.greenplum.pxf.api.model.Processor;
 import org.greenplum.pxf.api.model.RequestContext;
 
@@ -20,6 +19,6 @@ public class ProcessorFactory extends BasePluginFactory<Processor> {
     @Override
     protected String getPluginClassName(RequestContext context) {
         // TODO: return the processor
-        return DemoProcessor.class.getName();
+        return "org.greenplum.pxf.plugins.hdfs.ParquetProcessor";
     }
 }
