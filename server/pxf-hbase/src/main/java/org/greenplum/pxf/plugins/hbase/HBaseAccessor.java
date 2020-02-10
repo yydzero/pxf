@@ -116,13 +116,13 @@ public class HBaseAccessor extends BasePlugin implements Accessor {
      * Initializes HBaseAccessor based on GPDB table description and
      * initializes the scan start and end keys of the HBase table to default values.
      *
-     * @param requestContext data provided in the request
+     * @param context data provided in the request
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
-        tupleDescription = new HBaseTupleDescription(context);
+        tupleDescription = new HBaseTupleDescription(this.context);
         split = null;
         scanStartKey = HConstants.EMPTY_START_ROW;
         scanEndKey = HConstants.EMPTY_END_ROW;

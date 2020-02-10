@@ -99,18 +99,18 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * Initializes the HiveResolver by parsing the request context and
      * obtaining the serde class name, the serde properties string and the
      * partition keys.
-     * @param requestContext request context
+     * @param context request context
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
         hiveDefaultPartName = HiveConf.getVar(configuration, HiveConf.ConfVars.DEFAULTPARTITIONNAME);
 
         try {
-            parseUserData(context);
+            parseUserData(this.context);
             initPartitionFields();
-            initSerde(context);
+            initSerde(this.context);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize HiveResolver", e);
         }

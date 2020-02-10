@@ -2,9 +2,7 @@ package org.greenplum.pxf.api.model;
 
 import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
-import org.greenplum.pxf.api.concurrent.TaskAwareBlockingQueue;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
-import org.greenplum.pxf.api.utilities.FragmenterFactory;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
 
 import javax.ws.rs.WebApplicationException;
@@ -12,24 +10,22 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
     private static final int THRESHOLD = 2;
-    private final FragmenterFactory fragmenterFactory;
     private final SerializerFactory serializerFactory;
 
-    private TaskAwareBlockingQueue<T> outputQueue;
-
-    protected Fragmenter fragmenter;
+    private QuerySession<T> querySession;
 
     public BaseProcessor() {
-        this(FragmenterFactory.getInstance(), SerializerFactory.getInstance());
+        this(SerializerFactory.getInstance());
     }
 
-    public BaseProcessor(FragmenterFactory fragmenterFactory, SerializerFactory serializerFactory) {
-        this.fragmenterFactory = fragmenterFactory;
+    public BaseProcessor(SerializerFactory serializerFactory) {
         this.serializerFactory = serializerFactory;
     }
 
@@ -39,15 +35,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     @Override
     public void initialize(RequestContext context) {
         super.initialize(context);
-        this.fragmenter = fragmenterFactory.getPlugin(context);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void setOutputQueue(TaskAwareBlockingQueue<T> outputQueue) {
-        this.outputQueue = outputQueue;
+    public void setQuerySession(QuerySession<T> querySession) {
+        this.querySession = querySession;
     }
 
     /**
@@ -63,6 +58,13 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         long recordCount = 0;
         final String resource = context.getDataSource();
         final ExecutorService executor = ExecutorServiceProvider.get(context);
+        final QuerySplitter splitter = getQuerySplitter();
+        splitter.initialize(context);
+
+        final BlockingDeque<T> outputQueue = querySession.getOutputQueue();
+
+        LOG.info("{}-{}: {}-- Using queue {}", context.getTransactionId(),
+                context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue));
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
@@ -72,37 +74,60 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             // poll the output queue for results
 
             // we need to submit more work only if the output queue has slots available
-            while (true) {
-                while (outputQueue.activeTaskCount() < THRESHOLD && fragmenter.hasNext()) {
+            while (querySession.isActive()) {
+                while (splitter.hasNext() && querySession.isActive() && querySession.activeTaskCount() < THRESHOLD) {
                     // Queue more work
-                    Fragment fragment = fragmenter.next();
+                    QuerySplit split = splitter.next();
 
-                    if (doesSegmentProcessThisFragment(fragment)) {
+                    if (doesSegmentProcessThisSplit(split)) {
                         // Increase the number of jobs submitted to the executor
-                        outputQueue.registerTask();
-                        executor.submit(() -> {
+                        querySession.registerTask();
+                        executor.execute(() -> {
                             // TODO: handle errors
-                            Iterator<T> iterator = processFragment(fragment);
-                            while (iterator.hasNext()) {
-                                outputQueue.push(iterator.next());
+                            Iterator<T> iterator = readTuples(split);
+                            while (iterator.hasNext() && querySession.isActive()) {
+                                try {
+                                    outputQueue.put(iterator.next());
+                                } catch (InterruptedException e) {
+                                    querySession.errorQuery();
+                                    LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                                            context.getTransactionId(),
+                                            context.getSegmentId(),
+                                            context.getDataSource()), e);
+                                    break;
+                                }
                             }
                             // Decrease the number of jobs after completing
-                            // processing the fragment
-                            outputQueue.deregisterTask();
+                            // processing the split
+                            querySession.deregisterTask();
+                            LOG.info("Completed");
                         });
                     }
                 }
 
-                if (!outputQueue.hasPendingTasks() && outputQueue.isEmpty())
-                    break; // no more work to do
+                T tuple = outputQueue.poll(50, TimeUnit.MILLISECONDS);
+
+                if (tuple == null && !querySession.hasPendingTasks() && outputQueue.isEmpty()) {
+                    LOG.info("{}-{}: {}-- queue {} size {}, is queue empty {}", context.getTransactionId(),
+                            context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue),
+                            outputQueue.size(), outputQueue.isEmpty());
+                    break;
+                }
 
                 // output queue is a blocking queue
-                writeTuple(serializer, outputQueue.take());
+                writeTuple(serializer, tuple);
                 recordCount++;
             }
 
+            if (querySession.isQueryErrored()) {
+                outputQueue.clear();
+            }
+
+            querySession.unregisterSegment(context.getSegmentId());
+
             LOG.debug("Finished streaming {} record{} for resource {}", recordCount, recordCount == 1 ? "" : "s", resource);
         } catch (ClientAbortException e) {
+            querySession.cancelQuery();
             // Occurs whenever client (Greenplum) decides to end the connection
             if (LOG.isDebugEnabled()) {
                 // Stacktrace in debug
@@ -111,6 +136,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 LOG.error("Remote connection closed by GPDB (Enable debug for stacktrace)");
             }
         } catch (Exception e) {
+            querySession.errorQuery();
             throw new IOException(e.getMessage(), e);
         } finally {
             LOG.debug("Stopped streaming for resource {}, {} records.", resource, recordCount);
@@ -142,7 +168,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     }
 
     /**
-     * Determine whether this thread will handle the fragment. To determine
+     * Determine whether this thread will handle the split. To determine
      * which thread should process an element at a given index I for the source
      * SOURCE_NAME, use a MOD function
      * <p>
@@ -151,24 +177,24 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * <p>This hash function is deterministic for a given SOURCE_NAME, and allows
      * the same thread processing for segment S to always process the same
      * source. This allows for caching the Fragment at the segment S, as
-     * segment S is guaranteed to always process the same fragment.
+     * segment S is guaranteed to always process the same split.
      *
-     * @param fragment the fragment
-     * @return true if the thread handles the fragment, false otherwise
+     * @param split the split
+     * @return true if the thread handles the split, false otherwise
      */
-    protected boolean doesSegmentProcessThisFragment(Fragment fragment) {
+    protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
-        return context.getSegmentId() == fragment.getSourceName().hashCode() % context.getTotalSegments();
+        return context.getSegmentId() == split.getResource().hashCode() % context.getTotalSegments();
     }
 
     /**
-     * Process the current fragment and return an iterator to retrieve rows
+     * Process the current split and return an iterator to retrieve rows
      * from the external system.
      *
-     * @param fragment the fragment
+     * @param split the split
      * @return an iterator of rows of type T
      */
-    protected abstract Iterator<T> processFragment(Fragment fragment);
+    protected abstract Iterator<T> readTuples(QuerySplit split);
 
     /**
      * Return a list of fields for the the row

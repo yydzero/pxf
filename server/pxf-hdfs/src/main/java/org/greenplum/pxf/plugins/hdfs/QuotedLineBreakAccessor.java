@@ -43,17 +43,17 @@ public class QuotedLineBreakAccessor extends HdfsAtomicDataAccessor {
     Queue<String> lineQueue;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
         // true if the files are read as a single row, false otherwise
-        fileAsRow = StringUtils.equalsIgnoreCase("true", context.getOption("FILE_AS_ROW"));
+        fileAsRow = StringUtils.equalsIgnoreCase("true", this.context.getOption("FILE_AS_ROW"));
 
-        if (fileAsRow && context.getTupleDescription().size() != 1) {
+        if (fileAsRow && this.context.getTupleDescription().size() != 1) {
             throw new IllegalArgumentException(String.format("the FILE_AS_ROW " +
                     "property only supports tables with a single column in " +
                     "the table definition. %d columns were provided",
-                    context.getTupleDescription().size()));
+                    this.context.getTupleDescription().size()));
         }
     }
 

@@ -77,10 +77,10 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      * avro file or by generating it on the fly from the Greenplum schema.
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
-        schema = avroUtilities.obtainSchema(context, configuration, hcfsType);
+        schema = avroUtilities.obtainSchema(this.context, configuration, hcfsType);
 
     }
 

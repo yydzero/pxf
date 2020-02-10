@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<!--
+    PXF pre-packaged protocol definition file.
+    It's not recommended to add new protocols here.
+    For adding new custom profiles please edit pxf-protocol.xml
+-->
+<profiles>
+    <profile>
+        <protocol>demo</protocol>
+        <description>
+            Protocol that showcases the functionality of PXF. The demo protocol
+            does not access any data, it generates artificial splits and tuples,
+            and returns the data in CSV format.
+        </description>
+        <plugins>
+            <processor>org.greenplum.pxf.api.examples.DemoProcessor</processor>
+        </plugins>
+    </profile>
+</profiles>

@@ -20,7 +20,8 @@ package org.greenplum.pxf.api.examples;
  */
 
 import org.greenplum.pxf.api.model.BaseProcessor;
-import org.greenplum.pxf.api.model.Fragment;
+import org.greenplum.pxf.api.model.QuerySplit;
+import org.greenplum.pxf.api.model.QuerySplitter;
 
 import java.util.Iterator;
 
@@ -32,11 +33,14 @@ import java.util.Iterator;
  */
 public class DemoProcessor extends BaseProcessor<String> {
 
-    private static final int NUM_ROWS = 200;
+    private static final int NUM_ROWS = 500000;
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    protected Iterator<String> processFragment(Fragment fragment) {
-        final String fragmentMetadata = new String(fragment.getMetadata());
+    protected Iterator<String> readTuples(QuerySplit split) {
+        final String fragmentMetadata = new String(split.getMetadata());
         final int colCount = context.getColumns();
 
         return new Iterator<String>() {
@@ -56,18 +60,24 @@ public class DemoProcessor extends BaseProcessor<String> {
                     colValue.append("|").append("value").append(colIndex);
                 }
                 rowNumber++;
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 return colValue.toString();
             }
         };
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected Object[] getFields(String row) {
         return row.split("\\|");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public QuerySplitter getQuerySplitter() {
+        return new DemoQuerySplitter();
     }
 }

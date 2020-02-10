@@ -1,14 +1,13 @@
 package org.greenplum.pxf.service.rest;
 
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import org.greenplum.pxf.api.concurrent.TaskAwareBlockingQueue;
-import org.greenplum.pxf.api.concurrent.TaskAwareLinkedBlockingDeque;
 import org.greenplum.pxf.api.model.Processor;
+import org.greenplum.pxf.api.model.QuerySession;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ProcessorFactory;
 import org.greenplum.pxf.service.HttpRequestParser;
 import org.greenplum.pxf.service.RequestParser;
-import org.greenplum.pxf.service.processor.ProcessorQueueCacheFactory;
+import org.greenplum.pxf.service.processor.QuerySessionCacheFactory;
 
 import javax.servlet.ServletContext;
 import javax.ws.rs.GET;
@@ -20,6 +19,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * This class handles the subpath /<version>/Controller/ of this
@@ -56,32 +56,32 @@ import java.util.concurrent.ExecutionException;
 public class ControllerResource extends BaseResource {
 
     private ProcessorFactory processorFactory;
-    private ProcessorQueueCacheFactory processorQueueCacheFactory;
+    private QuerySessionCacheFactory querySessionCacheFactory;
 
     /**
      * Creates an instance of the resource with the default singletons of
-     * RequestParser, ProcessorFactory, and ProcessorQueueCacheFactory.
+     * RequestParser, ProcessorFactory, and QuerySessionCacheFactory.
      */
     public ControllerResource() {
         this(HttpRequestParser.getInstance(),
                 ProcessorFactory.getInstance(),
-                ProcessorQueueCacheFactory.getInstance());
+                QuerySessionCacheFactory.getInstance());
     }
 
     /**
      * Creates an instance of the resource with provided instances of
-     * RequestParser, ProcessorFactory and ProcessorQueueCacheFactory.
+     * RequestParser, ProcessorFactory and QuerySessionCacheFactory.
      *
-     * @param parser                     request parser
-     * @param processorFactory           a factory that constructs processors
-     * @param processorQueueCacheFactory a factory that returns output queues for the processor
+     * @param parser                   request parser
+     * @param processorFactory         a factory that constructs processors
+     * @param querySessionCacheFactory a factory that returns output queues for the processor
      */
     ControllerResource(RequestParser<HttpHeaders> parser,
                        ProcessorFactory processorFactory,
-                       ProcessorQueueCacheFactory processorQueueCacheFactory) {
+                       QuerySessionCacheFactory querySessionCacheFactory) {
         super(RequestContext.RequestType.READ_CONTROLLER, parser);
         this.processorFactory = processorFactory;
-        this.processorQueueCacheFactory = processorQueueCacheFactory;
+        this.querySessionCacheFactory = querySessionCacheFactory;
     }
 
     /**
@@ -124,7 +124,10 @@ public class ControllerResource extends BaseResource {
                                   final boolean threadSafe) throws Throwable {
 
         final String cacheKey = getCacheKey(context);
-        processor.setOutputQueue(getOutputQueue(cacheKey, context));
+
+        QuerySession<?> querySession = getQuerySession(cacheKey, context);
+        querySession.registerSegment(context.getSegmentId());
+        processor.setQuerySession(querySession);
 
         // TODO: lock when not thread safe
         return Response
@@ -133,22 +136,24 @@ public class ControllerResource extends BaseResource {
     }
 
     /**
-     * Shared output queue for all segments for the same transaction, server
-     * name, data source, and filter string
+     * Query session holds state for the duration of the query, for all
+     * segments for the same transaction, server name, data source and filter
+     * string combination.
      *
      * @param cacheKey the key to the cache
      * @param context  the request context
-     * @return the shared output queue
+     * @return the QuerySession object for the given key
      */
-    private TaskAwareBlockingQueue<?> getOutputQueue(final String cacheKey, final RequestContext context)
+    private QuerySession<?> getQuerySession(final String cacheKey, final RequestContext context)
             throws Throwable {
         try {
-            return processorQueueCacheFactory.getCache().get(cacheKey, new Callable<TaskAwareBlockingQueue<?>>() {
+            return querySessionCacheFactory.getCache().get(cacheKey, new Callable<QuerySession<?>>() {
                 @Override
-                public TaskAwareBlockingQueue<?> call() throws Exception {
-                    LOG.debug("Caching output queue for transactionId={} from segmentId={} with key={}",
+                public QuerySession<?> call() {
+                    LOG.debug("Caching QuerySession for transactionId={} from segmentId={} with key={}",
                             context.getTransactionId(), context.getSegmentId(), cacheKey);
-                    return new TaskAwareLinkedBlockingDeque<>();
+
+                    return new QuerySession<>(cacheKey, new LinkedBlockingDeque<>(100));
                 }
             });
         } catch (UncheckedExecutionException | ExecutionException e) {
@@ -157,12 +162,13 @@ public class ControllerResource extends BaseResource {
     }
 
     /**
-     * Returns a key for the output queue cache. TransactionID is not sufficient to key
-     * the cache. For the case where we have multiple slices (i.e select a, b from c
-     * where a = 'part1' union all select a, b from c where a = 'part2'), the list of
-     * fragments for each slice in the query will be different, but the transactionID
-     * will be the same. For that reason we must include the server name, data source
-     * and the filter string as part of the fragmenter cache.
+     * Returns a key for the QuerySession object. TransactionID is not
+     * sufficient to key the cache. For the case where we have multiple
+     * slices (i.e select a, b from c where a = 'part1' union all
+     * select a, b from c where a = 'part2'), the query context will be
+     * different for each slice, but the transactionID will be the same.
+     * For that reason we must include the server name, data source and the
+     * filter string as part of the QuerySession cache.
      *
      * @param context the request context
      * @return the key for the queue cache

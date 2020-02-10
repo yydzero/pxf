@@ -60,13 +60,13 @@ public class WritableResolver extends BasePlugin implements Resolver {
     /**
      * Initialize the plugin for the incoming request
      *
-     * @param requestContext data provided in the request
+     * @param context data provided in the request
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
-        String schemaName = context.getOption("DATA-SCHEMA");
+        String schemaName = this.context.getOption("DATA-SCHEMA");
 
         /* Testing that the schema name was supplied by the user - schema is an optional property. */
         if (schemaName == null) {
@@ -84,9 +84,9 @@ public class WritableResolver extends BasePlugin implements Resolver {
             throw new RuntimeException("Failed to create an instance of " + schemaName, e);
         }
         fields = userObject.getClass().getDeclaredFields();
-        recordkeyIndex = (context.getRecordkeyColumn() == null)
+        recordkeyIndex = (this.context.getRecordkeyColumn() == null)
                 ? RECORDKEY_UNDEFINED
-                : context.getRecordkeyColumn().columnIndex();
+                : this.context.getRecordkeyColumn().columnIndex();
 
         // fields details:
         if (LOG.isDebugEnabled()) {

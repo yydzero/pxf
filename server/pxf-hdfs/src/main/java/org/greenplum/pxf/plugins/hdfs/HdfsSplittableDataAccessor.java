@@ -61,14 +61,14 @@ public abstract class HdfsSplittableDataAccessor extends BasePlugin implements A
     }
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
         // variable required for the splits iteration logic
         jobConf = new JobConf(configuration, HdfsSplittableDataAccessor.class);
 
         // Check if the underlying configuration is for HDFS
-        hcfsType = HcfsType.getHcfsType(configuration, requestContext);
+        hcfsType = HcfsType.getHcfsType(configuration, context);
     }
 
     /**

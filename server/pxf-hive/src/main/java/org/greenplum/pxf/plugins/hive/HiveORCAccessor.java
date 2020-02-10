@@ -95,9 +95,9 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
     }
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
-        useStats = Utilities.aggregateOptimizationsSupported(context);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
+        useStats = Utilities.aggregateOptimizationsSupported(this.context);
     }
 
     @Override

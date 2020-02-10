@@ -52,9 +52,9 @@ public class HBaseResolver extends BasePlugin implements Resolver {
     private HBaseTupleDescription tupleDescription;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
-        tupleDescription = new HBaseTupleDescription(context);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
+        tupleDescription = new HBaseTupleDescription(this.context);
     }
 
     /**

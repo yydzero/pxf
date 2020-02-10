@@ -1,15 +1,20 @@
 package org.greenplum.pxf.api.model;
 
-import org.greenplum.pxf.api.concurrent.TaskAwareBlockingQueue;
-
 import javax.ws.rs.core.StreamingOutput;
 
 public interface Processor<T> extends Plugin, StreamingOutput {
 
     /**
-     * Register the output queue for processing the tuples
+     * Returns the query splitter for this {@link Processor}
      *
-     * @param outputQueue the task aware blocking output queue
+     * @return the query splitter
      */
-    void setOutputQueue(TaskAwareBlockingQueue<T> outputQueue);
+    QuerySplitter getQuerySplitter();
+
+    /**
+     * Register the {@link QuerySession<T>} for the given query
+     *
+     * @param querySession state for the query
+     */
+    void setQuerySession(QuerySession<T> querySession);
 }

@@ -59,8 +59,8 @@ public class HBaseDataFragmenter extends BaseFragmenter {
     private Connection connection;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
         configuration = HBaseConfiguration.create(configuration);
         configuration.set("hbase.client.retries.number", "3");
     }

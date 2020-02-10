@@ -81,22 +81,22 @@ public class AvroResolver extends BasePlugin implements Resolver {
      * throws RuntimeException if Avro schema could not be retrieved or parsed
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
-        hcfsType = HcfsType.getHcfsType(configuration, context);
-        Schema schema = avroUtilities.obtainSchema(context, configuration, hcfsType);
+        hcfsType = HcfsType.getHcfsType(configuration, this.context);
+        Schema schema = avroUtilities.obtainSchema(this.context, configuration, hcfsType);
 
         reader = new GenericDatumReader<>(schema);
 
         fields = schema.getFields();
 
-        collectionDelim = context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
-                : context.getOption("COLLECTION_DELIM");
-        mapkeyDelim = context.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
-                : context.getOption("MAPKEY_DELIM");
-        recordkeyDelim = context.getOption("RECORDKEY_DELIM") == null ? RECORDKEY_DELIM
-                : context.getOption("RECORDKEY_DELIM");
+        collectionDelim = this.context.getOption("COLLECTION_DELIM") == null ? COLLECTION_DELIM
+                : this.context.getOption("COLLECTION_DELIM");
+        mapkeyDelim = this.context.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
+                : this.context.getOption("MAPKEY_DELIM");
+        recordkeyDelim = this.context.getOption("RECORDKEY_DELIM") == null ? RECORDKEY_DELIM
+                : this.context.getOption("RECORDKEY_DELIM");
     }
 
     /**

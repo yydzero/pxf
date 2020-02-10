@@ -56,10 +56,10 @@ public class S3SelectAccessor extends BasePlugin implements Accessor {
     private URI name;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
-        name = URI.create(context.getDataSource());
+        name = URI.create(this.context.getDataSource());
         s3Client = initS3Client();
         lineReadCount = 0;
     }

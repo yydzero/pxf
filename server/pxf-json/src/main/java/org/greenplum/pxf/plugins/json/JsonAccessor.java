@@ -63,16 +63,16 @@ public class JsonAccessor extends HdfsSplittableDataAccessor {
     }
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
 
-        if (!isEmpty(context.getOption(IDENTIFIER_PARAM))) {
+        if (!isEmpty(this.context.getOption(IDENTIFIER_PARAM))) {
 
-            identifier = context.getOption(IDENTIFIER_PARAM);
+            identifier = this.context.getOption(IDENTIFIER_PARAM);
 
             // If the member identifier is set then check if a record max length is defined as well.
-            if (!isEmpty(context.getOption(RECORD_MAX_LENGTH_PARAM))) {
-                maxRecordLength = Integer.valueOf(context.getOption(RECORD_MAX_LENGTH_PARAM));
+            if (!isEmpty(this.context.getOption(RECORD_MAX_LENGTH_PARAM))) {
+                maxRecordLength = Integer.valueOf(this.context.getOption(RECORD_MAX_LENGTH_PARAM));
             }
         }
     }

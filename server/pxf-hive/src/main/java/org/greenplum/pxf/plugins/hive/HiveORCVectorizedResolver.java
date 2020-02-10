@@ -70,8 +70,8 @@ public class HiveORCVectorizedResolver extends HiveResolver implements ReadVecto
     private StructObjectInspector soi;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
         try {
             soi = (StructObjectInspector) getOrcReader().getObjectInspector();
         } catch (Exception e) {

@@ -149,6 +149,7 @@ project('pxf-api') {
         compile "org.apache.hadoop:hadoop-common:${hadoopVersion}"
         compile "com.fasterxml.jackson.core:jackson-core:2.9.10"
         compile "com.fasterxml.jackson.core:jackson-databind:2.9.10"
+        compile "org.apache.tomcat:tomcat-catalina:$tomcatVersion"
 
         bundleJars "asm:asm:3.2"
     }

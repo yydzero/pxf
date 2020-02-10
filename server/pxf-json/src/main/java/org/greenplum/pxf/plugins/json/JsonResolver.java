@@ -51,15 +51,15 @@ public class JsonResolver extends BasePlugin implements Resolver {
     private ObjectMapper mapper;
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
         oneFieldList = new ArrayList<>();
         mapper = new ObjectMapper();
 
         // Precompute the column metadata. The metadata is used for mapping column names to json nodes.
-        columnDescriptorCache = new ColumnDescriptorCache[requestContext.getColumns()];
-        for (int i = 0; i < requestContext.getColumns(); ++i) {
-            ColumnDescriptor cd = requestContext.getColumn(i);
+        columnDescriptorCache = new ColumnDescriptorCache[context.getColumns()];
+        for (int i = 0; i < context.getColumns(); ++i) {
+            ColumnDescriptor cd = context.getColumn(i);
             columnDescriptorCache[i] = new ColumnDescriptorCache(cd);
         }
     }

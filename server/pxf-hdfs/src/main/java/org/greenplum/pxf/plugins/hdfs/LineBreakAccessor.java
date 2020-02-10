@@ -56,8 +56,8 @@ public class LineBreakAccessor extends HdfsSplittableDataAccessor {
     }
 
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
         ((TextInputFormat) inputFormat).configure(jobConf);
     }
 

@@ -37,7 +37,7 @@ public class TestAccessor implements Accessor {
     }
 
     @Override
-    public void initialize(RequestContext requestContext) {
+    public void initialize(RequestContext context) {
 
     }
 

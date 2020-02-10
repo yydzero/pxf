@@ -15,7 +15,7 @@ public class CsvSerializer extends BaseSerializer {
     private int currentField;
 
     public CsvSerializer(GreenplumCSV greenplumCSV) {
-        this(greenplumCSV, 64 * OneKB);
+        this(greenplumCSV, 256 * OneKB);
     }
 
     public CsvSerializer(GreenplumCSV greenplumCSV, int bufferSize) {
@@ -43,13 +43,17 @@ public class CsvSerializer extends BaseSerializer {
             buffer.write(Utilities.getUtf8Bytes(greenplumCSV.getValueOfNull()));
         } else {
             // TODO: best effort to resolve the field to the greenplum datatype
-            valueHandlerProvider.resolve(dataType).handle(buffer, field);
+            if (DataType.isTextForm(dataType.getOID()) && !DataType.isArrayType(dataType.getOID()) && field instanceof String) {
+                valueHandlerProvider.resolve(dataType).handle(buffer,
+                        greenplumCSV.toCsvField((String) field, true, true, true));
+            } else {
+                valueHandlerProvider.resolve(dataType).handle(buffer, field);
+            }
         }
     }
 
     @Override
-    public void endField() throws IOException {
-        buffer.flush();
+    public void endField() {
     }
 
     @Override

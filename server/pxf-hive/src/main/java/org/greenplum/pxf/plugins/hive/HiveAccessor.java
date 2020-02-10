@@ -105,15 +105,15 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
      * {@link org.apache.hadoop.mapred.InputFormat}) and the Hive partition
      * fields
      *
-     * @param requestContext request context
+     * @param context request context
      * @throws RuntimeException if failed to create input format
      */
     @Override
-    public void initialize(RequestContext requestContext) {
-        super.initialize(requestContext);
+    public void initialize(RequestContext context) {
+        super.initialize(context);
         HiveUserData hiveUserData;
         try {
-            hiveUserData = HiveUtilities.parseHiveUserData(context);
+            hiveUserData = HiveUtilities.parseHiveUserData(this.context);
             if (inputFormat == null) {
                 this.inputFormat = HiveDataFragmenter.makeInputFormat(
                         hiveUserData.getInputFormatName(), jobConf);
