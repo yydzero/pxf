@@ -83,18 +83,28 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                         // Increase the number of jobs submitted to the executor
                         querySession.registerTask();
                         executor.execute(() -> {
-                            // TODO: handle errors
-                            Iterator<T> iterator = readTuples(split);
-                            while (iterator.hasNext() && querySession.isActive()) {
-                                try {
-                                    outputQueue.put(iterator.next());
-                                } catch (InterruptedException e) {
-                                    querySession.errorQuery();
-                                    LOG.info(String.format("%s-%d: %s-- processing was interrupted",
-                                            context.getTransactionId(),
-                                            context.getSegmentId(),
-                                            context.getDataSource()), e);
-                                    break;
+                            Iterator<T> iterator = null;
+                            try {
+                                iterator = readTuples(split);
+                            } catch (IOException e) {
+                                querySession.errorQuery();
+                                LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                                        context.getTransactionId(),
+                                        context.getSegmentId(),
+                                        context.getDataSource()), e);
+                            }
+                            if (iterator != null) {
+                                while (iterator.hasNext() && querySession.isActive()) {
+                                    try {
+                                        outputQueue.put(iterator.next());
+                                    } catch (InterruptedException e) {
+                                        querySession.errorQuery();
+                                        LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                                                context.getTransactionId(),
+                                                context.getSegmentId(),
+                                                context.getDataSource()), e);
+                                        break;
+                                    }
                                 }
                             }
                             // Decrease the number of jobs after completing
@@ -133,7 +143,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 // Stacktrace in debug
                 LOG.debug("Remote connection closed by GPDB", e);
             } else {
-                LOG.error("Remote connection closed by GPDB (Enable debug for stacktrace)");
+                LOG.error("{}-{}: {}-- Remote connection closed by GPDB (Enable debug for stacktrace)", context.getTransactionId(),
+                        context.getSegmentId(), context.getDataSource());
             }
         } catch (Exception e) {
             querySession.errorQuery();
@@ -172,7 +183,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * which thread should process an element at a given index I for the source
      * SOURCE_NAME, use a MOD function
      * <p>
-     * S = MOD( hash(SOURCE_NAME), N)
+     * S = MOD(hash(SOURCE_NAME), N)
      *
      * <p>This hash function is deterministic for a given SOURCE_NAME, and allows
      * the same thread processing for segment S to always process the same
@@ -184,6 +195,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
+        // TODO: append any identification for metadata (i.e. split offsets, partitioning for jdbc)
         return context.getSegmentId() == split.getResource().hashCode() % context.getTotalSegments();
     }
 
@@ -194,7 +206,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @param split the split
      * @return an iterator of rows of type T
      */
-    protected abstract Iterator<T> readTuples(QuerySplit split);
+    protected abstract Iterator<T> readTuples(QuerySplit split) throws IOException;
 
     /**
      * Return a list of fields for the the row
