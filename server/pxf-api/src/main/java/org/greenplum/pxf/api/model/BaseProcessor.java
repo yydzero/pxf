@@ -8,14 +8,12 @@ import org.greenplum.pxf.api.utilities.SerializerFactory;
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
@@ -66,25 +64,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         splitter.initialize(context);
 
         final BlockingDeque<Object> outputQueue = new LinkedBlockingDeque<>();
-
         LOG.info("{}-{}: {}-- Using queue {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue));
-
-//        executor.submit(() -> {
-//            while(true){
-//
-//            }
-//        };
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
 
-            // receive a common output queue from the controller resource
-            // submit one task per fragment that this thread will work on to the threadpool
-            // poll the output queue for results
-
-            // we need to submit more work only if the output queue has slots available
             while (querySession.isActive()) {
+                // we need to submit more work only if the output queue has slots available
                 while (splitter.hasNext() && querySession.isActive() && querySession.activeTaskCount() < threshold) {
                     // Queue more work
                     QuerySplit split = splitter.next();
@@ -106,25 +93,42 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                         context.getDataSource()), e);
                             }
                             if (iterator != null) {
+                                List<T> miniBuffer = new ArrayList<>(10);
                                 while (iterator.hasNext() && querySession.isActive()) {
+                                    miniBuffer.add(iterator.next());
+                                    if (miniBuffer.size() == 5) {
+                                        try {
+                                            flushBuffer(serializer, miniBuffer);
+                                        } catch (IOException e) {
+                                            querySession.errorQuery();
+                                            LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                                                    context.getTransactionId(),
+                                                    context.getSegmentId(),
+                                                    context.getDataSource()), e);
+                                            break;
+                                        } finally {
+                                            miniBuffer.clear();
+                                        }
+                                    }
+                                }
+                                if (querySession.isActive()) {
                                     try {
-                                        writeTuple(serializer, iterator.next());
+                                        flushBuffer(serializer, miniBuffer);
                                     } catch (IOException e) {
                                         querySession.errorQuery();
                                         LOG.info(String.format("%s-%d: %s-- processing was interrupted",
                                                 context.getTransactionId(),
                                                 context.getSegmentId(),
                                                 context.getDataSource()), e);
-                                        break;
                                     }
                                 }
+                                miniBuffer.clear();
                             }
                             // Decrease the number of jobs after completing
                             // processing the split
                             querySession.deregisterTask();
-                            Object object = new Object();
                             try {
-                                outputQueue.put(object);
+                                outputQueue.put(new Object());
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
                             }
@@ -140,11 +144,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     break;
                 }
 
-//                int j = 0;
-//                while (j < 10 && !querySession.hasPendingTasks() && !splitter.hasNext()) {
-//                    j++;
                 outputQueue.take();
-//                }
             }
 
             if (querySession.isQueryErrored()) {
@@ -172,6 +172,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         }
     }
 
+    private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
+        if (miniBuffer.isEmpty()) return;
+        synchronized (serializer) {
+            for (T t : miniBuffer)
+                writeTuple(serializer, t);
+        }
+    }
+
     /**
      * Write the tuple to the serializer. The method retrieves an array of
      * fields for the given row and serializes each field using information
@@ -186,17 +194,15 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
         Iterator<Object> fieldsIterator = getFields(row);
 
-        synchronized (serializer) {
-            serializer.startRow(tupleDescription.size());
-            while (fieldsIterator.hasNext()) {
-                ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
-                Object field = fieldsIterator.next();
-                serializer.startField();
-                serializer.writeField(columnDescriptor.getDataType(), field);
-                serializer.endField();
-            }
-            serializer.endRow();
+        serializer.startRow(tupleDescription.size());
+        while (fieldsIterator.hasNext()) {
+            ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
+            Object field = fieldsIterator.next();
+            serializer.startField();
+            serializer.writeField(columnDescriptor.getDataType(), field);
+            serializer.endField();
         }
+        serializer.endRow();
     }
 
     /**
