@@ -93,7 +93,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                         context.getDataSource()), e);
                             }
                             if (iterator != null) {
-                                int miniBufferSize = 10;
+                                int miniBufferSize = 5;
                                 List<T> miniBuffer = new ArrayList<>(miniBufferSize);
                                 while (iterator.hasNext() && querySession.isActive()) {
                                     miniBuffer.add(iterator.next());
