@@ -153,7 +153,7 @@ public class ControllerResource extends BaseResource {
                     LOG.debug("Caching QuerySession for transactionId={} from segmentId={} with key={}",
                             context.getTransactionId(), context.getSegmentId(), cacheKey);
 
-                    return new QuerySession<>(cacheKey, new LinkedBlockingDeque<>(100));
+                    return new QuerySession<>(cacheKey, new LinkedBlockingDeque<>(10000));
                 }
             });
         } catch (UncheckedExecutionException | ExecutionException e) {

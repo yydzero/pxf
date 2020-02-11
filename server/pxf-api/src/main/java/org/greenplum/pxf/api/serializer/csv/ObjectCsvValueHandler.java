@@ -1,9 +1,8 @@
 package org.greenplum.pxf.api.serializer.csv;
 
-import org.greenplum.pxf.api.utilities.Utilities;
-
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 public class ObjectCsvValueHandler extends BaseCsvValueHandler<Object> {
@@ -12,6 +11,6 @@ public class ObjectCsvValueHandler extends BaseCsvValueHandler<Object> {
      */
     @Override
     protected void internalHandle(OutputStream buffer, Object value) throws IOException {
-        buffer.write(Utilities.getUtf8Bytes(Objects.toString(value, null)));
+        buffer.write(Objects.toString(value, null).getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -167,24 +167,36 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     }
 
     @Override
-    protected Object[] getFields(Group row) {
-        int columnIndex = 0;
-
-        Object[] results = new Object[context.getTupleDescription().size()];
-
+    protected Iterator<Object> getFields(Group row) {
+//
         // schema is the readSchema, if there is column projection
         // the schema will be a subset of tuple descriptions
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
-        for (int i = 0; i < tupleDescription.size(); i++) {
-            ColumnDescriptor columnDescriptor = tupleDescription.get(i);
-            if (columnDescriptor.isProjected() && readSchema.getType(columnIndex).isPrimitive()) {
-                results[i] = resolvePrimitive(row, columnIndex, readSchema.getType(columnIndex), 0);
-                columnIndex++;
-            } else {
-                throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
+        final int totalColumns = tupleDescription.size();
+        return new Iterator<Object>() {
+            private int columnIndex = 0;
+            private int i = 0;
+
+            @Override
+            public boolean hasNext() {
+                return i < totalColumns;
             }
-        }
-        return results;
+
+            @Override
+            public Object next() {
+                Object result;
+                ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
+                if (!columnDescriptor.isProjected()) {
+                    return null;
+                } else if (readSchema.getType(columnIndex).isPrimitive()) {
+                    result = resolvePrimitive(row, columnIndex, readSchema.getType(columnIndex), 0);
+                    columnIndex++;
+                } else {
+                    throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
+                }
+                return result;
+            }
+        };
     }
 
     @Override

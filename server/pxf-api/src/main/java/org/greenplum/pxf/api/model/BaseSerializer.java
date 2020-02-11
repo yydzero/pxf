@@ -13,7 +13,7 @@ public abstract class BaseSerializer implements Serializer, AutoCloseable {
     protected transient DataOutputStream buffer;
 
     protected BaseSerializer() {
-        this(64 * OneKB);
+        this(512 * OneKB);
     }
 
     public BaseSerializer(int bufferSize) {

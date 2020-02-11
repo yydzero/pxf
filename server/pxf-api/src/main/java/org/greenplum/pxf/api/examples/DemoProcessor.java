@@ -19,6 +19,7 @@ package org.greenplum.pxf.api.examples;
  * under the License.
  */
 
+import com.google.common.collect.Lists;
 import org.greenplum.pxf.api.model.BaseProcessor;
 import org.greenplum.pxf.api.model.QuerySplit;
 import org.greenplum.pxf.api.model.QuerySplitter;
@@ -69,8 +70,8 @@ public class DemoProcessor extends BaseProcessor<String> {
      * {@inheritDoc}
      */
     @Override
-    protected Object[] getFields(String row) {
-        return row.split("\\|");
+    protected Iterator<Object> getFields(String row) {
+        return null;
     }
 
     /**

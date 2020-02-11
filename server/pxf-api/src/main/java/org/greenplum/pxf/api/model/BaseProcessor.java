@@ -12,7 +12,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
@@ -62,7 +65,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
         splitter.initialize(context);
 
-        final BlockingDeque<T> outputQueue = querySession.getOutputQueue();
+        final BlockingDeque<Object> outputQueue = new LinkedBlockingDeque<>();
 
         LOG.info("{}-{}: {}-- Using queue {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue));
@@ -84,7 +87,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                         LOG.info("Submitting {} to the pool", getUniqueResourceName(split));
                         // Increase the number of jobs submitted to the executor
                         querySession.registerTask();
-                        executor.execute(() -> {
+
+                        executor.submit(() -> {
                             Iterator<T> iterator = null;
                             try {
                                 iterator = readTuples(split);
@@ -98,8 +102,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                             if (iterator != null) {
                                 while (iterator.hasNext() && querySession.isActive()) {
                                     try {
-                                        outputQueue.put(iterator.next());
-                                    } catch (InterruptedException e) {
+                                        writeTuple(serializer, iterator.next());
+                                    } catch (IOException e) {
                                         querySession.errorQuery();
                                         LOG.info(String.format("%s-%d: %s-- processing was interrupted",
                                                 context.getTransactionId(),
@@ -112,22 +116,29 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                             // Decrease the number of jobs after completing
                             // processing the split
                             querySession.deregisterTask();
+                            Object object = new Object();
+                            try {
+                                outputQueue.put(object);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
                             LOG.info("Completed");
                         });
                     }
                 }
 
-                T tuple = outputQueue.poll(50, TimeUnit.MILLISECONDS);
-
-                if (tuple != null) {
-                    writeTuple(serializer, tuple);
-                    recordCount++;
-                } else if (!querySession.hasPendingTasks() && outputQueue.isEmpty()) {
+                if (!querySession.hasPendingTasks() && !splitter.hasNext()) {
                     LOG.info("{}-{}: {}-- queue {} size {}, is queue empty {}", context.getTransactionId(),
                             context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue),
                             outputQueue.size(), outputQueue.isEmpty());
                     break;
                 }
+
+//                int j = 0;
+//                while (j < 10 && !querySession.hasPendingTasks() && !splitter.hasNext()) {
+//                    j++;
+                outputQueue.take();
+//                }
             }
 
             if (querySession.isQueryErrored()) {
@@ -165,18 +176,21 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @throws IOException when an IOException occurs
      */
     protected void writeTuple(Serializer serializer, T row) throws IOException {
-        Object[] fields = getFields(row);
-
-        serializer.startRow(fields.length);
+        int i = 0;
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
-        for (int i = 0; i < tupleDescription.size(); i++) {
-            ColumnDescriptor columnDescriptor = tupleDescription.get(i);
-            Object field = fields[i];
-            serializer.startField();
-            serializer.writeField(columnDescriptor.getDataType(), field);
-            serializer.endField();
+        Iterator<Object> fieldsIterator = getFields(row);
+
+        synchronized (serializer) {
+            serializer.startRow(tupleDescription.size());
+            while (fieldsIterator.hasNext()) {
+                ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
+                Object field = fieldsIterator.next();
+                serializer.startField();
+                serializer.writeField(columnDescriptor.getDataType(), field);
+                serializer.endField();
+            }
+            serializer.endRow();
         }
-        serializer.endRow();
     }
 
     /**
@@ -217,5 +231,5 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @param row the row
      * @return the list of fields for the given row
      */
-    protected abstract Object[] getFields(T row);
+    protected abstract Iterator<Object> getFields(T row);
 }
