@@ -93,10 +93,11 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                         context.getDataSource()), e);
                             }
                             if (iterator != null) {
-                                List<T> miniBuffer = new ArrayList<>(10);
+                                int miniBufferSize = 10;
+                                List<T> miniBuffer = new ArrayList<>(miniBufferSize);
                                 while (iterator.hasNext() && querySession.isActive()) {
                                     miniBuffer.add(iterator.next());
-                                    if (miniBuffer.size() == 5) {
+                                    if (miniBuffer.size() == miniBufferSize) {
                                         try {
                                             flushBuffer(serializer, miniBuffer);
                                         } catch (IOException e) {
