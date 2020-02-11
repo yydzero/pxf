@@ -23,6 +23,7 @@ package org.greenplum.pxf.api.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.UnsupportedOperationException;
 
 /**
@@ -52,7 +53,7 @@ public class BufferWritable implements Writable {
      * @throws IOException if the buffer was not set
      */
     @Override
-    public void write(DataOutput out) throws IOException {
+    public void write(OutputStream out) throws IOException {
         if (buf == null)
             throw new IOException("BufferWritable was not set");
         out.write(buf);

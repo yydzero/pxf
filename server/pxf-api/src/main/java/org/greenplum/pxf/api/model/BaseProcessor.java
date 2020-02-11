@@ -70,6 +70,12 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         LOG.info("{}-{}: {}-- Using queue {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue));
 
+//        executor.submit(() -> {
+//            while(true){
+//
+//            }
+//        };
+
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
 
@@ -210,7 +216,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
-        // TODO: append any identification for metadata (i.e. split offsets, partitioning for jdbc)
         return context.getSegmentId() == getUniqueResourceName(split).hashCode() % context.getTotalSegments();
     }
 

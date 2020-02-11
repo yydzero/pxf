@@ -2,13 +2,13 @@ package org.greenplum.pxf.api.serializer.csv;
 
 import org.greenplum.pxf.api.serializer.ValueHandler;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 public abstract class BaseCsvValueHandler<T> implements ValueHandler<T> {
 
     @Override
-    public void handle(OutputStream buffer, T value) {
+    public void handle(DataOutputStream buffer, T value) {
         try {
             internalHandle(buffer, value);
         } catch (IOException e) {
@@ -16,6 +16,6 @@ public abstract class BaseCsvValueHandler<T> implements ValueHandler<T> {
         }
     }
 
-    protected abstract void internalHandle(OutputStream buffer, final T value)
+    protected abstract void internalHandle(DataOutputStream buffer, final T value)
             throws IOException;
 }

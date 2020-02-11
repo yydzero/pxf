@@ -22,10 +22,7 @@ package org.greenplum.pxf.api.io;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -339,7 +336,7 @@ public class Text implements Writable {
     }
 
     @Override
-    public void write(DataOutput out) throws IOException {
+    public void write(OutputStream out) throws IOException {
         byte[] bytes = getBytes();
         out.write(bytes, 0, getLength());
     }

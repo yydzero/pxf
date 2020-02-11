@@ -23,12 +23,7 @@ package org.greenplum.pxf.api.io;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 
 
 /**
@@ -328,7 +323,7 @@ public class GPDBWritable implements Writable {
     }
 
     @Override
-    public void write(DataOutput out) throws IOException {
+    public void write(OutputStream out) throws IOException {
         int numCol = colType.length;
         boolean[] nullBits = new boolean[numCol];
         int[] colLength = new int[numCol];
@@ -415,15 +410,15 @@ public class GPDBWritable implements Writable {
         datlen += endpadding;
 
 		/* Construct the packet header */
-        out.writeInt(datlen);
-        out.writeShort(VERSION);
-        out.writeByte(errorFlag);
-        out.writeShort(numCol);
-
-		/* Write col type */
-        for (int i = 0; i < numCol; i++) {
-            out.writeByte(enumType[i]);
-        }
+//        out.writeInt(datlen);
+//        out.writeShort(VERSION);
+//        out.writeByte(errorFlag);
+//        out.writeShort(numCol);
+//
+//		/* Write col type */
+//        for (int i = 0; i < numCol; i++) {
+//            out.writeByte(enumType[i]);
+//        }
 
 		/* Nullness */
         byte[] nullBytes = boolArrayToByteArray(nullBits);
@@ -438,40 +433,40 @@ public class GPDBWritable implements Writable {
                 }
 
 				/* Now, write the actual column value */
-                switch (DataType.get(colType[i])) {
-                    case BIGINT:
-                        out.writeLong(((Long) colValue[i]));
-                        break;
-                    case BOOLEAN:
-                        out.writeBoolean(((Boolean) colValue[i]));
-                        break;
-                    case FLOAT8:
-                        out.writeDouble(((Double) colValue[i]));
-                        break;
-                    case INTEGER:
-                        out.writeInt(((Integer) colValue[i]));
-                        break;
-                    case REAL:
-                        out.writeFloat(((Float) colValue[i]));
-                        break;
-                    case SMALLINT:
-                        out.writeShort(((Short) colValue[i]));
-                        break;
-
-					/* For BYTEA format, add 4byte length header at the beginning  */
-                    case BYTEA:
-                        out.writeInt(colLength[i]);
-                        out.write((byte[]) colValue[i]);
-                        break;
-
-					/* For text format, add 4byte length header. string is already '\0' terminated */
-                    default: {
-                        out.writeInt(colLength[i]);
-                        byte[] data = ((String) colValue[i]).getBytes(CHARSET);
-                        out.write(data);
-                        break;
-                    }
-                }
+//                switch (DataType.get(colType[i])) {
+//                    case BIGINT:
+//                        out.writeLong(((Long) colValue[i]));
+//                        break;
+//                    case BOOLEAN:
+//                        out.writeBoolean(((Boolean) colValue[i]));
+//                        break;
+//                    case FLOAT8:
+//                        out.writeDouble(((Double) colValue[i]));
+//                        break;
+//                    case INTEGER:
+//                        out.writeInt(((Integer) colValue[i]));
+//                        break;
+//                    case REAL:
+//                        out.writeFloat(((Float) colValue[i]));
+//                        break;
+//                    case SMALLINT:
+////                        out.writeShort(((Short) colValue[i]));
+//                        break;
+//
+//					/* For BYTEA format, add 4byte length header at the beginning  */
+//                    case BYTEA:
+////                        out.writeInt(colLength[i]);
+//                        out.write((byte[]) colValue[i]);
+//                        break;
+//
+//					/* For text format, add 4byte length header. string is already '\0' terminated */
+//                    default: {
+////                        out.writeInt(colLength[i]);
+//                        byte[] data = ((String) colValue[i]).getBytes(CHARSET);
+//                        out.write(data);
+//                        break;
+//                    }
+//                }
             }
         }
 

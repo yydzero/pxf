@@ -23,6 +23,7 @@ package org.greenplum.pxf.api.io;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * A serializable object which implements a simple, efficient, serialization
@@ -36,7 +37,7 @@ public interface Writable {
      * @param out <code>DataOutput</code> to serialize this object into.
      * @throws IOException if I/O error occurs
      */
-    void write(DataOutput out) throws IOException;
+    void write(OutputStream out) throws IOException;
 
     /**
      * Deserialize the fields of this object from <code>in</code>.
