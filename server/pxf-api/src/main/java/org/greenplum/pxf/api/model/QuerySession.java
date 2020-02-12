@@ -20,11 +20,7 @@ import static java.util.Objects.requireNonNull;
 public class QuerySession<T> {
 
     private final AtomicBoolean queryCancelled;
-
     private final AtomicBoolean queryErrored;
-
-    private final BlockingDeque<T> outputQueue;
-    private final AtomicInteger activeTasks;
     private final AtomicInteger activeSegments;
 
     private final String queryId;
@@ -38,11 +34,9 @@ public class QuerySession<T> {
 
     public QuerySession(String queryId, BlockingDeque<T> outputQueue) {
         this.queryId = requireNonNull(queryId, "queryId is null");
-        this.outputQueue = requireNonNull(outputQueue, "outputQueue is null");
         this.startTime = Instant.now();
         this.queryCancelled = new AtomicBoolean();
         this.queryErrored = new AtomicBoolean();
-        this.activeTasks = new AtomicInteger();
         this.activeSegments = new AtomicInteger();
     }
 
@@ -85,35 +79,6 @@ public class QuerySession<T> {
     }
 
     /**
-     * Returns the shared {@link BlockingQueue} for the given query. Multiple
-     * requests share the queue and produce tuples that are stored in this
-     * queue.
-     *
-     * @return the blocking output queue for the given query
-     */
-    public BlockingDeque<T> getOutputQueue() {
-        return outputQueue;
-    }
-
-    /**
-     * Returns true if pending tasks are registered to the queue, false otherwise
-     *
-     * @return true if pending tasks are registered to the queue, false otherwise
-     */
-    public boolean hasPendingTasks() {
-        return activeTasks.get() > 0;
-    }
-
-    /**
-     * Returns the number of active tasks registered to this queue
-     *
-     * @return the number of active tasks registered to this queue
-     */
-    public int activeTaskCount() {
-        return activeTasks.get();
-    }
-
-    /**
      * Registers a segment
      *
      * @param segmentId the segment identifier
@@ -128,24 +93,10 @@ public class QuerySession<T> {
      *
      * @param segmentId the segment identifier
      */
-    public void unregisterSegment(int segmentId) {
+    public void deregisterSegment(int segmentId) {
         if (activeSegments.decrementAndGet() == 0) {
             endTime = Instant.now();
         }
-    }
-
-    /**
-     * Registers a task to the queue
-     */
-    public void registerTask() {
-        activeTasks.incrementAndGet();
-    }
-
-    /**
-     * De-registers a task from the queue
-     */
-    public void deregisterTask() {
-        activeTasks.decrementAndGet();
     }
 
     /**

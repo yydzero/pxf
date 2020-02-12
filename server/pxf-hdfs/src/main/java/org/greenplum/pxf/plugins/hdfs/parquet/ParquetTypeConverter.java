@@ -3,6 +3,7 @@ package org.greenplum.pxf.plugins.hdfs.parquet;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.parquet.example.data.Group;
+import org.apache.parquet.example.data.simple.BinaryValue;
 import org.apache.parquet.example.data.simple.NanoTime;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.OriginalType;

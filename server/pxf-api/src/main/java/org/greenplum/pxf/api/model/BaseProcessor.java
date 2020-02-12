@@ -152,7 +152,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 outputQueue.clear();
             }
 
-            querySession.unregisterSegment(context.getSegmentId());
+            querySession.deregisterSegment(context.getSegmentId());
 
             LOG.debug("Finished streaming {} record{} for resource {}", recordCount, recordCount == 1 ? "" : "s", resource);
         } catch (ClientAbortException e) {
