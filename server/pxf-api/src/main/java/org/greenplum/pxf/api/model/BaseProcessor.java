@@ -4,6 +4,8 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
@@ -14,12 +16,14 @@ import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
     private static final int THRESHOLD = 2;
-    private final SerializerFactory serializerFactory;
 
+    private final SerializerFactory serializerFactory;
     private QuerySession<T> querySession;
 
     public BaseProcessor() {
@@ -61,25 +65,25 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         final ExecutorService executor = ExecutorServiceProvider.get(context);
         final QuerySplitter splitter = getQuerySplitter();
         final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
+        final AtomicInteger activeTaskCount = new AtomicInteger();
         splitter.initialize(context);
 
-        final BlockingDeque<Object> outputQueue = new LinkedBlockingDeque<>();
-        LOG.info("{}-{}: {}-- Using queue {}", context.getTransactionId(),
-                context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue));
+        LOG.info("{}-{}: {}-- Starting session", context.getTransactionId(),
+                context.getSegmentId(), context.getDataSource());
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
 
             while (querySession.isActive()) {
                 // we need to submit more work only if the output queue has slots available
-                while (splitter.hasNext() && querySession.isActive() && querySession.activeTaskCount() < threshold) {
+                while (splitter.hasNext() && querySession.isActive() && activeTaskCount.get() < threshold) {
                     // Queue more work
                     QuerySplit split = splitter.next();
 
                     if (doesSegmentProcessThisSplit(split)) {
                         LOG.info("Submitting {} to the pool", getUniqueResourceName(split));
                         // Increase the number of jobs submitted to the executor
-                        querySession.registerTask();
+                        activeTaskCount.incrementAndGet();
 
                         executor.submit(() -> {
                             Iterator<T> iterator = null;
@@ -127,29 +131,22 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                             }
                             // Decrease the number of jobs after completing
                             // processing the split
-                            querySession.deregisterTask();
-                            try {
-                                outputQueue.put(new Object());
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
+                            activeTaskCount.decrementAndGet();
+                            querySession.requestMoreTasks();
                             LOG.info("Completed");
                         });
                     }
                 }
 
-                if (!querySession.hasPendingTasks() && !splitter.hasNext()) {
-                    LOG.info("{}-{}: {}-- queue {} size {}, is queue empty {}", context.getTransactionId(),
-                            context.getSegmentId(), context.getDataSource(), System.identityHashCode(outputQueue),
-                            outputQueue.size(), outputQueue.isEmpty());
+                if (activeTaskCount.get() == 0 && !splitter.hasNext()) {
+                    LOG.info("{}-{}: {}-- Completed processing for query {}",
+                            context.getTransactionId(), context.getSegmentId(),
+                            context.getDataSource(), querySession);
                     break;
                 }
 
-                outputQueue.take();
-            }
-
-            if (querySession.isQueryErrored()) {
-                outputQueue.clear();
+                /* Block until more tasks are requested */
+                querySession.waitForMoreTasks();
             }
 
             querySession.deregisterSegment(context.getSegmentId());

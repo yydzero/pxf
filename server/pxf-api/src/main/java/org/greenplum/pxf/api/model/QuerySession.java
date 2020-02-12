@@ -2,12 +2,14 @@ package org.greenplum.pxf.api.model;
 
 import com.google.common.base.Objects;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static java.util.Objects.requireNonNull;
 
@@ -19,6 +21,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class QuerySession<T> {
 
+    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
     private final AtomicBoolean queryCancelled;
     private final AtomicBoolean queryErrored;
     private final AtomicInteger activeSegments;
@@ -32,7 +35,17 @@ public class QuerySession<T> {
 
     private UserGroupInformation effectiveUgi;
 
-    public QuerySession(String queryId, BlockingDeque<T> outputQueue) {
+    /**
+     * Main lock guarding all access
+     */
+    final ReentrantLock lock = new ReentrantLock();
+
+    /**
+     * Condition for waiting takes
+     */
+    private final Condition moreTasks = lock.newCondition();
+
+    public QuerySession(String queryId) {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.startTime = Instant.now();
         this.queryCancelled = new AtomicBoolean();
@@ -107,6 +120,37 @@ public class QuerySession<T> {
      */
     public boolean isActive() {
         return !isQueryErrored() && !isQueryCancelled();
+    }
+
+    public void requestMoreTasks() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            moreTasks.signal();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void waitForMoreTasks() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            LOG.debug("Waiting for more tasks");
+            moreTasks.await();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return "QuerySession{" +
+                "queryId='" + queryId + '\'' +
+                '}';
     }
 
     /**
