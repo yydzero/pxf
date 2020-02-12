@@ -61,6 +61,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     @Override
     public void write(OutputStream output) throws IOException, WebApplicationException {
+        int splitsProcessed = 0;
         final AtomicInteger activeTaskCount = new AtomicInteger();
         final AtomicLong recordCount = new AtomicLong();
         final String resource = context.getDataSource();
@@ -82,6 +83,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     QuerySplit split = splitter.next();
 
                     if (doesSegmentProcessThisSplit(split)) {
+                        splitsProcessed++;
                         LOG.info("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
                                 context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
                         // Increase the number of jobs submitted to the executor
@@ -153,10 +155,12 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
             querySession.deregisterSegment(context.getSegmentId());
 
-            LOG.info("{}-{}: {}-- Finished streaming {} record{} for resource {}",
+            LOG.info("{}-{}: {}-- Finished streaming {} record{} for resource {}. Processed {} split{}",
                     context.getTransactionId(), context.getSegmentId(),
                     context.getDataSource(), recordCount.get(),
-                    recordCount.get() == 1 ? "" : "s", resource);
+                    recordCount.get() == 1 ? "" : "s", resource,
+                    splitsProcessed,
+                    splitsProcessed == 1 ? "" : "s");
         } catch (ClientAbortException e) {
             querySession.cancelQuery();
             // Occurs whenever client (Greenplum) decides to end the connection
