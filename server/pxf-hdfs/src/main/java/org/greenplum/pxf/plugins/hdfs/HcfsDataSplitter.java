@@ -96,7 +96,7 @@ public class HcfsDataSplitter extends BaseQuerySplitter {
             return null;
         }
 
-        LOG.debug("{}-{}: {}-- Total number of splits = {}",
+        LOG.info("{}-{}: {}-- Total number of splits = {}",
                 context.getTransactionId(), context.getSegmentId(),
                 context.getDataSource(), splits.length);
 
