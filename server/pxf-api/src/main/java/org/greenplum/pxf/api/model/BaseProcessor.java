@@ -17,6 +17,7 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
@@ -60,16 +61,16 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     @Override
     public void write(OutputStream output) throws IOException, WebApplicationException {
-        long recordCount = 0;
+        final AtomicInteger activeTaskCount = new AtomicInteger();
+        final AtomicLong recordCount = new AtomicLong();
         final String resource = context.getDataSource();
         final ExecutorService executor = ExecutorServiceProvider.get(context);
         final QuerySplitter splitter = getQuerySplitter();
         final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
-        final AtomicInteger activeTaskCount = new AtomicInteger();
         splitter.initialize(context);
 
-        LOG.info("{}-{}: {}-- Starting session", context.getTransactionId(),
-                context.getSegmentId(), context.getDataSource());
+        LOG.info("{}-{}: {}-- Starting session for query {}", context.getTransactionId(),
+                context.getSegmentId(), context.getDataSource(), querySession);
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
@@ -81,7 +82,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     QuerySplit split = splitter.next();
 
                     if (doesSegmentProcessThisSplit(split)) {
-                        LOG.info("Submitting {} to the pool", getUniqueResourceName(split));
+                        LOG.info("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
+                                context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
                         // Increase the number of jobs submitted to the executor
                         activeTaskCount.incrementAndGet();
 
@@ -104,6 +106,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                     if (miniBuffer.size() == miniBufferSize) {
                                         try {
                                             flushBuffer(serializer, miniBuffer);
+                                            recordCount.addAndGet(miniBuffer.size());
                                         } catch (IOException e) {
                                             querySession.errorQuery();
                                             LOG.info(String.format("%s-%d: %s-- processing was interrupted",
@@ -119,6 +122,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                 if (querySession.isActive()) {
                                     try {
                                         flushBuffer(serializer, miniBuffer);
+                                        recordCount.addAndGet(miniBuffer.size());
                                     } catch (IOException e) {
                                         querySession.errorQuery();
                                         LOG.info(String.format("%s-%d: %s-- processing was interrupted",
@@ -133,15 +137,13 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                             // processing the split
                             activeTaskCount.decrementAndGet();
                             querySession.requestMoreTasks();
-                            LOG.info("Completed");
+                            LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
+                                    context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
                         });
                     }
                 }
 
                 if (activeTaskCount.get() == 0 && !splitter.hasNext()) {
-                    LOG.info("{}-{}: {}-- Completed processing for query {}",
-                            context.getTransactionId(), context.getSegmentId(),
-                            context.getDataSource(), querySession);
                     break;
                 }
 
@@ -151,7 +153,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
             querySession.deregisterSegment(context.getSegmentId());
 
-            LOG.debug("Finished streaming {} record{} for resource {}", recordCount, recordCount == 1 ? "" : "s", resource);
+            LOG.info("{}-{}: {}-- Finished streaming {} record{} for resource {}",
+                    context.getTransactionId(), context.getSegmentId(),
+                    context.getDataSource(), recordCount.get(),
+                    recordCount.get() == 1 ? "" : "s", resource);
         } catch (ClientAbortException e) {
             querySession.cancelQuery();
             // Occurs whenever client (Greenplum) decides to end the connection
