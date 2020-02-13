@@ -108,7 +108,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     // skip if this thread does not process the split
                     if (!doesSegmentProcessThisSplit(split)) continue;
 
-                    LOG.info("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
+                    LOG.debug("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
                             context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
 
                     // Keep track of the number of splits processed
@@ -361,7 +361,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             runningTasks.decrementAndGet();
             // Keep track of the number of records processed by this task
             result.recordCount = recordCount;
-            LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
+            LOG.debug("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
                     context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
             // Signal for more tasks
             requestMoreTasks();
