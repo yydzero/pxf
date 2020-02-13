@@ -320,64 +320,33 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         @Override
         public Result call() {
             Result result = new Result();
-            Iterator<T> iterator = null;
+            Iterator<T> iterator;
+            int recordCount = 0, minBufferSize = 5;
             try {
                 iterator = processor.readTuples(split);
+
+                List<T> miniBuffer = new ArrayList<>(minBufferSize);
+                while (iterator.hasNext() && querySession.isActive()) {
+                    miniBuffer.add(iterator.next());
+                    if (miniBuffer.size() == minBufferSize) {
+                        recordCount += flushBuffer(serializer, miniBuffer);
+                    }
+                }
+                if (querySession.isActive()) {
+                    // flush the rest of the buffer
+                    recordCount += flushBuffer(serializer, miniBuffer);
+                }
             } catch (IOException e) {
                 querySession.errorQuery();
                 result.addError(e);
-                LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                LOG.info(String.format("%s-%d: %s-- error while processing split %s for query %s",
                         context.getTransactionId(),
                         context.getSegmentId(),
-                        context.getDataSource()), e);
+                        context.getDataSource(),
+                        split.getResource(),
+                        querySession), e);
             }
 
-            if (iterator == null) {
-                // Decrease the number of jobs after completing
-                // processing the split
-                runningTasks.decrementAndGet();
-                requestMoreTasks();
-                LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
-                        context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
-                return result;
-            }
-
-            int minBufferSize = 5, recordCount = 0;
-            List<T> miniBuffer = new ArrayList<>(minBufferSize);
-
-            while (iterator.hasNext() && querySession.isActive()) {
-                miniBuffer.add(iterator.next());
-                if (miniBuffer.size() == minBufferSize) {
-                    try {
-                        flushBuffer(serializer, miniBuffer);
-                        recordCount += miniBuffer.size();
-                    } catch (IOException e) {
-                        querySession.errorQuery();
-                        result.addError(e);
-                        LOG.info(String.format("%s-%d: %s-- processing was interrupted",
-                                context.getTransactionId(),
-                                context.getSegmentId(),
-                                context.getDataSource()), e);
-                        break;
-                    } finally {
-                        miniBuffer.clear();
-                    }
-                }
-            }
-            if (querySession.isActive()) {
-                try {
-                    flushBuffer(serializer, miniBuffer);
-                    recordCount += miniBuffer.size();
-                } catch (IOException e) {
-                    querySession.errorQuery();
-                    result.addError(e);
-                    LOG.info(String.format("%s-%d: %s-- processing was interrupted",
-                            context.getTransactionId(),
-                            context.getSegmentId(),
-                            context.getDataSource()), e);
-                }
-            }
-            miniBuffer.clear();
             // Decrease the number of jobs after completing processing the split
             runningTasks.decrementAndGet();
             // Keep track of the number of records processed by this task
@@ -394,14 +363,18 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
          *
          * @param serializer the serializer
          * @param miniBuffer the buffer
+         * @return the number or tuples written
          * @throws IOException when an IOException occurs
          */
-        private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
-            if (miniBuffer.isEmpty()) return;
+        private int flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
+            if (miniBuffer.isEmpty()) return 0;
             synchronized (serializer) {
                 for (T tuple : miniBuffer)
                     processor.writeTuple(serializer, tuple);
             }
+            int count = miniBuffer.size();
+            miniBuffer.clear();
+            return count;
         }
 
         private class Result {
