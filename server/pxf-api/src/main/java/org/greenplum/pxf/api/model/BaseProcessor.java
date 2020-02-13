@@ -164,7 +164,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             querySession.errorQuery();
             throw new IOException(e.getMessage(), e);
         } finally {
-            cleanup();
             LOG.info("{}-{}: {}-- Stopped streaming {} record{} for resource {}. Processed {} split{}",
                     context.getTransactionId(), context.getSegmentId(),
                     context.getDataSource(), recordCount,
@@ -265,13 +264,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         } finally {
             lock.unlock();
         }
-    }
-
-    /**
-     * Do any cleanup
-     */
-    protected void cleanup() {
-
     }
 
     /**

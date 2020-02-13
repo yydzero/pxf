@@ -97,6 +97,7 @@ public class QuerySession<T> {
     public void deregisterSegment(int segmentId) {
         if (activeSegments.decrementAndGet() == 0) {
             endTime = Instant.now();
+            querySplitList = null;
         }
     }
 
@@ -110,10 +111,21 @@ public class QuerySession<T> {
         return !isQueryErrored() && !isQueryCancelled();
     }
 
+    /**
+     * Returns a list of splits for the query. The list of splits is only set
+     * when the "fragmenter" cache is enabled
+     *
+     * @return the list of splits for the query
+     */
     public List<QuerySplit> getQuerySplitList() {
         return querySplitList;
     }
 
+    /**
+     * Sets a list of splits for the query.
+     *
+     * @param querySplitList the list of query splits
+     */
     public void setQuerySplitList(List<QuerySplit> querySplitList) {
         this.querySplitList = querySplitList;
     }
