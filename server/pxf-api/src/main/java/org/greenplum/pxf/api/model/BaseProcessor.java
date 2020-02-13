@@ -15,6 +15,8 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
@@ -22,6 +24,21 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
     private final SerializerFactory serializerFactory;
     private QuerySession<T> querySession;
+
+    /**
+     * Main lock guarding all access
+     */
+    final ReentrantLock lock = new ReentrantLock();
+
+    /**
+     * Main lock guarding all access
+     */
+    final ReentrantLock writeLock = new ReentrantLock();
+
+    /**
+     * Condition for waiting takes
+     */
+    private final Condition moreTasks = lock.newCondition();
 
     public BaseProcessor() {
         this(SerializerFactory.getInstance());
@@ -97,14 +114,18 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                         context.getDataSource()), e);
                             }
                             if (iterator != null) {
-                                int miniBufferSize = 5;
-                                List<T> miniBuffer = new ArrayList<>(miniBufferSize);
+                                int minBufferSize = 5, maxBufferSize = 15, bufferSize;
+                                List<T> miniBuffer = new ArrayList<>(minBufferSize);
+
                                 while (iterator.hasNext() && querySession.isActive()) {
                                     miniBuffer.add(iterator.next());
-                                    if (miniBuffer.size() == miniBufferSize) {
+                                    bufferSize = miniBuffer.size();
+                                    if (((bufferSize >= minBufferSize && bufferSize < maxBufferSize) && writeLock.tryLock()) ||
+                                            bufferSize == maxBufferSize) {
+                                        if (bufferSize == maxBufferSize) writeLock.lock();
                                         try {
                                             flushBuffer(serializer, miniBuffer);
-                                            recordCount.addAndGet(miniBuffer.size());
+                                            recordCount.addAndGet(bufferSize);
                                         } catch (IOException e) {
                                             querySession.errorQuery();
                                             LOG.info(String.format("%s-%d: %s-- processing was interrupted",
@@ -113,12 +134,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                                     context.getDataSource()), e);
                                             break;
                                         } finally {
+                                            writeLock.unlock();
                                             miniBuffer.clear();
                                         }
                                     }
                                 }
                                 if (querySession.isActive()) {
                                     try {
+                                        writeLock.lock();
                                         flushBuffer(serializer, miniBuffer);
                                         recordCount.addAndGet(miniBuffer.size());
                                     } catch (IOException e) {
@@ -127,6 +150,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                                 context.getTransactionId(),
                                                 context.getSegmentId(),
                                                 context.getDataSource()), e);
+                                    } finally {
+                                        writeLock.unlock();
                                     }
                                 }
                                 miniBuffer.clear();
@@ -134,7 +159,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                             // Decrease the number of jobs after completing
                             // processing the split
                             activeTaskCount.decrementAndGet();
-                            querySession.requestMoreTasks();
+                            requestMoreTasks();
                             LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
                                     context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
                         });
@@ -146,7 +171,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 }
 
                 /* Block until more tasks are requested */
-                querySession.waitForMoreTasks();
+                waitForMoreTasks();
             }
 
             querySession.deregisterSegment(context.getSegmentId());
@@ -175,12 +200,31 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         }
     }
 
+    public void requestMoreTasks() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            moreTasks.signal();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void waitForMoreTasks() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            LOG.debug("Waiting for more tasks");
+            moreTasks.await();
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
         if (miniBuffer.isEmpty()) return;
-        synchronized (serializer) {
-            for (T t : miniBuffer)
-                writeTuple(serializer, t);
-        }
+        for (T t : miniBuffer)
+            writeTuple(serializer, t);
     }
 
     /**
@@ -225,7 +269,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
-        return context.getSegmentId() == Math.abs(Objects.hash(getUniqueResourceName(split))) % context.getTotalSegments();
+        return context.getSegmentId() == Math.floorMod(Objects.hash(getUniqueResourceName(split)), context.getTotalSegments());
     }
 
     protected abstract String getUniqueResourceName(QuerySplit split);

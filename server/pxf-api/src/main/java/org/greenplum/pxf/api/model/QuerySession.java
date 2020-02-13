@@ -35,16 +35,6 @@ public class QuerySession<T> {
 
     private UserGroupInformation effectiveUgi;
 
-    /**
-     * Main lock guarding all access
-     */
-    final ReentrantLock lock = new ReentrantLock();
-
-    /**
-     * Condition for waiting takes
-     */
-    private final Condition moreTasks = lock.newCondition();
-
     public QuerySession(String queryId) {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.startTime = Instant.now();
@@ -120,27 +110,6 @@ public class QuerySession<T> {
      */
     public boolean isActive() {
         return !isQueryErrored() && !isQueryCancelled();
-    }
-
-    public void requestMoreTasks() {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            moreTasks.signal();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public void waitForMoreTasks() throws InterruptedException {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            LOG.debug("Waiting for more tasks");
-            moreTasks.await();
-        } finally {
-            lock.unlock();
-        }
     }
 
     /**
