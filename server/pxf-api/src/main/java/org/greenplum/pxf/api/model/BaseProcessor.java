@@ -1,9 +1,11 @@
 package org.greenplum.pxf.api.model;
 
+import com.google.common.collect.Lists;
 import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
+import org.greenplum.pxf.api.utilities.Utilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,7 +27,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
     private static final int THRESHOLD = 2;
 
+    /**
+     * A factory for serializers
+     */
     private final SerializerFactory serializerFactory;
+
+    /**
+     * A query session shared among all segments participating in this query
+     */
     private QuerySession<T> querySession;
 
     /**
@@ -80,9 +89,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         int splitsProcessed = 0, recordCount = 0;
         final String resource = context.getDataSource();
         final ExecutorService executor = ExecutorServiceProvider.get(context);
-        final QuerySplitter splitter = getQuerySplitter();
+        final Iterator<QuerySplit> splitter = getQuerySplitterIterator();
         final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
-        splitter.initialize(context);
 
         LOG.info("{}-{}: {}-- Starting session for query {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), querySession);
@@ -166,19 +174,38 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         }
     }
 
+    private Iterator<QuerySplit> getQuerySplitterIterator() {
+        if (Utilities.isFragmenterCacheEnabled()) {
+            if (querySession.getQuerySplitList() == null) {
+                synchronized (querySession) {
+                    if (querySession.getQuerySplitList() == null) {
+                        QuerySplitter splitter = getQuerySplitter();
+                        splitter.initialize(context);
+                        querySession.setQuerySplitList(Lists.newArrayList(splitter));
+                    }
+                }
+            }
+            return querySession.getQuerySplitList().iterator();
+        } else {
+            QuerySplitter splitter = getQuerySplitter();
+            splitter.initialize(context);
+            return splitter;
+        }
+    }
+
     /**
      * Write the tuple to the serializer. The method retrieves an array of
-     * fields for the given row and serializes each field using information
+     * fields for the given tuple and serializes each field using information
      * from the column descriptor to determine the type of the field
      *
      * @param serializer the serializer for the output format
-     * @param row        the row
+     * @param tuple      the tuple
      * @throws IOException when an IOException occurs
      */
-    protected void writeTuple(Serializer serializer, T row) throws IOException {
+    protected void writeTuple(Serializer serializer, T tuple) throws IOException {
         int i = 0;
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
-        Iterator<Object> fieldsIterator = getFields(row);
+        Iterator<Object> fieldsIterator = getFields(tuple);
 
         serializer.startRow(tupleDescription.size());
         while (fieldsIterator.hasNext()) {
@@ -247,6 +274,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
     }
 
+    /**
+     * Returns a unique resource name for the given split. For example, in
+     * HDFS, the name is the path to the resource and the split offset
+     * (i.e. /path/to/file/in/hdfs/a.txt:0-5000)
+     *
+     * @param split the query split
+     * @return a unique resource name for the given split
+     */
     protected abstract String getUniqueResourceName(QuerySplit split);
 
     /**

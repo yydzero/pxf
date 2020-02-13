@@ -2,14 +2,11 @@ package org.greenplum.pxf.api.model;
 
 import com.google.common.base.Objects;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static java.util.Objects.requireNonNull;
 
@@ -21,7 +18,6 @@ import static java.util.Objects.requireNonNull;
  */
 public class QuerySession<T> {
 
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
     private final AtomicBoolean queryCancelled;
     private final AtomicBoolean queryErrored;
     private final AtomicInteger activeSegments;
@@ -34,6 +30,8 @@ public class QuerySession<T> {
     private Instant errorTime;
 
     private UserGroupInformation effectiveUgi;
+
+    private List<QuerySplit> querySplitList;
 
     public QuerySession(String queryId) {
         this.queryId = requireNonNull(queryId, "queryId is null");
@@ -110,6 +108,14 @@ public class QuerySession<T> {
      */
     public boolean isActive() {
         return !isQueryErrored() && !isQueryCancelled();
+    }
+
+    public List<QuerySplit> getQuerySplitList() {
+        return querySplitList;
+    }
+
+    public void setQuerySplitList(List<QuerySplit> querySplitList) {
+        this.querySplitList = querySplitList;
     }
 
     /**
