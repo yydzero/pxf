@@ -4,8 +4,6 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
@@ -13,12 +11,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.BlockingDeque;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
@@ -229,7 +225,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
-        return context.getSegmentId() == getUniqueResourceName(split).hashCode() % context.getTotalSegments();
+        return context.getSegmentId() == Math.abs(Objects.hash(getUniqueResourceName(split))) % context.getTotalSegments();
     }
 
     protected abstract String getUniqueResourceName(QuerySplit split);
