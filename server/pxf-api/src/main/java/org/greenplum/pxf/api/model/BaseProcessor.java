@@ -123,10 +123,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 // Check for errors
 
                 for (Future<ProcessQuerySplitCallable.Result> f : futures) {
-                    if (!f.isDone() || f.isCancelled()) {
-                        LOG.info("future is not donNNEEEEE!!!!");
-                        continue;
-                    }
+//                    if (!f.isDone() || f.isCancelled()) {
+//                        LOG.info("future is not donNNEEEEE!!!!");
+//                        continue;
+//                    }
 
                     ProcessQuerySplitCallable.Result result = f.get();
 
@@ -349,12 +349,12 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             miniBuffer.clear();
             // Decrease the number of jobs after completing processing the split
             runningTasks.decrementAndGet();
-            // Signal for more tasks
-            requestMoreTasks();
             // Keep track of the number of records processed by this task
             result.recordCount = recordCount;
             LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
                     context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
+            // Signal for more tasks
+            requestMoreTasks();
             return result;
         }
 
