@@ -33,7 +33,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     /**
      * Main lock guarding all access
      */
-    final ReentrantLock writeLock = new ReentrantLock();
+//    final ReentrantLock writeLock = new ReentrantLock();
 
     /**
      * Condition for waiting takes
@@ -114,18 +114,19 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                         context.getDataSource()), e);
                             }
                             if (iterator != null) {
-                                int minBufferSize = 5, maxBufferSize = 15, bufferSize;
+                                int minBufferSize = 5;//, maxBufferSize = 15, bufferSize;
                                 List<T> miniBuffer = new ArrayList<>(minBufferSize);
 
                                 while (iterator.hasNext() && querySession.isActive()) {
                                     miniBuffer.add(iterator.next());
-                                    bufferSize = miniBuffer.size();
-                                    if (((bufferSize >= minBufferSize && bufferSize < maxBufferSize) && writeLock.tryLock()) ||
-                                            bufferSize == maxBufferSize) {
-                                        if (bufferSize == maxBufferSize) writeLock.lock();
+//                                    bufferSize = miniBuffer.size();
+//                                    if (((bufferSize >= minBufferSize && bufferSize < maxBufferSize) && writeLock.tryLock()) ||
+//                                            bufferSize == maxBufferSize) {
+//                                        if (bufferSize == maxBufferSize) writeLock.lock();
+                                    if (miniBuffer.size() == minBufferSize) {
                                         try {
                                             flushBuffer(serializer, miniBuffer);
-                                            recordCount.addAndGet(bufferSize);
+                                            recordCount.addAndGet(miniBuffer.size());
                                         } catch (IOException e) {
                                             querySession.errorQuery();
                                             LOG.info(String.format("%s-%d: %s-- processing was interrupted",
@@ -134,14 +135,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                                     context.getDataSource()), e);
                                             break;
                                         } finally {
-                                            writeLock.unlock();
+//                                            writeLock.unlock();
                                             miniBuffer.clear();
                                         }
                                     }
                                 }
                                 if (querySession.isActive()) {
                                     try {
-                                        writeLock.lock();
+//                                        writeLock.lock();
                                         flushBuffer(serializer, miniBuffer);
                                         recordCount.addAndGet(miniBuffer.size());
                                     } catch (IOException e) {
@@ -150,9 +151,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                                                 context.getTransactionId(),
                                                 context.getSegmentId(),
                                                 context.getDataSource()), e);
-                                    } finally {
-                                        writeLock.unlock();
                                     }
+//                                    finally {
+//                                        writeLock.unlock();
+//                                    }
                                 }
                                 miniBuffer.clear();
                             }
@@ -223,8 +225,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
     private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
         if (miniBuffer.isEmpty()) return;
-        for (T t : miniBuffer)
-            writeTuple(serializer, t);
+        synchronized (serializer) {
+            for (T t : miniBuffer)
+                writeTuple(serializer, t);
+        }
     }
 
     /**
