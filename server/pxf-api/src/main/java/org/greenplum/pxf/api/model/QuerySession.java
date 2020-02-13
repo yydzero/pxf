@@ -135,8 +135,9 @@ public class QuerySession<T> {
      */
     @Override
     public String toString() {
-        return "QuerySession{" +
-                "queryId='" + queryId + '\'' +
+        return "QuerySession@" +
+                Integer.toHexString(System.identityHashCode(this)) +
+                "{queryId='" + queryId + '\'' +
                 '}';
     }
 
