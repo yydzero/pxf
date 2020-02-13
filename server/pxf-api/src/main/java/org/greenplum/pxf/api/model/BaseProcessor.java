@@ -4,6 +4,8 @@ import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
@@ -12,9 +14,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -26,12 +29,17 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     private QuerySession<T> querySession;
 
     /**
+     * Tracks number of active tasks
+     */
+    final AtomicInteger runningTasks = new AtomicInteger();
+
+    /**
      * Main lock guarding all access
      */
     final ReentrantLock lock = new ReentrantLock();
 
     /**
-     * Condition for waiting takes
+     * Condition for waiting for more tasks
      */
     private final Condition moreTasks = lock.newCondition();
 
@@ -69,9 +77,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     @Override
     public void write(OutputStream output) throws IOException, WebApplicationException {
-        int splitsProcessed = 0;
-        final AtomicInteger activeTaskCount = new AtomicInteger();
-        final AtomicLong recordCount = new AtomicLong();
+        int splitsProcessed = 0, recordCount = 0;
         final String resource = context.getDataSource();
         final ExecutorService executor = ExecutorServiceProvider.get(context);
         final QuerySplitter splitter = getQuerySplitter();
@@ -81,95 +87,71 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         LOG.info("{}-{}: {}-- Starting session for query {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), querySession);
 
+        List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
+
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
 
+            // querySession.isActive determines whether an error or cancellation of the query occurred
             while (querySession.isActive()) {
-                // we need to submit more work only if the output queue has slots available
-                while (splitter.hasNext() && querySession.isActive() && activeTaskCount.get() < threshold) {
-                    // Queue more work
+                // we need to submit more work only if we are under the max threshold
+                while (splitter.hasNext() && querySession.isActive() && runningTasks.get() < threshold) {
                     QuerySplit split = splitter.next();
+                    // skip if this thread does not process the split
+                    if (!doesSegmentProcessThisSplit(split)) continue;
 
-                    if (doesSegmentProcessThisSplit(split)) {
-                        splitsProcessed++;
-                        LOG.info("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
-                                context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
-                        // Increase the number of jobs submitted to the executor
-                        activeTaskCount.incrementAndGet();
+                    LOG.info("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
+                            context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
 
-                        executor.submit(() -> {
-                            Iterator<T> iterator = null;
-                            try {
-                                iterator = readTuples(split);
-                            } catch (IOException e) {
-                                querySession.errorQuery();
-                                LOG.info(String.format("%s-%d: %s-- processing was interrupted",
-                                        context.getTransactionId(),
-                                        context.getSegmentId(),
-                                        context.getDataSource()), e);
-                            }
-                            if (iterator != null) {
-                                int minBufferSize = 5;
-                                List<T> miniBuffer = new ArrayList<>(minBufferSize);
-
-                                while (iterator.hasNext() && querySession.isActive()) {
-                                    miniBuffer.add(iterator.next());
-                                    if (miniBuffer.size() == minBufferSize) {
-                                        try {
-                                            flushBuffer(serializer, miniBuffer);
-                                            recordCount.addAndGet(miniBuffer.size());
-                                        } catch (IOException e) {
-                                            querySession.errorQuery();
-                                            LOG.info(String.format("%s-%d: %s-- processing was interrupted",
-                                                    context.getTransactionId(),
-                                                    context.getSegmentId(),
-                                                    context.getDataSource()), e);
-                                            break;
-                                        } finally {
-                                            miniBuffer.clear();
-                                        }
-                                    }
-                                }
-                                if (querySession.isActive()) {
-                                    try {
-                                        flushBuffer(serializer, miniBuffer);
-                                        recordCount.addAndGet(miniBuffer.size());
-                                    } catch (IOException e) {
-                                        querySession.errorQuery();
-                                        LOG.info(String.format("%s-%d: %s-- processing was interrupted",
-                                                context.getTransactionId(),
-                                                context.getSegmentId(),
-                                                context.getDataSource()), e);
-                                    }
-                                }
-                                miniBuffer.clear();
-                            }
-                            // Decrease the number of jobs after completing
-                            // processing the split
-                            activeTaskCount.decrementAndGet();
-                            requestMoreTasks();
-                            LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
-                                    context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
-                        });
-                    }
+                    // Keep track of the number of splits processed
+                    splitsProcessed++;
+                    // Increase the number of jobs submitted to the executor
+                    runningTasks.incrementAndGet();
+                    // Submit more work
+                    futures.add(executor
+                            .submit(new ProcessQuerySplitCallable<>(split, serializer, this)));
                 }
 
-                if (activeTaskCount.get() == 0 && !splitter.hasNext()) {
-                    break;
-                }
+                // Exit if there is no more work to process
+                if (runningTasks.get() == 0 && !splitter.hasNext()) break;
 
                 /* Block until more tasks are requested */
                 waitForMoreTasks();
             }
 
-            querySession.deregisterSegment(context.getSegmentId());
+            if (querySession.isActive()) {
+                // Check for errors
 
-            LOG.info("{}-{}: {}-- Finished streaming {} record{} for resource {}. Processed {} split{}",
-                    context.getTransactionId(), context.getSegmentId(),
-                    context.getDataSource(), recordCount.get(),
-                    recordCount.get() == 1 ? "" : "s", resource,
-                    splitsProcessed,
-                    splitsProcessed == 1 ? "" : "s");
+                for (Future<ProcessQuerySplitCallable.Result> f : futures) {
+                    if (!f.isDone() || f.isCancelled()) {
+                        LOG.info("future is not donNNEEEEE!!!!");
+                        continue;
+                    }
+
+                    ProcessQuerySplitCallable.Result result = f.get();
+
+                    if (result.errors != null) {
+                        IOException exception = null;
+                        @SuppressWarnings("unchecked")
+                        List<IOException> exceptionList = result.errors;
+                        for (IOException ex : exceptionList) {
+                            if (exception == null) {
+                                exception = ex;
+                            }
+                            LOG.error("Error while processing", ex);
+                        }
+
+                        if (exception != null) {
+                            // Throw first error if present
+                            throw exception;
+                        }
+                    }
+                    // collect total rows processed
+                    recordCount += result.recordCount;
+                }
+            }
+
+            querySession.deregisterSegment(context.getSegmentId());
         } catch (ClientAbortException e) {
             querySession.cancelQuery();
             // Occurs whenever client (Greenplum) decides to end the connection
@@ -184,11 +166,21 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             querySession.errorQuery();
             throw new IOException(e.getMessage(), e);
         } finally {
-            LOG.debug("Stopped streaming for resource {}, {} records.", resource, recordCount);
+            cleanup();
+            LOG.info("{}-{}: {}-- Stopped streaming {} record{} for resource {}. Processed {} split{}",
+                    context.getTransactionId(), context.getSegmentId(),
+                    context.getDataSource(), recordCount,
+                    recordCount == 1 ? "" : "s", resource,
+                    splitsProcessed,
+                    splitsProcessed == 1 ? "" : "s");
         }
     }
 
-    public void requestMoreTasks() {
+    protected void cleanup() {
+
+    }
+
+    private void requestMoreTasks() {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
@@ -206,14 +198,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             moreTasks.await();
         } finally {
             lock.unlock();
-        }
-    }
-
-    private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
-        if (miniBuffer.isEmpty()) return;
-        synchronized (serializer) {
-            for (T tuple : miniBuffer)
-                writeTuple(serializer, tuple);
         }
     }
 
@@ -280,4 +264,118 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @return the list of fields for the given row
      */
     protected abstract Iterator<Object> getFields(T row);
+
+    /**
+     * Processes a {@link QuerySplit} and generates 0 or more tuples. Stores
+     * a mini buffer of tuples and flushes the buffer to the serializer when
+     * the buffer is full or processing has completed.
+     */
+    private class ProcessQuerySplitCallable<T> implements
+            Callable<ProcessQuerySplitCallable.Result> {
+
+        private final Logger LOG = LoggerFactory.getLogger(ProcessQuerySplitCallable.class);
+        private final QuerySplit split;
+        private final Serializer serializer;
+        private final BaseProcessor<T> processor;
+
+        public ProcessQuerySplitCallable(QuerySplit split,
+                                         Serializer serializer,
+                                         BaseProcessor<T> processor) {
+            this.split = split;
+            this.serializer = serializer;
+            this.processor = processor;
+        }
+
+        @Override
+        public Result call() throws Exception {
+            Result result = new Result();
+            Iterator<T> iterator = null;
+            try {
+                iterator = processor.readTuples(split);
+            } catch (IOException e) {
+                querySession.errorQuery();
+                result.addError(e);
+                LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                        context.getTransactionId(),
+                        context.getSegmentId(),
+                        context.getDataSource()), e);
+            }
+
+            if (iterator == null) {
+                // Decrease the number of jobs after completing
+                // processing the split
+                runningTasks.decrementAndGet();
+                requestMoreTasks();
+                LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
+                        context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
+                return result;
+            }
+
+            int minBufferSize = 5, recordCount = 0;
+            List<T> miniBuffer = new ArrayList<>(minBufferSize);
+
+            while (iterator.hasNext() && querySession.isActive()) {
+                miniBuffer.add(iterator.next());
+                if (miniBuffer.size() == minBufferSize) {
+                    try {
+                        flushBuffer(serializer, miniBuffer);
+                        recordCount += miniBuffer.size();
+                    } catch (IOException e) {
+                        querySession.errorQuery();
+                        result.addError(e);
+                        LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                                context.getTransactionId(),
+                                context.getSegmentId(),
+                                context.getDataSource()), e);
+                        break;
+                    } finally {
+                        miniBuffer.clear();
+                    }
+                }
+            }
+            if (querySession.isActive()) {
+                try {
+                    flushBuffer(serializer, miniBuffer);
+                    recordCount += miniBuffer.size();
+                } catch (IOException e) {
+                    querySession.errorQuery();
+                    result.addError(e);
+                    LOG.info(String.format("%s-%d: %s-- processing was interrupted",
+                            context.getTransactionId(),
+                            context.getSegmentId(),
+                            context.getDataSource()), e);
+                }
+            }
+            miniBuffer.clear();
+            // Decrease the number of jobs after completing processing the split
+            runningTasks.decrementAndGet();
+            // Signal for more tasks
+            requestMoreTasks();
+            // Keep track of the number of records processed by this task
+            result.recordCount = recordCount;
+            LOG.info("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
+                    context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
+            return result;
+        }
+
+        private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
+            if (miniBuffer.isEmpty()) return;
+            synchronized (serializer) {
+                for (T tuple : miniBuffer)
+                    processor.writeTuple(serializer, tuple);
+            }
+        }
+
+        private class Result {
+            private List<IOException> errors;
+            private int recordCount;
+
+            void addError(IOException ioe) {
+                if (errors == null) {
+                    errors = new ArrayList<>();
+                }
+                errors.add(ioe);
+            }
+        }
+    }
 }

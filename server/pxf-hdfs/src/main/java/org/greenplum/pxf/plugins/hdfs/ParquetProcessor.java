@@ -112,17 +112,19 @@ public class ParquetProcessor extends BaseProcessor<Group> {
 
             @Override
             public boolean hasNext() {
-                try {
-                    final long then = System.nanoTime();
-                    group = fileReader.read();
-                    final long nanos = System.nanoTime() - then;
-                    totalReadTimeInNanos += nanos;
+                if (group == null) {
+                    try {
+                        final long then = System.nanoTime();
+                        group = fileReader.read();
+                        final long nanos = System.nanoTime() - then;
+                        totalReadTimeInNanos += nanos;
 
-                    if (group == null) {
-                        closeForRead();
+                        if (group == null) {
+                            closeForRead();
+                        }
+                    } catch (IOException ex) {
+                        throw new RuntimeException(ex);
                     }
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
                 }
                 return group != null;
             }
@@ -130,7 +132,9 @@ public class ParquetProcessor extends BaseProcessor<Group> {
             @Override
             public Group next() {
                 rowsRead++;
-                return group;
+                Group result = group;
+                group = null;
+                return result;
             }
 
             private void closeForRead() throws IOException {
@@ -168,7 +172,6 @@ public class ParquetProcessor extends BaseProcessor<Group> {
 
     @Override
     protected Iterator<Object> getFields(Group row) {
-//
         // schema is the readSchema, if there is column projection
         // the schema will be a subset of tuple descriptions
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
