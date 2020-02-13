@@ -109,7 +109,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     runningTasks.incrementAndGet();
                     // Submit more work
                     futures.add(executor
-                            .submit(new ProcessQuerySplitCallable<>(split, serializer, this)));
+                            .submit(new ProcessQuerySplitCallable(split, serializer, this)));
                 }
 
                 // Exit if there is no more work to process
@@ -120,34 +120,24 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             }
 
             if (querySession.isActive()) {
-                // Check for errors
-
+                IOException exception = null;
                 for (Future<ProcessQuerySplitCallable.Result> f : futures) {
-//                    if (!f.isDone() || f.isCancelled()) {
-//                        LOG.info("future is not donNNEEEEE!!!!");
-//                        continue;
-//                    }
-
                     ProcessQuerySplitCallable.Result result = f.get();
-
                     if (result.errors != null) {
-                        IOException exception = null;
-                        @SuppressWarnings("unchecked")
-                        List<IOException> exceptionList = result.errors;
-                        for (IOException ex : exceptionList) {
+                        for (IOException ex : result.errors) {
                             if (exception == null) {
                                 exception = ex;
                             }
                             LOG.error("Error while processing", ex);
                         }
-
-                        if (exception != null) {
-                            // Throw first error if present
-                            throw exception;
-                        }
                     }
                     // collect total rows processed
                     recordCount += result.recordCount;
+                }
+
+                if (exception != null) {
+                    // Throw first error if present
+                    throw exception;
                 }
             }
 
@@ -173,31 +163,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     recordCount == 1 ? "" : "s", resource,
                     splitsProcessed,
                     splitsProcessed == 1 ? "" : "s");
-        }
-    }
-
-    protected void cleanup() {
-
-    }
-
-    private void requestMoreTasks() {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            moreTasks.signal();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    private void waitForMoreTasks() throws InterruptedException {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            LOG.debug("Waiting for more tasks");
-            moreTasks.await();
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -246,6 +211,42 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         return context.getSegmentId() == Math.floorMod(Objects.hash(getUniqueResourceName(split)), context.getTotalSegments());
     }
 
+    /**
+     * Waits until the moreTasks is signaled
+     *
+     * @throws InterruptedException when an InterruptedException occurs
+     */
+    private void waitForMoreTasks() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            LOG.debug("Waiting for more tasks");
+            moreTasks.await();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Signals the moreTasks condition for the waiting threads
+     */
+    private void requestMoreTasks() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            moreTasks.signal();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Do any cleanup
+     */
+    protected void cleanup() {
+
+    }
+
     protected abstract String getUniqueResourceName(QuerySplit split);
 
     /**
@@ -270,7 +271,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * a mini buffer of tuples and flushes the buffer to the serializer when
      * the buffer is full or processing has completed.
      */
-    private class ProcessQuerySplitCallable<T> implements
+    private class ProcessQuerySplitCallable implements
             Callable<ProcessQuerySplitCallable.Result> {
 
         private final Logger LOG = LoggerFactory.getLogger(ProcessQuerySplitCallable.class);
@@ -286,8 +287,11 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             this.processor = processor;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
-        public Result call() throws Exception {
+        public Result call() {
             Result result = new Result();
             Iterator<T> iterator = null;
             try {
@@ -358,6 +362,13 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             return result;
         }
 
+        /**
+         * Write all the tuples in the miniBuffer to the serializer
+         *
+         * @param serializer the serializer
+         * @param miniBuffer the buffer
+         * @throws IOException when an IOException occurs
+         */
         private void flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
             if (miniBuffer.isEmpty()) return;
             synchronized (serializer) {
