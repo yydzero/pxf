@@ -173,25 +173,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         }
     }
 
-    private Iterator<QuerySplit> getQuerySplitterIterator() {
-        if (Utilities.isFragmenterCacheEnabled()) {
-            if (querySession.getQuerySplitList() == null) {
-                synchronized (querySession) {
-                    if (querySession.getQuerySplitList() == null) {
-                        QuerySplitter splitter = getQuerySplitter();
-                        splitter.initialize(context);
-                        querySession.setQuerySplitList(Lists.newArrayList(splitter));
-                    }
-                }
-            }
-            return querySession.getQuerySplitList().iterator();
-        } else {
-            QuerySplitter splitter = getQuerySplitter();
-            splitter.initialize(context);
-            return splitter;
-        }
-    }
-
     /**
      * Write the tuple to the serializer. The method retrieves an array of
      * fields for the given tuple and serializes each field using information
@@ -235,6 +216,35 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
         // TODO: use a consistent hash algorithm here, for when the total segments is elastic
         return context.getSegmentId() == Math.floorMod(Objects.hash(getUniqueResourceName(split)), context.getTotalSegments());
+    }
+
+    /**
+     * Gets the {@link QuerySplit} iterator. If the "fragmenter cache" is
+     * enabled, the first thread will process the list of fragments and store
+     * the query split list in the querySession. All other threads will use
+     * the "cached" query split list for the given query. If the "fragmenter
+     * cache" is disabled, return the initialized QuerySplitter for the given
+     * processor.
+     *
+     * @return a {@link QuerySplit} iterator
+     */
+    private Iterator<QuerySplit> getQuerySplitterIterator() {
+        if (Utilities.isFragmenterCacheEnabled()) {
+            if (querySession.getQuerySplitList() == null) {
+                synchronized (querySession) {
+                    if (querySession.getQuerySplitList() == null) {
+                        QuerySplitter splitter = getQuerySplitter();
+                        splitter.initialize(context);
+                        querySession.setQuerySplitList(Lists.newArrayList(splitter));
+                    }
+                }
+            }
+            return querySession.getQuerySplitList().iterator();
+        } else {
+            QuerySplitter splitter = getQuerySplitter();
+            splitter.initialize(context);
+            return splitter;
+        }
     }
 
     /**
