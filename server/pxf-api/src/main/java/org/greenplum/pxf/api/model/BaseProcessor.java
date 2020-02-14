@@ -99,7 +99,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 context.getSegmentId(), context.getDataSource(), querySession);
 
 //        List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
-        BlockingDeque<List<T>> outputQueue = new LinkedBlockingDeque<>(200);
+        BlockingDeque<List<T>> outputQueue = querySession.getOutputQueue();
         TupleProducerCallable producer = null;
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {

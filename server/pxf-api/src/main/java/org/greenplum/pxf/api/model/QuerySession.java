@@ -5,6 +5,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -33,12 +35,19 @@ public class QuerySession<T> {
 
     private List<QuerySplit> querySplitList;
 
+    private final BlockingDeque<List<T>> outputQueue;
+
     public QuerySession(String queryId) {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.startTime = Instant.now();
         this.queryCancelled = new AtomicBoolean();
         this.queryErrored = new AtomicBoolean();
         this.activeSegments = new AtomicInteger();
+        this.outputQueue = new LinkedBlockingDeque<>(200);
+    }
+
+    public BlockingDeque<List<T>> getOutputQueue() {
+        return outputQueue;
     }
 
     /**
