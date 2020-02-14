@@ -155,9 +155,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             // Occurs whenever client (Greenplum) decides to end the connection
             if (LOG.isDebugEnabled()) {
                 // Stacktrace in debug
-                LOG.debug("Remote connection closed by GPDB", e);
+                LOG.debug("Remote connection closed by Greenplum", e);
             } else {
-                LOG.error("{}-{}: {}-- Remote connection closed by GPDB (Enable debug for stacktrace)", context.getTransactionId(),
+                LOG.error("{}-{}: {}-- Remote connection closed by Greenplum (Enable debug for stacktrace)", context.getTransactionId(),
                         context.getSegmentId(), context.getDataSource());
             }
         } catch (Exception e) {
@@ -334,7 +334,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             int recordCount = 0, minBufferSize = 5;
             try {
                 iterator = processor.readTuples(split);
-
                 List<T> miniBuffer = new ArrayList<>(minBufferSize);
                 while (iterator.hasNext() && querySession.isActive()) {
                     miniBuffer.add(iterator.next());
@@ -346,6 +345,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     // flush the rest of the buffer
                     recordCount += flushBuffer(serializer, miniBuffer);
                 }
+            } catch (ClientAbortException e) {
+                querySession.cancelQuery();
+                result.addError(e);
             } catch (IOException e) {
                 querySession.errorQuery();
                 result.addError(e);

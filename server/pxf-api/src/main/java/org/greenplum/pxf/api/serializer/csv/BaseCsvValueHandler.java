@@ -8,12 +8,8 @@ import java.io.OutputStreamWriter;
 public abstract class BaseCsvValueHandler<T> implements ValueHandler<T> {
 
     @Override
-    public void handle(OutputStreamWriter writer, T value) {
-        try {
-            internalHandle(writer, value);
-        } catch (IOException e) {
-            throw new RuntimeException("Unable to serialize value", e);
-        }
+    public void handle(OutputStreamWriter writer, T value) throws IOException {
+        internalHandle(writer, value);
     }
 
     protected abstract void internalHandle(OutputStreamWriter writer, final T value)
