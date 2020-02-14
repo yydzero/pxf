@@ -383,6 +383,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     miniBuffer.add(iterator.next());
                     if (miniBuffer.size() == minBufferSize) {
                         recordCount += flushBuffer(serializer, miniBuffer);
+                        miniBuffer = new ArrayList<>(minBufferSize);
                     }
                 }
                 if (querySession.isActive()) {
@@ -432,7 +433,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 //                    processor.writeTuple(serializer, tuple);
 //            }
             int count = miniBuffer.size();
-            miniBuffer.clear();
+//            miniBuffer.clear();
             return count;
         }
 
