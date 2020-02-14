@@ -375,7 +375,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         public Result call() {
             Result result = new Result();
             Iterator<T> iterator;
-            int recordCount = 0, minBufferSize = 500;
+            int recordCount = 0, minBufferSize = 1000;
             try {
                 iterator = processor.readTuples(split);
                 List<T> miniBuffer = new ArrayList<>(minBufferSize);
