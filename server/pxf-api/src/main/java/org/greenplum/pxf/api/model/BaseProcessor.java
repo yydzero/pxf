@@ -1,7 +1,12 @@
 package org.greenplum.pxf.api.model;
 
 import com.google.common.collect.Lists;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import org.apache.catalina.connector.ClientAbortException;
+import org.apache.commons.codec.binary.Hex;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
@@ -12,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -155,9 +161,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             // Occurs whenever client (Greenplum) decides to end the connection
             if (LOG.isDebugEnabled()) {
                 // Stacktrace in debug
-                LOG.debug("Remote connection closed by Greenplum", e);
+                LOG.debug("Remote connection closed by client", e);
             } else {
-                LOG.error("{}-{}: {}-- Remote connection closed by Greenplum (Enable debug for stacktrace)", context.getTransactionId(),
+                LOG.error("{}-{}: {}-- Remote connection closed by client (Enable debug for stacktrace)", context.getTransactionId(),
                         context.getSegmentId(), context.getDataSource());
             }
         } catch (Exception e) {
@@ -203,7 +209,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * which thread should process an element at a given index I for the source
      * SOURCE_NAME, use a MOD function
      * <p>
-     * S = MOD(hash(SOURCE_NAME), N)
+     * S = MOD(hash(SOURCE_NAME[+META_DATA[+USER_DATA]]), N)
      *
      * <p>This hash function is deterministic for a given SOURCE_NAME, and allows
      * the same thread processing for segment S to always process the same
@@ -214,9 +220,36 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @return true if the thread handles the split, false otherwise
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
-        // TODO: use a consistent hash algorithm here, for when the total segments is elastic
-        return context.getSegmentId() == Math.floorMod(Objects.hash(getUniqueResourceName(split)), context.getTotalSegments());
+        HashFunction hf = Hashing.goodFastHash(256);
+        Hasher hasher = hf.newHasher()
+                .putString(split.getResource(), StandardCharsets.UTF_8);
+
+        if (split.getMetadata() != null) {
+            hasher = hasher.putBytes(split.getMetadata());
+        }
+
+        if (split.getUserData() != null) {
+            hasher = hasher.putBytes(split.getUserData());
+        }
+        return context.getSegmentId() == Hashing.consistentHash(hasher.hash(), context.getTotalSegments());
     }
+
+    /**
+     * Process the current split and return an iterator to retrieve rows
+     * from the external system.
+     *
+     * @param split the split
+     * @return an iterator of rows of type T
+     */
+    protected abstract Iterator<T> readTuples(QuerySplit split) throws IOException;
+
+    /**
+     * Return a list of fields for the the row
+     *
+     * @param row the row
+     * @return the list of fields for the given row
+     */
+    protected abstract Iterator<Object> getFields(T row);
 
     /**
      * Gets the {@link QuerySplit} iterator. If the "fragmenter cache" is
@@ -277,31 +310,25 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     }
 
     /**
-     * Returns a unique resource name for the given split. For example, in
-     * HDFS, the name is the path to the resource and the split offset
-     * (i.e. /path/to/file/in/hdfs/a.txt:0-5000)
-     *
-     * @param split the query split
-     * @return a unique resource name for the given split
-     */
-    protected abstract String getUniqueResourceName(QuerySplit split);
-
-    /**
-     * Process the current split and return an iterator to retrieve rows
-     * from the external system.
+     * Returns a unique resource name for the given split
      *
      * @param split the split
-     * @return an iterator of rows of type T
+     * @return a unique resource name for the given split
      */
-    protected abstract Iterator<T> readTuples(QuerySplit split) throws IOException;
+    private String getUniqueResourceName(QuerySplit split) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(split.getResource());
 
-    /**
-     * Return a list of fields for the the row
-     *
-     * @param row the row
-     * @return the list of fields for the given row
-     */
-    protected abstract Iterator<Object> getFields(T row);
+        if (split.getMetadata() != null) {
+            sb.append(":").append(Hex.encodeHex(split.getMetadata()));
+        }
+
+        if (split.getUserData() != null) {
+            sb.append(":").append(Hex.encodeHex(split.getUserData()));
+        }
+
+        return sb.toString();
+    }
 
     /**
      * Processes a {@link QuerySplit} and generates 0 or more tuples. Stores

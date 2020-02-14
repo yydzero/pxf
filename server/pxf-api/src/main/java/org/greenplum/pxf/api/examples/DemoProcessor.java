@@ -78,14 +78,6 @@ public class DemoProcessor extends BaseProcessor<String> {
      * {@inheritDoc}
      */
     @Override
-    protected String getUniqueResourceName(QuerySplit split) {
-        return split.getResource();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public QuerySplitter getQuerySplitter() {
         return new DemoQuerySplitter();
     }

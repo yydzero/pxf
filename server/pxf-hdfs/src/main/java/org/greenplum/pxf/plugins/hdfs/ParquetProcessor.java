@@ -203,12 +203,6 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     }
 
     @Override
-    protected String getUniqueResourceName(QuerySplit split) {
-        FragmentMetadata metadata = deserializeFragmentMetadata(split.getMetadata());
-        return String.format("%s:%d-%d", split.getResource(), metadata.getStart(), metadata.getEnd());
-    }
-
-    @Override
     public QuerySplitter getQuerySplitter() {
         return new HcfsDataSplitter();
     }
