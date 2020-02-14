@@ -9,6 +9,8 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static java.util.Objects.requireNonNull;
 
@@ -36,6 +38,21 @@ public class QuerySession<T> {
     private List<QuerySplit> querySplitList;
 
     private final BlockingDeque<List<T>> outputQueue;
+
+    /**
+     * Tracks number of active tasks
+     */
+    final AtomicInteger runningTasks = new AtomicInteger();
+
+    /**
+     * Main lock guarding all access
+     */
+    final ReentrantLock lock = new ReentrantLock();
+
+    /**
+     * Condition for waiting for more tasks
+     */
+    private final Condition moreTasks = lock.newCondition();
 
     public QuerySession(String queryId) {
         this.queryId = requireNonNull(queryId, "queryId is null");
@@ -140,6 +157,38 @@ public class QuerySession<T> {
     }
 
     /**
+     * Waits until the moreTasks is signaled
+     *
+     * @throws InterruptedException when an InterruptedException occurs
+     */
+    public void waitForMoreTasks() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            moreTasks.await();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Signals the moreTasks condition for the waiting threads
+     */
+    public void requestMoreTasks() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            moreTasks.signal();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public int getRunningTasks() {
+        return runningTasks.get();
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -167,5 +216,13 @@ public class QuerySession<T> {
     @Override
     public int hashCode() {
         return Objects.hashCode(queryId);
+    }
+
+    public void registerTask() {
+        runningTasks.incrementAndGet();
+    }
+
+    public void deregisterTask() {
+        runningTasks.decrementAndGet();
     }
 }

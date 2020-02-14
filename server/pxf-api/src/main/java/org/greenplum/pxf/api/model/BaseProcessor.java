@@ -41,21 +41,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     private QuerySession<T> querySession;
 
-    /**
-     * Tracks number of active tasks
-     */
-    final AtomicInteger runningTasks = new AtomicInteger();
-
-    /**
-     * Main lock guarding all access
-     */
-    final ReentrantLock lock = new ReentrantLock();
-
-    /**
-     * Condition for waiting for more tasks
-     */
-    private final Condition moreTasks = lock.newCondition();
-
     public BaseProcessor() {
         this(SerializerFactory.getInstance());
     }
@@ -128,13 +113,13 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             producer.start();
 
             // block here until we get some signal from the producer that it has started producing
-            waitForMoreTasks();
+            querySession.waitForMoreTasks();
 
             // querySession.isActive determines whether an error or cancellation of the query occurred
             while (querySession.isActive()) {
 
                 // Exit if there is no more work to process
-                if (runningTasks.get() == 0 && outputQueue.isEmpty())
+                if (querySession.getRunningTasks() == 0 && outputQueue.isEmpty())
                     break;
 
                 /* Block until more tasks are requested */
@@ -304,35 +289,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     }
 
     /**
-     * Waits until the moreTasks is signaled
-     *
-     * @throws InterruptedException when an InterruptedException occurs
-     */
-    private void waitForMoreTasks() throws InterruptedException {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            LOG.debug("Waiting for more tasks");
-            moreTasks.await();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * Signals the moreTasks condition for the waiting threads
-     */
-    private void requestMoreTasks() {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            moreTasks.signal();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
      * Returns a unique resource name for the given split
      *
      * @param split the split
@@ -380,9 +336,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 // Keep track of the number of splits processed
 //                splitsProcessed++;
                 // Increase the number of jobs submitted to the executor
-                runningTasks.incrementAndGet();
+                querySession.registerTask();
                 //
-                requestMoreTasks();
+                querySession.requestMoreTasks();
                 // Submit more work
                 executor.submit(new ProcessQuerySplitCallable(split, outputQueue));
             }
@@ -446,12 +402,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             }
 
             // Decrease the number of jobs after completing processing the split
-            runningTasks.decrementAndGet();
+            querySession.deregisterTask();
             // Keep track of the number of records processed by this task
             LOG.debug("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
                     context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
-            // Signal for more tasks
-            requestMoreTasks();
             return result;
         }
 
