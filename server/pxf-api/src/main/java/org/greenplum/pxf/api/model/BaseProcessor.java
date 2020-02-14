@@ -100,7 +100,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 context.getSegmentId(), context.getDataSource(), querySession);
 
         List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
-        BlockingDeque<T> outputQueue = new LinkedBlockingDeque<>(200);
+        BlockingDeque<List<T>> outputQueue = new LinkedBlockingDeque<>(200);
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
@@ -126,11 +126,16 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 }
 
                 // Exit if there is no more work to process
-                if (runningTasks.get() == 0 && !splitter.hasNext()) break;
+                if (runningTasks.get() == 0 && !splitter.hasNext() && outputQueue.isEmpty())
+                    break;
 
 //                /* Block until more tasks are requested */
 //                waitForMoreTasks();
-                writeTuple(serializer, outputQueue.take());
+                List<T> tuples = outputQueue.take();
+
+                for (T tuple : tuples) {
+                    writeTuple(serializer, tuple);
+                }
             }
 
             if (querySession.isActive()) {
@@ -351,12 +356,12 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         private final QuerySplit split;
         private final Serializer serializer;
         private final BaseProcessor<T> processor;
-        private final BlockingDeque<T> outputQueue;
+        private final BlockingDeque<List<T>> outputQueue;
 
         public ProcessQuerySplitCallable(QuerySplit split,
                                          Serializer serializer,
                                          BaseProcessor<T> processor,
-                                         BlockingDeque<T> outputQueue) {
+                                         BlockingDeque<List<T>> outputQueue) {
             this.split = split;
             this.serializer = serializer;
             this.processor = processor;
@@ -370,7 +375,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         public Result call() {
             Result result = new Result();
             Iterator<T> iterator;
-            int recordCount = 0, minBufferSize = 5;
+            int recordCount = 0, minBufferSize = 500;
             try {
                 iterator = processor.readTuples(split);
                 List<T> miniBuffer = new ArrayList<>(minBufferSize);
@@ -422,8 +427,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         private int flushBuffer(Serializer serializer, List<T> miniBuffer) throws InterruptedException {
             if (miniBuffer.isEmpty()) return 0;
 //            synchronized (serializer) {
-                for (T tuple : miniBuffer)
-                    outputQueue.put(tuple);
+//                for (T tuple : miniBuffer)
+            outputQueue.put(miniBuffer);
 //                    processor.writeTuple(serializer, tuple);
 //            }
             int count = miniBuffer.size();
