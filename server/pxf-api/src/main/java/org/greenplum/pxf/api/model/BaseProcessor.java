@@ -118,7 +118,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     break;
 
                 /* Block until more tasks are requested */
-                List<T> tuples = outputQueue.take();
+                List<T> tuples = outputQueue.poll(100, TimeUnit.MILLISECONDS);
+
+                if (tuples == null) continue;
 
                 for (T tuple : tuples) {
                     writeTuple(serializer, tuple);
