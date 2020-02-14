@@ -92,7 +92,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     public void write(OutputStream output) throws IOException, WebApplicationException {
         int splitsProcessed = 0, recordCount = 0;
         final String resource = context.getDataSource();
-        final ExecutorService executor = ExecutorServiceProvider.get(context);
         final Iterator<QuerySplit> splitter = getQuerySplitterIterator();
         final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
 
@@ -101,32 +100,37 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
         List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
         BlockingDeque<List<T>> outputQueue = new LinkedBlockingDeque<>(200);
+        TupleProducerCallable producer = null;
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
 
+            producer = new TupleProducerCallable(splitter, outputQueue);
+//            // we need to submit more work only if we are under the max threshold
+//            while (splitter.hasNext() && querySession.isActive() && runningTasks.get() < threshold) {
+//                QuerySplit split = splitter.next();
+//                // skip if this thread does not process the split
+//                if (!doesSegmentProcessThisSplit(split)) continue;
+//
+//                LOG.debug("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
+//                        context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
+//
+//                // Keep track of the number of splits processed
+//                splitsProcessed++;
+//                // Increase the number of jobs submitted to the executor
+//                runningTasks.incrementAndGet();
+//                // Submit more work
+//                futures.add(executor
+//                        .submit(new ProcessQuerySplitCallable(split, serializer, this, outputQueue)));
+//            }
+
+            producer.start();
+
             // querySession.isActive determines whether an error or cancellation of the query occurred
             while (querySession.isActive()) {
-                // we need to submit more work only if we are under the max threshold
-                while (splitter.hasNext() && querySession.isActive() && runningTasks.get() < threshold) {
-                    QuerySplit split = splitter.next();
-                    // skip if this thread does not process the split
-                    if (!doesSegmentProcessThisSplit(split)) continue;
-
-                    LOG.debug("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
-                            context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
-
-                    // Keep track of the number of splits processed
-                    splitsProcessed++;
-                    // Increase the number of jobs submitted to the executor
-                    runningTasks.incrementAndGet();
-                    // Submit more work
-                    futures.add(executor
-                            .submit(new ProcessQuerySplitCallable(split, serializer, this, outputQueue)));
-                }
 
                 // Exit if there is no more work to process
-                if (runningTasks.get() == 0 && !splitter.hasNext() && outputQueue.isEmpty())
+                if (runningTasks.get() == 0 && outputQueue.isEmpty())
                     break;
 
 //                /* Block until more tasks are requested */
@@ -135,6 +139,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
                 for (T tuple : tuples) {
                     writeTuple(serializer, tuple);
+                    recordCount++;
                 }
             }
 
@@ -150,8 +155,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                             LOG.error("Error while processing", ex);
                         }
                     }
-                    // collect total rows processed
-                    recordCount += result.recordCount;
                 }
 
                 if (exception != null) {
@@ -181,6 +184,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     recordCount == 1 ? "" : "s", resource,
                     splitsProcessed,
                     splitsProcessed == 1 ? "" : "s");
+//            if (producer != null && producer.isAlive()) {
+//                producer.wait(100);
+//            }
         }
     }
 
@@ -344,6 +350,40 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         return sb.toString();
     }
 
+    private class TupleProducerCallable extends Thread {
+
+        private final Iterator<QuerySplit> querySplitIterator;
+        private final BlockingDeque<List<T>> outputQueue;
+
+        final ExecutorService executor = ExecutorServiceProvider.get(context);
+
+        public TupleProducerCallable(Iterator<QuerySplit> querySplitIterator,
+                                     BlockingDeque<List<T>> outputQueue) {
+            this.querySplitIterator = querySplitIterator;
+            this.outputQueue = outputQueue;
+        }
+
+        @Override
+        public void run() {
+            // we need to submit more work only if we are under the max threshold
+            while (querySplitIterator.hasNext() && querySession.isActive()) {
+                QuerySplit split = querySplitIterator.next();
+                // skip if this thread does not process the split
+                if (!doesSegmentProcessThisSplit(split)) continue;
+
+                LOG.debug("{}-{}: {}-- Submitting {} to the pool", context.getTransactionId(),
+                        context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
+
+                // Keep track of the number of splits processed
+//                splitsProcessed++;
+                // Increase the number of jobs submitted to the executor
+                runningTasks.incrementAndGet();
+                // Submit more work
+                executor.submit(new ProcessQuerySplitCallable(split, outputQueue));
+            }
+        }
+    }
+
     /**
      * Processes a {@link QuerySplit} and generates 0 or more tuples. Stores
      * a mini buffer of tuples and flushes the buffer to the serializer when
@@ -354,17 +394,11 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
         private final Logger LOG = LoggerFactory.getLogger(ProcessQuerySplitCallable.class);
         private final QuerySplit split;
-        private final Serializer serializer;
-        private final BaseProcessor<T> processor;
         private final BlockingDeque<List<T>> outputQueue;
 
         public ProcessQuerySplitCallable(QuerySplit split,
-                                         Serializer serializer,
-                                         BaseProcessor<T> processor,
                                          BlockingDeque<List<T>> outputQueue) {
             this.split = split;
-            this.serializer = serializer;
-            this.processor = processor;
             this.outputQueue = outputQueue;
         }
 
@@ -375,20 +409,20 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         public Result call() {
             Result result = new Result();
             Iterator<T> iterator;
-            int recordCount = 0, minBufferSize = 1000;
+            int minBufferSize = 1000;
             try {
-                iterator = processor.readTuples(split);
+                iterator = readTuples(split);
                 List<T> miniBuffer = new ArrayList<>(minBufferSize);
                 while (iterator.hasNext() && querySession.isActive()) {
                     miniBuffer.add(iterator.next());
                     if (miniBuffer.size() == minBufferSize) {
-                        recordCount += flushBuffer(serializer, miniBuffer);
+                        flushBuffer(miniBuffer);
                         miniBuffer = new ArrayList<>(minBufferSize);
                     }
                 }
                 if (querySession.isActive()) {
                     // flush the rest of the buffer
-                    recordCount += flushBuffer(serializer, miniBuffer);
+                    flushBuffer(miniBuffer);
                 }
             } catch (ClientAbortException e) {
                 querySession.cancelQuery();
@@ -409,7 +443,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             // Decrease the number of jobs after completing processing the split
             runningTasks.decrementAndGet();
             // Keep track of the number of records processed by this task
-            result.recordCount = recordCount;
             LOG.debug("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
                     context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
             // Signal for more tasks
@@ -420,26 +453,18 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         /**
          * Write all the tuples in the miniBuffer to the serializer
          *
-         * @param serializer the serializer
          * @param miniBuffer the buffer
          * @return the number or tuples written
          * @throws IOException when an IOException occurs
          */
-        private int flushBuffer(Serializer serializer, List<T> miniBuffer) throws InterruptedException {
-            if (miniBuffer.isEmpty()) return 0;
-//            synchronized (serializer) {
-//                for (T tuple : miniBuffer)
-            outputQueue.put(miniBuffer);
-//                    processor.writeTuple(serializer, tuple);
-//            }
-            int count = miniBuffer.size();
-//            miniBuffer.clear();
-            return count;
+        private void flushBuffer(List<T> miniBuffer) throws InterruptedException {
+            if (!miniBuffer.isEmpty()) {
+                outputQueue.put(miniBuffer);
+            }
         }
 
         private class Result {
             private List<IOException> errors;
-            private int recordCount;
 
             void addError(IOException ioe) {
                 if (errors == null) {

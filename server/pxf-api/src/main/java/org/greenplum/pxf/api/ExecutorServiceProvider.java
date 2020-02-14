@@ -12,7 +12,7 @@ public class ExecutorServiceProvider {
     // TODO: pick a better executor thread pool, maybe some elastic threadpool
     // TODO: maybe 10X number of cores
     public static final ExecutorService EXECUTOR_SERVICE =
-            new ThreadPoolExecutor(64, 256, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(10));
+            new ThreadPoolExecutor(16, 16, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
 
     public static ExecutorService get(RequestContext context) {
         // TODO: implement executor service per server / read Configuration here as well
