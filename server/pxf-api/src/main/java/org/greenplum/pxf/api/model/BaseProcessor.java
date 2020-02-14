@@ -106,6 +106,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             serializer.open(output);
 
             producer = new TupleProducerCallable(splitter, outputQueue);
+            producer.setName("tuple-producer-" + context.getSegmentId());
 //            // we need to submit more work only if we are under the max threshold
 //            while (splitter.hasNext() && querySession.isActive() && runningTasks.get() < threshold) {
 //                QuerySplit split = splitter.next();
