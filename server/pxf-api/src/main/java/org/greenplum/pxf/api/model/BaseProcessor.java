@@ -220,7 +220,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @return true if the thread handles the split, false otherwise
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
-        HashFunction hf = Hashing.goodFastHash(256);
+        HashFunction hf = Hashing.goodFastHash(128); // 29 26 29
         Hasher hasher = hf.newHasher()
                 .putString(split.getResource(), StandardCharsets.UTF_8);
 
