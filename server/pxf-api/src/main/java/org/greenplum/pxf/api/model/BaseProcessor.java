@@ -22,9 +22,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -102,6 +100,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 context.getSegmentId(), context.getDataSource(), querySession);
 
         List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
+        BlockingDeque<T> outputQueue = new LinkedBlockingDeque<>(200);
 
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
@@ -123,14 +122,15 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     runningTasks.incrementAndGet();
                     // Submit more work
                     futures.add(executor
-                            .submit(new ProcessQuerySplitCallable(split, serializer, this)));
+                            .submit(new ProcessQuerySplitCallable(split, serializer, this, outputQueue)));
                 }
 
                 // Exit if there is no more work to process
                 if (runningTasks.get() == 0 && !splitter.hasNext()) break;
 
-                /* Block until more tasks are requested */
-                waitForMoreTasks();
+//                /* Block until more tasks are requested */
+//                waitForMoreTasks();
+                writeTuple(serializer, outputQueue.take());
             }
 
             if (querySession.isActive()) {
@@ -220,7 +220,16 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @return true if the thread handles the split, false otherwise
      */
     protected boolean doesSegmentProcessThisSplit(QuerySplit split) {
-        HashFunction hf = Hashing.goodFastHash(128); // 29 26 29
+//        HashFunction hf = Hashing.adler32(); // 26 24 34
+        HashFunction hf = Hashing.crc32(); // 27 31 26
+//        HashFunction hf = Hashing.md5(); // 25 33 26
+//        HashFunction hf = Hashing.sha1(); // 34 26 24
+//        HashFunction hf = Hashing.goodFastHash(256); // 31 28 25
+//        HashFunction hf = Hashing.sha512(); // 32 31 21
+//        HashFunction hf = Hashing.sha256(); // 29 39 16
+//        HashFunction hf = Hashing.goodFastHash(64); // 32 32 20
+//        HashFunction hf = Hashing.goodFastHash(128); // 29 26 29
+//        HashFunction hf = Hashing.crc32c(); // 20 31 33
         Hasher hasher = hf.newHasher()
                 .putString(split.getResource(), StandardCharsets.UTF_8);
 
@@ -342,13 +351,16 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         private final QuerySplit split;
         private final Serializer serializer;
         private final BaseProcessor<T> processor;
+        private final BlockingDeque<T> outputQueue;
 
         public ProcessQuerySplitCallable(QuerySplit split,
                                          Serializer serializer,
-                                         BaseProcessor<T> processor) {
+                                         BaseProcessor<T> processor,
+                                         BlockingDeque<T> outputQueue) {
             this.split = split;
             this.serializer = serializer;
             this.processor = processor;
+            this.outputQueue = outputQueue;
         }
 
         /**
@@ -384,6 +396,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                         context.getDataSource(),
                         split.getResource(),
                         querySession), e);
+            } catch (InterruptedException e) {
+                querySession.errorQuery();
             }
 
             // Decrease the number of jobs after completing processing the split
@@ -405,12 +419,13 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
          * @return the number or tuples written
          * @throws IOException when an IOException occurs
          */
-        private int flushBuffer(Serializer serializer, List<T> miniBuffer) throws IOException {
+        private int flushBuffer(Serializer serializer, List<T> miniBuffer) throws InterruptedException {
             if (miniBuffer.isEmpty()) return 0;
-            synchronized (serializer) {
+//            synchronized (serializer) {
                 for (T tuple : miniBuffer)
-                    processor.writeTuple(serializer, tuple);
-            }
+                    outputQueue.put(tuple);
+//                    processor.writeTuple(serializer, tuple);
+//            }
             int count = miniBuffer.size();
             miniBuffer.clear();
             return count;

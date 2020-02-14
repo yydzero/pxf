@@ -10,8 +10,9 @@ import java.util.concurrent.TimeUnit;
 public class ExecutorServiceProvider {
 
     // TODO: pick a better executor thread pool, maybe some elastic threadpool
+    // TODO: maybe 10X number of cores
     public static final ExecutorService EXECUTOR_SERVICE =
-            new ThreadPoolExecutor(64, 256, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>());
+            new ThreadPoolExecutor(64, 256, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(10));
 
     public static ExecutorService get(RequestContext context) {
         // TODO: implement executor service per server / read Configuration here as well
