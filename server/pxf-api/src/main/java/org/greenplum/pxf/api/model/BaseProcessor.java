@@ -98,7 +98,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         LOG.info("{}-{}: {}-- Starting session for query {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), querySession);
 
-        List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
+//        List<Future<ProcessQuerySplitCallable.Result>> futures = new ArrayList<>();
         BlockingDeque<List<T>> outputQueue = new LinkedBlockingDeque<>(200);
         TupleProducerCallable producer = null;
 
@@ -126,6 +126,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
             producer.start();
 
+            // block here until we get some signal from the producer that it has started producing
+            waitForMoreTasks();
+
             // querySession.isActive determines whether an error or cancellation of the query occurred
             while (querySession.isActive()) {
 
@@ -133,8 +136,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 if (runningTasks.get() == 0 && outputQueue.isEmpty())
                     break;
 
-//                /* Block until more tasks are requested */
-//                waitForMoreTasks();
+                /* Block until more tasks are requested */
                 List<T> tuples = outputQueue.take();
 
                 for (T tuple : tuples) {
@@ -143,25 +145,25 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 }
             }
 
-            if (querySession.isActive()) {
-                IOException exception = null;
-                for (Future<ProcessQuerySplitCallable.Result> f : futures) {
-                    ProcessQuerySplitCallable.Result result = f.get();
-                    if (result.errors != null) {
-                        for (IOException ex : result.errors) {
-                            if (exception == null) {
-                                exception = ex;
-                            }
-                            LOG.error("Error while processing", ex);
-                        }
-                    }
-                }
-
-                if (exception != null) {
-                    // Throw first error if present
-                    throw exception;
-                }
-            }
+//            if (querySession.isActive()) {
+//                IOException exception = null;
+//                for (Future<ProcessQuerySplitCallable.Result> f : futures) {
+//                    ProcessQuerySplitCallable.Result result = f.get();
+//                    if (result.errors != null) {
+//                        for (IOException ex : result.errors) {
+//                            if (exception == null) {
+//                                exception = ex;
+//                            }
+//                            LOG.error("Error while processing", ex);
+//                        }
+//                    }
+//                }
+//
+//                if (exception != null) {
+//                    // Throw first error if present
+//                    throw exception;
+//                }
+//            }
 
             querySession.deregisterSegment(context.getSegmentId());
         } catch (ClientAbortException e) {
@@ -378,6 +380,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 //                splitsProcessed++;
                 // Increase the number of jobs submitted to the executor
                 runningTasks.incrementAndGet();
+                //
+                requestMoreTasks();
                 // Submit more work
                 executor.submit(new ProcessQuerySplitCallable(split, outputQueue));
             }
