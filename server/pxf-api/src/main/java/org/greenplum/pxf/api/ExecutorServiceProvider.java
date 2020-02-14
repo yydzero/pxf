@@ -2,17 +2,18 @@ package org.greenplum.pxf.api;
 
 import org.greenplum.pxf.api.model.RequestContext;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ExecutorServiceProvider {
 
     // TODO: pick a better executor thread pool, maybe some elastic threadpool
     // TODO: maybe 10X number of cores
+
     public static final ExecutorService EXECUTOR_SERVICE =
-            new ThreadPoolExecutor(16, 16, 1, TimeUnit.SECONDS, new LinkedBlockingQueue<>(10));
+            new ThreadPoolExecutor(16, 16, 1,
+                    TimeUnit.SECONDS, new LinkedBlockingDeque<>(10), new ThreadPoolExecutor.CallerRunsPolicy());
 
     public static ExecutorService get(RequestContext context) {
         // TODO: implement executor service per server / read Configuration here as well

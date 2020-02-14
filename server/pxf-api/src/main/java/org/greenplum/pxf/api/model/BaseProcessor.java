@@ -1,10 +1,10 @@
 package org.greenplum.pxf.api.model;
 
 import com.google.common.collect.Lists;
-import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.catalina.connector.ClientAbortException;
 import org.apache.commons.codec.binary.Hex;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
@@ -21,11 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
 
@@ -78,7 +74,6 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         int splitsProcessed = 0, recordCount = 0;
         final String resource = context.getDataSource();
         final Iterator<QuerySplit> splitter = getQuerySplitterIterator();
-        final int threshold = configuration.getInt("pxf.query.active.task.threshold", THRESHOLD);
 
         LOG.info("{}-{}: {}-- Starting session for query {}", context.getTransactionId(),
                 context.getSegmentId(), context.getDataSource(), querySession);
@@ -326,6 +321,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         public void run() {
             // we need to submit more work only if we are under the max threshold
             while (querySplitIterator.hasNext() && querySession.isActive()) {
+
                 QuerySplit split = querySplitIterator.next();
                 // skip if this thread does not process the split
                 if (!doesSegmentProcessThisSplit(split)) continue;
@@ -339,7 +335,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                 querySession.registerTask();
                 //
                 querySession.requestMoreTasks();
-                // Submit more work
+
                 executor.submit(new ProcessQuerySplitCallable(split, outputQueue));
             }
         }
@@ -403,6 +399,7 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
             // Decrease the number of jobs after completing processing the split
             querySession.deregisterTask();
+
             // Keep track of the number of records processed by this task
             LOG.debug("{}-{}: {}-- Completed processing {}", context.getTransactionId(),
                     context.getSegmentId(), context.getDataSource(), getUniqueResourceName(split));
