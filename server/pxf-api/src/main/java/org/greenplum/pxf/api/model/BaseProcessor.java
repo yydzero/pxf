@@ -66,8 +66,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         final Iterator<QuerySplit> splitter = getQuerySplitterIterator();
         final int segmentId = querySession.nextSegmentId();
 
-        LOG.info("{}-{}: {}-- Starting session for query {}", context.getTransactionId(),
-                segmentId, context.getDataSource(), querySession);
+        LOG.info("{}-{}-- Starting session for query {}", context.getTransactionId(),
+                segmentId, querySession);
 
         BlockingDeque<List<T>> outputQueue = querySession.getOutputQueue();
 
@@ -112,10 +112,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             querySession.errorQuery();
             throw new IOException(e.getMessage(), e);
         } finally {
+            output.close();
             querySession.deregisterSegment(segmentId);
-            LOG.info("{}-{}: {}-- Stopped streaming {} record{} for resource {}",
-                    context.getTransactionId(), segmentId,
-                    context.getDataSource(), recordCount,
+            LOG.info("{}-{}-- Stopped streaming {} record{} for resource {}",
+                    context.getTransactionId(), segmentId, recordCount,
                     recordCount == 1 ? "" : "s", resource);
         }
     }
