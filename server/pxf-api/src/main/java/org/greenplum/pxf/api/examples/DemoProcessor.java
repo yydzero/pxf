@@ -40,7 +40,7 @@ public class DemoProcessor extends BaseProcessor<String> {
      * {@inheritDoc}
      */
     @Override
-    protected Iterator<String> readTuples(QuerySplit split) {
+    public Iterator<String> getTupleIterator(QuerySplit split) {
         final String fragmentMetadata = new String(split.getMetadata());
         final int colCount = context.getColumns();
 

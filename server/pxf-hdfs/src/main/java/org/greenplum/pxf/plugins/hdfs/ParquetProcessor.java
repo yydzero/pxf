@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -47,10 +48,9 @@ import static org.apache.parquet.schema.Type.Repetition.REPEATED;
 
 public class ParquetProcessor extends BaseProcessor<Group> {
 
-    private long rowsRead, totalRowsRead;
-    private ObjectMapper mapper = new ObjectMapper();
-    private MessageType readSchema;
-    protected HcfsType hcfsType;
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    private static final TreeTraverser TRAVERSER = new TreeTraverser();
 
     public static final EnumSet<Operator> SUPPORTED_OPERATORS = EnumSet.of(
             Operator.NOOP,
@@ -68,12 +68,9 @@ public class ParquetProcessor extends BaseProcessor<Group> {
             Operator.NOT
     );
 
-    private static final TreeTraverser TRAVERSER = new TreeTraverser();
+    protected HcfsType hcfsType;
 
-    /**
-     * Records the total read time in nanoseconds
-     */
-    private long totalReadTimeInNanos;
+    private volatile MessageType readSchema;
 
     @Override
     public void initialize(RequestContext context) {
@@ -83,164 +80,143 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     }
 
     @Override
-    protected Iterator<Group> readTuples(QuerySplit split) throws IOException {
-        Path file = new Path(hcfsType.getDataUri(configuration, context.getDataSource() + split.getResource()));
-        FragmentMetadata metadata = deserializeFragmentMetadata(split.getMetadata());
-        FileSplit fileSplit = new FileSplit(file, metadata.getStart(), metadata.getEnd(), (String[]) null);
+    public Iterator<Group> getTupleIterator(QuerySplit split) throws IOException {
 
-        readSchema = getReadSchema(file, fileSplit);
-        // Get a map of the column name to Types for the given schema
-        Map<String, Type> originalFieldsMap = getOriginalFieldsMap(readSchema);
-        // Get the record filter in case of predicate push-down
-        FilterCompat.Filter recordFilter = getRecordFilter(context.getFilterString(), originalFieldsMap, readSchema);
+        // should be thread-safe
+        if (readSchema == null) {
+            synchronized (this) {
+                if (readSchema == null) {
+                    readSchema = getReadSchema(split);
 
-        // add column projection
-        configuration.set(PARQUET_READ_SCHEMA, readSchema.toString());
-
-        ParquetReader<Group> fileReader = ParquetReader.builder(new GroupReadSupport(), file)
-                .withConf(configuration)
-                // Create reader for a given split, read a range in file
-                .withFileRange(fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength())
-                .withFilter(recordFilter)
-                .build();
-
-
-        totalRowsRead += rowsRead;
-
-        return new Iterator<Group>() {
-            private Group group;
-
-            @Override
-            public boolean hasNext() {
-                if (group == null) {
-                    try {
-                        final long then = System.nanoTime();
-                        group = fileReader.read();
-                        final long nanos = System.nanoTime() - then;
-                        totalReadTimeInNanos += nanos;
-
-                        if (group == null) {
-                            closeForRead();
-                        }
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }
-                return group != null;
-            }
-
-            @Override
-            public Group next() {
-                rowsRead++;
-                Group result = group;
-                group = null;
-                return result;
-            }
-
-            private void closeForRead() throws IOException {
-                if (LOG.isDebugEnabled()) {
-                    final long millis = TimeUnit.NANOSECONDS.toMillis(totalReadTimeInNanos);
-                    long average = totalReadTimeInNanos / totalRowsRead;
-                    LOG.debug("{}-{}: Read TOTAL of {} rows from file {} on server {} in {} ms. Average speed: {} nanoseconds",
-                            context.getTransactionId(),
-                            context.getSegmentId(),
-                            totalRowsRead,
-                            context.getDataSource(),
-                            context.getServerName(),
-                            millis,
-                            average);
-                }
-                if (fileReader != null) {
-                    fileReader.close();
+                    // add column projection
+                    configuration.set(PARQUET_READ_SCHEMA, readSchema.toString());
                 }
             }
-        };
+        }
+
+        return new TupleItr(split);
     }
 
-    private synchronized MessageType getReadSchema(Path file, FileSplit fileSplit) throws IOException {
-        if (readSchema != null) {
-            return readSchema;
+    private class TupleItr implements Iterator<Group> {
+        private ParquetReader<Group> fileReader;
+        private Group group = null;
+        private long totalRowsRead;
+
+        /**
+         * Records the total read time in nanoseconds
+         */
+        private long totalReadTimeInNanos;
+
+        public TupleItr(QuerySplit split) throws IOException {
+            Path file = new Path(hcfsType.getDataUri(configuration, context.getDataSource() + split.getResource()));
+            FragmentMetadata metadata = deserializeFragmentMetadata(split.getMetadata());
+            FileSplit fileSplit = new FileSplit(file, metadata.getStart(), metadata.getEnd(), (String[]) null);
+
+            // Get a map of the column name to Types for the given schema
+            Map<String, Type> originalFieldsMap = getOriginalFieldsMap(readSchema);
+            // Get the record filter in case of predicate push-down
+            FilterCompat.Filter recordFilter = getRecordFilter(context.getFilterString(), originalFieldsMap);
+
+            fileReader = ParquetReader.builder(new GroupReadSupport(), file)
+                    .withConf(configuration)
+                    // Create reader for a given split, read a range in file
+                    .withFileRange(fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength())
+                    .withFilter(recordFilter)
+                    .build();
         }
-        // Read the original schema from the parquet file
-        MessageType originalSchema = getSchema(file, fileSplit);
-        // Get a map of the column name to Types for the given schema
-        Map<String, Type> originalFieldsMap = getOriginalFieldsMap(originalSchema);
-        // Get the read schema. This is either the full set or a subset (in
-        // case of column projection) of the greenplum schema.
-        return buildReadSchema(originalFieldsMap, originalSchema);
+
+        @Override
+        public boolean hasNext() {
+            if (group == null && fileReader != null) {
+                try {
+                    final long then = System.nanoTime();
+                    group = fileReader.read();
+                    final long nanos = System.nanoTime() - then;
+                    totalReadTimeInNanos += nanos;
+
+                    if (group == null) {
+                        closeForRead();
+                    }
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+            return group != null;
+        }
+
+        @Override
+        public Group next() {
+            totalRowsRead++;
+            Group result = group;
+            group = null;
+            return result;
+        }
+
+        private void closeForRead() throws IOException {
+            if (LOG.isDebugEnabled()) {
+                final long millis = TimeUnit.NANOSECONDS.toMillis(totalReadTimeInNanos);
+                long average = totalRowsRead > 0 ? totalReadTimeInNanos / totalRowsRead : 0;
+                LOG.debug("{}-{}: Read TOTAL of {} rows from file {} on server {} in {} ms. Average speed: {} nanoseconds",
+                        context.getTransactionId(),
+                        context.getSegmentId(),
+                        totalRowsRead,
+                        context.getDataSource(),
+                        context.getServerName(),
+                        millis,
+                        average);
+            }
+            if (fileReader != null) {
+                fileReader.close();
+            }
+            fileReader = null;
+        }
     }
 
     @Override
     protected Iterator<Object> getFields(Group row) {
-        // schema is the readSchema, if there is column projection
-        // the schema will be a subset of tuple descriptions
-        List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
-        final int totalColumns = tupleDescription.size();
-        return new Iterator<Object>() {
-            private int columnIndex = 0;
-            private int i = 0;
+        return new FieldItr(row, context.getTupleDescription());
+    }
 
-            @Override
-            public boolean hasNext() {
-                return i < totalColumns;
-            }
+    private class FieldItr implements Iterator<Object> {
+        private final Group row;
+        private final List<ColumnDescriptor> tupleDescription;
+        private int columnIndex = 0;
+        private int i = 0;
+        private final int totalColumns;
 
-            @Override
-            public Object next() {
-                Object result;
-                ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
-                if (!columnDescriptor.isProjected()) {
-                    return null;
-                } else if (readSchema.getType(columnIndex).isPrimitive()) {
-                    result = resolvePrimitive(row, columnIndex, readSchema.getType(columnIndex), 0);
-                    columnIndex++;
-                } else {
-                    throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
-                }
-                return result;
+        public FieldItr(Group row, List<ColumnDescriptor> tupleDescription) {
+            this.row = row;
+            this.tupleDescription = tupleDescription;
+            this.totalColumns = tupleDescription.size();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return i < totalColumns;
+        }
+
+        @Override
+        public Object next() {
+            if (i >= totalColumns)
+                throw new NoSuchElementException();
+
+            Object result;
+            ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
+            if (!columnDescriptor.isProjected()) {
+                result = null;
+            } else if (readSchema.getType(columnIndex).isPrimitive()) {
+                result = resolvePrimitive(row, columnIndex, readSchema.getType(columnIndex), 0);
+                columnIndex++;
+            } else {
+                throw new UnsupportedOperationException("Parquet complex type support is not yet available.");
             }
-        };
+            return result;
+        }
     }
 
     @Override
     public QuerySplitter getQuerySplitter() {
         return new HcfsDataSplitter();
-    }
-
-    /**
-     * Reads the original schema from the parquet file.
-     *
-     * @param parquetFile the path to the parquet file
-     * @param fileSplit   the file split we are accessing
-     * @return the original schema from the parquet file
-     * @throws IOException when there's an IOException while reading the schema
-     */
-    private MessageType getSchema(Path parquetFile, FileSplit fileSplit) throws IOException {
-
-        final long then = System.nanoTime();
-        ParquetMetadataConverter.MetadataFilter filter = ParquetMetadataConverter.range(
-                fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength());
-        ParquetReadOptions parquetReadOptions = HadoopReadOptions
-                .builder(configuration)
-                .withMetadataFilter(filter)
-                .build();
-        HadoopInputFile inputFile = HadoopInputFile.fromPath(parquetFile, configuration);
-        try (ParquetFileReader parquetFileReader =
-                     ParquetFileReader.open(inputFile, parquetReadOptions)) {
-            FileMetaData metadata = parquetFileReader.getFileMetaData();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("{}-{}: Reading file {} with {} records in {} RowGroups",
-                        context.getTransactionId(), context.getSegmentId(),
-                        parquetFile.getName(), parquetFileReader.getRecordCount(),
-                        parquetFileReader.getRowGroups().size());
-            }
-            final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
-            LOG.debug("{}-{}: Read schema in {} ms", context.getTransactionId(),
-                    context.getSegmentId(), millis);
-            return metadata.getSchema();
-        } catch (Exception e) {
-            throw new IOException(e);
-        }
     }
 
     /**
@@ -254,9 +230,9 @@ public class ParquetProcessor extends BaseProcessor<Group> {
         Map<String, Type> originalFields = new HashMap<>(originalSchema.getFieldCount() * 2);
 
         // We need to add the original name and lower cased name to
-        // the map to support mixed case where in GPDB the column name
+        // the map to support mixed case where in Greenplum the column name
         // was created with quotes i.e "mIxEd CaSe". When quotes are not
-        // used to create a table in GPDB, the name of the column will
+        // used to create a table in Greenplum, the name of the column will
         // always come in lower-case
         originalSchema.getFields().forEach(t -> {
             String columnName = t.getName();
@@ -265,6 +241,55 @@ public class ParquetProcessor extends BaseProcessor<Group> {
         });
 
         return originalFields;
+    }
+
+    private MessageType getReadSchema(QuerySplit querySplit) throws IOException {
+        FragmentMetadata metadata = deserializeFragmentMetadata(querySplit.getMetadata());
+        Path path = new Path(hcfsType.getDataUri(configuration, context.getDataSource() + querySplit.getResource()));
+        FileSplit fileSplit = new FileSplit(path, metadata.getStart(), metadata.getEnd(), (String[]) null);
+
+        // Read the original schema from the parquet file
+        MessageType originalSchema = getSchema(fileSplit);
+        // Get a map of the column name to Types for the given schema
+        Map<String, Type> originalFieldsMap = getOriginalFieldsMap(originalSchema);
+        // Get the read schema. This is either the full set or a subset (in
+        // case of column projection) of the greenplum schema.
+        return  buildReadSchema(originalFieldsMap, originalSchema);
+    }
+
+    /**
+     * Reads the original schema from the parquet file.
+     *
+     * @param fileSplit the file split we are accessing
+     * @return the original schema from the parquet file
+     * @throws IOException when there's an IOException while reading the schema
+     */
+    private MessageType getSchema(FileSplit fileSplit) throws IOException {
+
+        final long then = System.nanoTime();
+        ParquetMetadataConverter.MetadataFilter filter = ParquetMetadataConverter.range(
+                fileSplit.getStart(), fileSplit.getStart() + fileSplit.getLength());
+        ParquetReadOptions parquetReadOptions = HadoopReadOptions
+                .builder(configuration)
+                .withMetadataFilter(filter)
+                .build();
+        HadoopInputFile inputFile = HadoopInputFile.fromPath(fileSplit.getPath(), configuration);
+        try (ParquetFileReader parquetFileReader =
+                     ParquetFileReader.open(inputFile, parquetReadOptions)) {
+            FileMetaData metadata = parquetFileReader.getFileMetaData();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("{}-{}: Reading file {} with {} records in {} RowGroups",
+                        context.getTransactionId(), context.getSegmentId(),
+                        fileSplit.getPath().getName(), parquetFileReader.getRecordCount(),
+                        parquetFileReader.getRowGroups().size());
+            }
+            final long millis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - then);
+            LOG.debug("{}-{}: Read schema in {} ms", context.getTransactionId(),
+                    context.getSegmentId(), millis);
+            return metadata.getSchema();
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
     }
 
     /**
@@ -293,10 +318,9 @@ public class ParquetProcessor extends BaseProcessor<Group> {
      *
      * @param filterString      the filter string
      * @param originalFieldsMap a map of field names to types
-     * @param schema            the parquet schema
      * @return the parquet record filter for the given filter string
      */
-    private FilterCompat.Filter getRecordFilter(String filterString, Map<String, Type> originalFieldsMap, MessageType schema) {
+    private FilterCompat.Filter getRecordFilter(String filterString, Map<String, Type> originalFieldsMap) {
         if (StringUtils.isBlank(filterString)) {
             return FilterCompat.NOOP;
         }
@@ -366,5 +390,4 @@ public class ParquetProcessor extends BaseProcessor<Group> {
         buffer.flip();//need flip
         return new FragmentMetadata(buffer.getLong(), buffer.getLong(), null);
     }
-
 }

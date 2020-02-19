@@ -1,5 +1,9 @@
 package org.greenplum.pxf.api.model;
 
+import org.apache.commons.codec.binary.Hex;
+
+import java.util.Arrays;
+
 /**
  * A query split holds information about a data split.
  * {@link QuerySplitter} iterates over splits for a query slice.
@@ -96,5 +100,22 @@ public class QuerySplit {
      */
     public void setUserData(byte[] userData) {
         this.userData = userData;
+    }
+
+    /**
+     * Returns a unique resource name for the given split
+     *
+     * @return a unique resource name for the given split
+     */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder(resource);
+        if (metadata != null) {
+            sb.append(":").append(Hex.encodeHex(metadata));
+        }
+        if (userData != null) {
+            sb.append(":").append(Hex.encodeHex(userData));
+        }
+        return sb.toString();
     }
 }

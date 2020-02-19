@@ -28,10 +28,8 @@ public class HcfsDataSplitter extends BaseQuerySplitter {
 
     protected JobConf jobConf;
     protected HcfsType hcfsType;
-
-    private Iterator<InputSplit> inputSplitIterator;
-
-    private int basePathLength;
+    protected Iterator<InputSplit> inputSplitIterator;
+    protected int basePathLength;
 
     /**
      * {@inheritDoc}
@@ -121,7 +119,7 @@ public class HcfsDataSplitter extends BaseQuerySplitter {
      * @param fileSplit the file split information
      * @return a byte array that encapsulates the serialized split start and length information
      */
-    private byte[] serializeFragmentMetadata(FileSplit fileSplit) {
+    protected byte[] serializeFragmentMetadata(FileSplit fileSplit) {
         ByteBuffer buffer = ByteBuffer.allocate(2 * Long.BYTES);
         buffer.putLong(fileSplit.getStart());
         buffer.putLong(fileSplit.getLength());

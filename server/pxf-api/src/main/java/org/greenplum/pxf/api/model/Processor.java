@@ -1,6 +1,8 @@
 package org.greenplum.pxf.api.model;
 
 import javax.ws.rs.core.StreamingOutput;
+import java.io.IOException;
+import java.util.Iterator;
 
 public interface Processor<T> extends Plugin, StreamingOutput {
 
@@ -17,4 +19,13 @@ public interface Processor<T> extends Plugin, StreamingOutput {
      * @param querySession state for the query
      */
     void setQuerySession(QuerySession<T> querySession);
+
+    /**
+     * Process the current split and return an iterator to retrieve tuples
+     * from the external system.
+     *
+     * @param split the split
+     * @return an iterator of tuples of type T
+     */
+    Iterator<T> getTupleIterator(QuerySplit split) throws IOException;
 }

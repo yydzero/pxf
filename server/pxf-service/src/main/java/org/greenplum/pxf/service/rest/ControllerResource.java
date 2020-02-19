@@ -101,37 +101,18 @@ public class ControllerResource extends BaseResource {
                          @Context HttpHeaders headers) throws Throwable {
 
         RequestContext context = parseRequest(headers);
-        Processor<?> processor = processorFactory.getPlugin(context);
-
-        // THREAD-SAFE parameter has precedence
-        boolean isThreadSafe = context.isThreadSafe() && processor.isThreadSafe();
-        LOG.debug("Request for {} will be handled {} synchronization", context.getDataSource(), (isThreadSafe ? "without" : "with"));
-
-        return readResponse(processor, context, isThreadSafe);
-    }
-
-    /**
-     * Produces streaming Response used by the container to read data from the controller.
-     *
-     * @param processor  processor that will process the query
-     * @param context    the context for the query
-     * @param threadSafe whether streaming can proceed in parallel
-     * @return response object to be used by the container
-     */
-    @SuppressWarnings("unchecked")
-    private Response readResponse(final Processor processor,
-                                  final RequestContext context,
-                                  final boolean threadSafe) throws Throwable {
-
         final String cacheKey = getCacheKey(context);
+
+//        // THREAD-SAFE parameter has precedence
+//        boolean isThreadSafe = context.isThreadSafe() && processor.isThreadSafe();
+//        LOG.debug("Request for {} will be handled {} synchronization", context.getDataSource(), (isThreadSafe ? "without" : "with"));
 
         QuerySession<?> querySession = getQuerySession(cacheKey, context);
         querySession.registerSegment(context.getSegmentId());
-        processor.setQuerySession(querySession);
 
         // TODO: lock when not thread safe
         return Response
-                .ok(processor, MediaType.APPLICATION_OCTET_STREAM)
+                .ok(querySession.getProcessor(), MediaType.APPLICATION_OCTET_STREAM)
                 .build();
     }
 
@@ -153,7 +134,8 @@ public class ControllerResource extends BaseResource {
                     LOG.debug("Caching QuerySession for transactionId={} from segmentId={} with key={}",
                             context.getTransactionId(), context.getSegmentId(), cacheKey);
 
-                    return new QuerySession<>(cacheKey);
+                    Processor<?> processor = processorFactory.getPlugin(context);
+                    return new QuerySession<>(processor, cacheKey, context.getTotalSegments());
                 }
             });
         } catch (UncheckedExecutionException | ExecutionException e) {
