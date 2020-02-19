@@ -167,11 +167,9 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
             if (querySession.getQuerySplitList() == null) {
                 synchronized (querySession) {
                     if (querySession.getQuerySplitList() == null) {
-                        LOG.error("retrieving fragments");
                         QuerySplitter splitter = getQuerySplitter();
                         splitter.initialize(context);
                         querySession.setQuerySplitList(Lists.newArrayList(splitter));
-                        LOG.error("completed retrieving fragments");
                     }
                 }
             }
