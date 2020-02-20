@@ -19,7 +19,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * This class handles the subpath /<version>/Controller/ of this
@@ -108,11 +107,12 @@ public class ControllerResource extends BaseResource {
 //        LOG.debug("Request for {} will be handled {} synchronization", context.getDataSource(), (isThreadSafe ? "without" : "with"));
 
         QuerySession<?> querySession = getQuerySession(cacheKey, context);
-        querySession.registerSegment(context.getSegmentId());
+        Processor processor = processorFactory.getPlugin(context);
+        processor.setQuerySession(querySession);
 
         // TODO: lock when not thread safe
         return Response
-                .ok(querySession.getProcessor(), MediaType.APPLICATION_OCTET_STREAM)
+                .ok(processor, MediaType.APPLICATION_OCTET_STREAM)
                 .build();
     }
 
@@ -133,9 +133,7 @@ public class ControllerResource extends BaseResource {
                 public QuerySession<?> call() {
                     LOG.debug("Caching QuerySession for transactionId={} from segmentId={} with key={}",
                             context.getTransactionId(), context.getSegmentId(), cacheKey);
-
-                    Processor<?> processor = processorFactory.getPlugin(context);
-                    return new QuerySession<>(processor, cacheKey, context.getTotalSegments());
+                    return new QuerySession<>(cacheKey, context.getTotalSegments());
                 }
             });
         } catch (UncheckedExecutionException | ExecutionException e) {

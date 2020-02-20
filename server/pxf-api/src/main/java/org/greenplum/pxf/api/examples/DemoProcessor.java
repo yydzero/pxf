@@ -70,7 +70,7 @@ public class DemoProcessor extends BaseProcessor<String> {
      * {@inheritDoc}
      */
     @Override
-    protected Iterator<Object> getFields(String row) {
+    protected Iterator<Object> getFields(String tuple) {
         return null;
     }
 
@@ -79,6 +79,6 @@ public class DemoProcessor extends BaseProcessor<String> {
      */
     @Override
     public QuerySplitter getQuerySplitter() {
-        return new DemoQuerySplitter();
+        return new DemoQuerySplitter(context);
     }
 }

@@ -9,6 +9,7 @@ import org.greenplum.pxf.api.utilities.Utilities;
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
@@ -27,10 +28,20 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      */
     protected QuerySession<T> querySession;
 
+    /**
+     * Default constructor. Initializes with the singleton instance of the
+     * {@link SerializerFactory}
+     */
     public BaseProcessor() {
         this(SerializerFactory.getInstance());
     }
 
+    /**
+     * Constructs a BaseProcessor with the given {@link SerializerFactory}
+     * instance
+     *
+     * @param serializerFactory the SerializerFactory instance
+     */
     BaseProcessor(SerializerFactory serializerFactory) {
         this.serializerFactory = serializerFactory;
     }
@@ -52,6 +63,14 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int getSegmentId() {
+        return context.getSegmentId();
+    }
+
+    /**
      * Write the processed fragments to the output stream in the desired
      * wire output format
      *
@@ -62,18 +81,13 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     @Override
     public void write(OutputStream output) throws IOException, WebApplicationException {
         int recordCount = 0;
-        final Iterator<QuerySplit> splitter = getQuerySplitterIterator();
-        final int segmentId = querySession.nextSegmentId();
 
-        LOG.info("{}-{}-- Starting streaming for {}", context.getTransactionId(),
-                segmentId, querySession);
+        LOG.info("{}-{}-- Starting streaming for {}", context.getTransactionId(), context.getSegmentId(), querySession);
 
         BlockingDeque<List<T>> outputQueue = querySession.getOutputQueue();
-
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
-
-            querySession.registerQuerySplitter(segmentId, splitter);
+            querySession.registerProcessor(this);
 
             while (!querySession.hasStartedProducing() && querySession.isActive()) {
                 // wait until producer has started producing
@@ -82,14 +96,12 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
 
             // querySession.isActive determines whether an error or cancellation of the query occurred
             while (querySession.isActive()) {
-
                 // Exit if there is no more work to process
                 if (querySession.getRunningTasks() == 0 && outputQueue.isEmpty())
                     break;
 
                 /* Block until more tasks are requested */
                 List<T> tuples = outputQueue.poll(100, TimeUnit.MILLISECONDS);
-
                 if (tuples == null) continue;
 
                 for (T tuple : tuples) {
@@ -97,23 +109,31 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     recordCount++;
                 }
             }
+
+//            if (!querySession.isActive()) {
+//                Exception firstException = null;
+//                Deque<Exception> errorQueue = querySession.getErrors();
+//
+//                while (!errorQueue.isEmpty()) {
+//                    Exception
+//                }
+//            }
+
         } catch (ClientAbortException e) {
-            querySession.cancelQuery();
             // Occurs whenever client (Greenplum) decides to end the connection
             if (LOG.isDebugEnabled()) {
                 // Stacktrace in debug
                 LOG.debug("Remote connection closed by client", e);
             } else {
                 LOG.error("{}-{}: {}-- Remote connection closed by client (Enable debug for stacktrace)", context.getTransactionId(),
-                        segmentId, context.getDataSource());
+                        context.getSegmentId(), context.getDataSource());
             }
         } catch (Exception e) {
-            querySession.errorQuery();
             throw new IOException(e.getMessage(), e);
         } finally {
-            querySession.deregisterSegment(segmentId);
+            querySession.deregisterSegment(context.getSegmentId());
             LOG.info("{}-{}-- Stopped streaming {} record{} for {}",
-                    context.getTransactionId(), segmentId, recordCount,
+                    context.getTransactionId(), context.getSegmentId(), recordCount,
                     recordCount == 1 ? "" : "s", querySession);
         }
     }
@@ -144,40 +164,10 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
     }
 
     /**
-     * Return a list of fields for the the row
+     * Return a list of fields for the the tuple
      *
-     * @param row the row
-     * @return the list of fields for the given row
+     * @param tuple the tuple
+     * @return the list of fields for the given tuple
      */
-    protected abstract Iterator<Object> getFields(T row);
-
-    /**
-     * Gets the {@link QuerySplit} iterator. If the "fragmenter cache" is
-     * enabled, the first thread will process the list of fragments and store
-     * the query split list in the querySession. All other threads will use
-     * the "cached" query split list for the given query. If the "fragmenter
-     * cache" is disabled, return the initialized QuerySplitter for the given
-     * processor.
-     *
-     * @return a {@link QuerySplit} iterator
-     */
-    private Iterator<QuerySplit> getQuerySplitterIterator() {
-        if (Utilities.isFragmenterCacheEnabled()) {
-            // TODO: querySplit List needs volatile?
-            if (querySession.getQuerySplitList() == null) {
-                synchronized (querySession) {
-                    if (querySession.getQuerySplitList() == null) {
-                        QuerySplitter splitter = getQuerySplitter();
-                        splitter.initialize(context);
-                        querySession.setQuerySplitList(Lists.newArrayList(splitter));
-                    }
-                }
-            }
-            return querySession.getQuerySplitList().iterator();
-        } else {
-            QuerySplitter splitter = getQuerySplitter();
-            splitter.initialize(context);
-            return splitter;
-        }
-    }
+    protected abstract Iterator<Object> getFields(T tuple);
 }

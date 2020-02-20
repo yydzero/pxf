@@ -28,4 +28,11 @@ public interface Processor<T> extends Plugin, StreamingOutput {
      * @return an iterator of tuples of type T
      */
     Iterator<T> getTupleIterator(QuerySplit split) throws IOException;
+
+    /**
+     * Returns the segment ID for this processor
+     *
+     * @return the segment ID for this processor
+     */
+    int getSegmentId();
 }

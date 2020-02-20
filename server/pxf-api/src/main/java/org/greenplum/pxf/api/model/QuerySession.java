@@ -1,7 +1,9 @@
 package org.greenplum.pxf.api.model;
 
 import com.google.common.base.Objects;
+import org.apache.catalina.connector.ClientAbortException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.greenplum.pxf.api.task.ProducerTask;
 
 import java.time.Instant;
 import java.util.Deque;
@@ -28,13 +30,12 @@ public class QuerySession<T> {
 
     private final AtomicBoolean queryCancelled;
     private final AtomicBoolean queryErrored;
-    private final AtomicInteger activeSegments;
+//    private final AtomicInteger activeSegments;
     private final AtomicBoolean startedProducing;
 
     private final String queryId;
     private final Instant startTime;
     private final int totalSegments;
-    private final Processor<T> processor;
     private Instant endTime;
     private Instant cancelTime;
 
@@ -46,9 +47,9 @@ public class QuerySession<T> {
 
     private final BlockingDeque<List<T>> outputQueue;
 
-    private final BlockingDeque<Iterator<QuerySplit>> splitIteratorQueue;
+    private final BlockingDeque<Processor<T>> processorQueue;
 
-    private final Deque<Integer> registeredSegmentQueue;
+    private final Deque<Exception> errors;
 
     /**
      * Tracks number of active tasks
@@ -61,25 +62,23 @@ public class QuerySession<T> {
     final ReentrantLock lock = new ReentrantLock();
 
     /**
-     * Condition for waiting for more tasks
+     * Condition for waiting for tasks to be available
      */
-    private final Condition moreTasks = lock.newCondition();
+    private final Condition tasksAvailable = lock.newCondition();
 
-    public QuerySession(Processor<T> processor, String queryId, int totalSegments) {
+    public QuerySession(String queryId, int totalSegments) {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.startTime = Instant.now();
         this.queryCancelled = new AtomicBoolean(false);
         this.queryErrored = new AtomicBoolean(false);
         this.startedProducing = new AtomicBoolean(false);
-        this.activeSegments = new AtomicInteger(0);
+//        this.activeSegments = new AtomicInteger(0);
         this.outputQueue = new LinkedBlockingDeque<>(200);
-        this.splitIteratorQueue = new LinkedBlockingDeque<>();
+        this.processorQueue = new LinkedBlockingDeque<>();
         this.totalSegments = totalSegments;
-        this.processor = processor;
-        this.processor.setQuerySession(this);
-        this.registeredSegmentQueue = new ConcurrentLinkedDeque<>();
+        this.errors = new ConcurrentLinkedDeque<>();
 
-        TaskProducer<T> producer = new TaskProducer<>(this);
+        ProducerTask<T> producer = new ProducerTask<>(this);
         producer.setName("task-producer-" + queryId);
         producer.start();
     }
@@ -92,10 +91,11 @@ public class QuerySession<T> {
      * Cancels the query, the first thread to cancel the query sets the cancel
      * time
      */
-    public void cancelQuery() {
+    public void cancelQuery(ClientAbortException e) {
         if (!queryCancelled.getAndSet(true)) {
             cancelTime = Instant.now();
         }
+        errors.offer(e);
     }
 
     /**
@@ -111,10 +111,11 @@ public class QuerySession<T> {
      * Marks the query as errored, the first thread to error the query sets
      * the error time
      */
-    public void errorQuery() {
+    public void errorQuery(Exception e) {
         if (!queryErrored.getAndSet(true)) {
             errorTime = Instant.now();
         }
+        errors.offer(e);
     }
 
     /**
@@ -129,12 +130,11 @@ public class QuerySession<T> {
     /**
      * Registers a query splitter to the session
      *
-     * @param segmentId     the segment identifier
-     * @param splitIterator the query split iterator
+     * @param processor the processor
      */
-    public void registerQuerySplitter(int segmentId, Iterator<QuerySplit> splitIterator) throws InterruptedException {
-        activeSegments.incrementAndGet();
-        splitIteratorQueue.put(new QuerySplitSegmentIterator(segmentId, totalSegments, splitIterator));
+    public void registerProcessor(Processor<T> processor) throws InterruptedException {
+//        activeSegments.incrementAndGet();
+        processorQueue.put(processor);
     }
 
     /**
@@ -144,10 +144,10 @@ public class QuerySession<T> {
      * @param segmentId the segment identifier
      */
     public void deregisterSegment(int segmentId) {
-        if (activeSegments.decrementAndGet() == 0) {
-            endTime = Instant.now();
-            querySplitList = null;
-        }
+//        if (activeSegments.decrementAndGet() == 0) {
+//            endTime = Instant.now();
+//            querySplitList = null;
+//        }
     }
 
     /**
@@ -188,7 +188,7 @@ public class QuerySession<T> {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            moreTasks.await(time, unit);
+            tasksAvailable.await(time, unit);
         } finally {
             lock.unlock();
         }
@@ -201,7 +201,7 @@ public class QuerySession<T> {
         final ReentrantLock lock = this.lock;
         lock.lock();
         try {
-            moreTasks.signalAll();
+            tasksAvailable.signalAll();
         } finally {
             lock.unlock();
         }
@@ -209,6 +209,27 @@ public class QuerySession<T> {
 
     public int getRunningTasks() {
         return runningTasks.get();
+    }
+
+    public void registerTask() {
+        runningTasks.incrementAndGet();
+    }
+
+    public void deregisterTask() {
+        runningTasks.decrementAndGet();
+    }
+
+    public boolean hasStartedProducing() {
+        return startedProducing.get();
+    }
+
+    public void markAsStartedProducing() {
+        startedProducing.set(true);
+        signalTaskStartedProcessing();
+    }
+
+     public BlockingDeque<Processor<T>> getProcessorQueue() {
+        return processorQueue;
     }
 
     /**
@@ -241,36 +262,11 @@ public class QuerySession<T> {
         return Objects.hashCode(queryId);
     }
 
-    public void registerTask() {
-        runningTasks.incrementAndGet();
+    public Deque<Exception> getErrors() {
+        return errors;
     }
 
-    public void deregisterTask() {
-        runningTasks.decrementAndGet();
-    }
-
-    public boolean hasStartedProducing() {
-        return startedProducing.get();
-    }
-
-    protected void markAsStartedProducing() {
-        startedProducing.set(true);
-        signalTaskStartedProcessing();
-    }
-
-    public BlockingDeque<Iterator<QuerySplit>> getSplitIteratorQueue() {
-        return splitIteratorQueue;
-    }
-
-    public Processor<T> getProcessor() {
-        return processor;
-    }
-
-    public void registerSegment(int segmentId) {
-        registeredSegmentQueue.push(segmentId);
-    }
-
-    public int nextSegmentId() {
-        return registeredSegmentQueue.poll();
+    public int getTotalSegments() {
+        return totalSegments;
     }
 }

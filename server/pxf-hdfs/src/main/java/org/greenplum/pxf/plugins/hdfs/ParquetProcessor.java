@@ -173,8 +173,8 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     }
 
     @Override
-    protected Iterator<Object> getFields(Group row) {
-        return new FieldItr(row, context.getTupleDescription());
+    protected Iterator<Object> getFields(Group tuple) {
+        return new FieldItr(tuple, context.getTupleDescription());
     }
 
     private class FieldItr implements Iterator<Object> {
@@ -216,7 +216,7 @@ public class ParquetProcessor extends BaseProcessor<Group> {
 
     @Override
     public QuerySplitter getQuerySplitter() {
-        return new HcfsDataSplitter();
+        return new HcfsDataSplitter(context);
     }
 
     /**
@@ -254,7 +254,7 @@ public class ParquetProcessor extends BaseProcessor<Group> {
         Map<String, Type> originalFieldsMap = getOriginalFieldsMap(originalSchema);
         // Get the read schema. This is either the full set or a subset (in
         // case of column projection) of the greenplum schema.
-        return  buildReadSchema(originalFieldsMap, originalSchema);
+        return buildReadSchema(originalFieldsMap, originalSchema);
     }
 
     /**

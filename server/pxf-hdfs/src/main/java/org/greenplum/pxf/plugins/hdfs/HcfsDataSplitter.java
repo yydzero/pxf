@@ -31,6 +31,10 @@ public class HcfsDataSplitter extends BaseQuerySplitter {
     protected Iterator<InputSplit> inputSplitIterator;
     protected int basePathLength;
 
+    public HcfsDataSplitter(RequestContext context) {
+        super(context);
+    }
+
     /**
      * {@inheritDoc}
      */
