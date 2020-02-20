@@ -7,16 +7,12 @@ import org.greenplum.pxf.api.task.ProducerTask;
 
 import java.time.Instant;
 import java.util.Deque;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static java.util.Objects.requireNonNull;
 
@@ -26,12 +22,12 @@ import static java.util.Objects.requireNonNull;
  *
  * @param <T> the type of the tuple that is returned by the query
  */
-public class QuerySession<T> {
+public class QuerySession<T, M> {
 
     private final AtomicBoolean queryCancelled;
     private final AtomicBoolean queryErrored;
-//    private final AtomicInteger activeSegments;
-    private final AtomicBoolean startedProducing;
+    //    private final AtomicInteger activeSegments;
+    private final AtomicBoolean finishedProducing;
 
     private final String queryId;
     private final Instant startTime;
@@ -51,34 +47,31 @@ public class QuerySession<T> {
 
     private final Deque<Exception> errors;
 
+    private M metadata;
+
     /**
      * Tracks number of active tasks
      */
-    final AtomicInteger runningTasks = new AtomicInteger();
+    final AtomicInteger createdTasks = new AtomicInteger();
 
     /**
-     * Main lock guarding all access
+     * Tracks number of active tasks
      */
-    final ReentrantLock lock = new ReentrantLock();
-
-    /**
-     * Condition for waiting for tasks to be available
-     */
-    private final Condition tasksAvailable = lock.newCondition();
+    final AtomicInteger completedTasks = new AtomicInteger();
 
     public QuerySession(String queryId, int totalSegments) {
         this.queryId = requireNonNull(queryId, "queryId is null");
         this.startTime = Instant.now();
         this.queryCancelled = new AtomicBoolean(false);
         this.queryErrored = new AtomicBoolean(false);
-        this.startedProducing = new AtomicBoolean(false);
+        this.finishedProducing = new AtomicBoolean(false);
 //        this.activeSegments = new AtomicInteger(0);
         this.outputQueue = new LinkedBlockingDeque<>(200);
         this.processorQueue = new LinkedBlockingDeque<>();
         this.totalSegments = totalSegments;
         this.errors = new ConcurrentLinkedDeque<>();
 
-        ProducerTask<T> producer = new ProducerTask<>(this);
+        ProducerTask<T, M> producer = new ProducerTask<>(this);
         producer.setName("task-producer-" + queryId);
         producer.start();
     }
@@ -179,57 +172,44 @@ public class QuerySession<T> {
         this.querySplitList = querySplitList;
     }
 
-    /**
-     * Waits until the moreTasks is signaled
-     *
-     * @throws InterruptedException when an InterruptedException occurs
-     */
-    public void waitUntilTaskStartProcessing(long time, TimeUnit unit) throws InterruptedException {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            tasksAvailable.await(time, unit);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * Signals the moreTasks condition for the waiting threads
-     */
-    public void signalTaskStartedProcessing() {
-        final ReentrantLock lock = this.lock;
-        lock.lock();
-        try {
-            tasksAvailable.signalAll();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public int getRunningTasks() {
-        return runningTasks.get();
+    public int getCreatedTasks() {
+        return createdTasks.get();
     }
 
     public void registerTask() {
-        runningTasks.incrementAndGet();
+        createdTasks.incrementAndGet();
     }
 
-    public void deregisterTask() {
-        runningTasks.decrementAndGet();
+    public void registerCompletedTask() {
+        completedTasks.incrementAndGet();
     }
 
-    public boolean hasStartedProducing() {
-        return startedProducing.get();
+    public int getCompletedTasks() {
+        return completedTasks.get();
     }
 
-    public void markAsStartedProducing() {
-        startedProducing.set(true);
-        signalTaskStartedProcessing();
+    public void markAsFinishedProducing() {
+        finishedProducing.set(true);
     }
 
-     public BlockingDeque<Processor<T>> getProcessorQueue() {
+    public boolean hasFinishedProducing() {
+        return finishedProducing.get();
+    }
+
+    public BlockingDeque<Processor<T>> getProcessorQueue() {
         return processorQueue;
+    }
+
+    public Deque<Exception> getErrors() {
+        return errors;
+    }
+
+    public int getTotalSegments() {
+        return totalSegments;
+    }
+
+    public M getMetadata() {
+        return metadata;
     }
 
     /**
@@ -250,7 +230,7 @@ public class QuerySession<T> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        QuerySession<?> that = (QuerySession<?>) o;
+        QuerySession<?, ?> that = (QuerySession<?, ?>) o;
         return Objects.equal(queryId, that.queryId);
     }
 
@@ -262,11 +242,7 @@ public class QuerySession<T> {
         return Objects.hashCode(queryId);
     }
 
-    public Deque<Exception> getErrors() {
-        return errors;
-    }
-
-    public int getTotalSegments() {
-        return totalSegments;
+    public void setMetadata(M metadata) {
+        this.metadata = metadata;
     }
 }

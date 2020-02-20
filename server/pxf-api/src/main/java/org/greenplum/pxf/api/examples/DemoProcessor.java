@@ -32,7 +32,7 @@ import java.util.Iterator;
  * <p>
  * Demo implementation
  */
-public class DemoProcessor extends BaseProcessor<String> {
+public class DemoProcessor extends BaseProcessor<String, Void> {
 
     private static final int NUM_ROWS = 500000;
 

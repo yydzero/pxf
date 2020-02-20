@@ -19,16 +19,16 @@ import java.util.concurrent.Callable;
  * tuples in the buffer, until the buffer is full, then it adds the buffer to
  * the outputQueue.
  */
-public class TupleReaderTask<T> implements Callable<Void> {
+public class TupleReaderTask<T, M> implements Callable<Void> {
 
     private final Logger LOG = LoggerFactory.getLogger(TupleReaderTask.class);
     private final QuerySplit split;
     private final BlockingDeque<List<T>> outputQueue;
-    private final QuerySession<T> querySession;
+    private final QuerySession<T, M> querySession;
     private final String uniqueResourceName;
     private final Processor<T> processor;
 
-    public TupleReaderTask(Processor<T> processor, QuerySplit split, QuerySession<T> querySession) {
+    public TupleReaderTask(Processor<T> processor, QuerySplit split, QuerySession<T, M> querySession) {
         this.split = split;
         this.querySession = querySession;
         this.outputQueue = querySession.getOutputQueue();
@@ -67,10 +67,9 @@ public class TupleReaderTask<T> implements Callable<Void> {
                     uniqueResourceName, querySession), e);
         } catch (InterruptedException e) {
             querySession.errorQuery(e);
+        } finally {
+            querySession.registerCompletedTask();
         }
-
-        // Decrease the number of jobs after completing processing the split
-        querySession.deregisterTask();
 
         // Keep track of the number of records processed by this task
         LOG.debug("completed processing {} row{} {} for query {}",

@@ -14,14 +14,15 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
-public class ProducerTask<T> extends Thread {
+public class ProducerTask<T, M> extends Thread {
 
     protected Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private final ExecutorService executor = ExecutorServiceProvider.get();
-    private final QuerySession<T> querySession;
+    private final QuerySession<T, M> querySession;
+    private int processorCount;
 
-    public ProducerTask(QuerySession<T> querySession) {
+    public ProducerTask(QuerySession<T, M> querySession) {
         this.querySession = requireNonNull(querySession, "querySession cannot be null");
     }
 
@@ -35,10 +36,20 @@ public class ProducerTask<T> extends Thread {
             Processor<T> processor;
 
             LOG.debug("fetching QuerySplit iterator");
-            /* Wait for 11 seconds until segments have registered their iterators */
+            while (querySession.isActive()) {
+                processor = queue.poll(250, TimeUnit.MILLISECONDS);
+                if (processor == null) {
+                    if (processorCount > 0) {
+                        break;
+                    } else {
+                        // We expect at least one processor, since the query
+                        // session creation is tied to the creation of this
+                        // producer task
+                        continue;
+                    }
+                }
 
-            while (querySession.isActive() && (processor = queue.poll(11, TimeUnit.SECONDS)) != null) {
-
+                processorCount++;
                 Iterator<QuerySplit> iterator = new QuerySplitSegmentIterator(processor.getSegmentId(), querySession.getTotalSegments(), getQuerySplitterIterator(processor));
                 LOG.debug("new QuerySplit iterator fetched");
                 while (iterator.hasNext() && querySession.isActive()) {
@@ -49,16 +60,14 @@ public class ProducerTask<T> extends Thread {
                     executor.submit(new TupleReaderTask<>(processor, split, querySession));
                     // Increase the number of jobs submitted to the executor
                     querySession.registerTask();
-                    // Need to mark the session as started producing
-                    querySession.markAsStartedProducing();
                 }
             }
-            /* Edge case when there are no splits or an error occurs */
-            querySession.markAsStartedProducing();
             LOG.debug("task producer completed");
         } catch (Exception ex) {
             querySession.errorQuery(ex);
             throw new RuntimeException(ex);
+        } finally {
+            querySession.markAsFinishedProducing();
         }
     }
 
@@ -74,7 +83,6 @@ public class ProducerTask<T> extends Thread {
      */
     public Iterator<QuerySplit> getQuerySplitterIterator(Processor<T> processor) {
         if (Utilities.isFragmenterCacheEnabled()) {
-            // TODO: querySplit List needs volatile?
             if (querySession.getQuerySplitList() == null) {
                 synchronized (querySession) {
                     if (querySession.getQuerySplitList() == null) {

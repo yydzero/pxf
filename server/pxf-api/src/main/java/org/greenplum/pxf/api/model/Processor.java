@@ -14,13 +14,6 @@ public interface Processor<T> extends Plugin, StreamingOutput {
     QuerySplitter getQuerySplitter();
 
     /**
-     * Register the {@link QuerySession<T>} for the given query
-     *
-     * @param querySession state for the query
-     */
-    void setQuerySession(QuerySession<T> querySession);
-
-    /**
      * Process the current split and return an iterator to retrieve tuples
      * from the external system.
      *

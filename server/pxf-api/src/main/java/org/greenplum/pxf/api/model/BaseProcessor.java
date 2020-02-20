@@ -1,65 +1,70 @@
 package org.greenplum.pxf.api.model;
 
-import com.google.common.collect.Lists;
 import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.SerializerFactory;
-import org.greenplum.pxf.api.utilities.Utilities;
 
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T> {
+public abstract class BaseProcessor<T, M> extends BasePlugin implements Processor<T> {
 
     /**
      * A factory for serializers
      */
     private final SerializerFactory serializerFactory;
 
+
+    private QuerySessionCacheFactory querySessionCacheFactory;
+
     /**
      * A query session shared among all segments participating in this query
      */
-    protected QuerySession<T> querySession;
+    protected QuerySession<T, M> querySession;
 
     /**
      * Default constructor. Initializes with the singleton instance of the
      * {@link SerializerFactory}
      */
     public BaseProcessor() {
-        this(SerializerFactory.getInstance());
+        this(SerializerFactory.getInstance(),
+                QuerySessionCacheFactory.getInstance());
     }
 
     /**
      * Constructs a BaseProcessor with the given {@link SerializerFactory}
      * instance
      *
-     * @param serializerFactory the SerializerFactory instance
+     * @param serializerFactory        the SerializerFactory instance
+     * @param querySessionCacheFactory a factory that returns output queues for the processor
      */
-    BaseProcessor(SerializerFactory serializerFactory) {
+    BaseProcessor(SerializerFactory serializerFactory,
+                  QuerySessionCacheFactory querySessionCacheFactory) {
         this.serializerFactory = serializerFactory;
+        this.querySessionCacheFactory = querySessionCacheFactory;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
+    @SuppressWarnings("unchecked")
     public void initialize(RequestContext context) {
         super.initialize(context);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setQuerySession(QuerySession<T> querySession) {
-        this.querySession = querySession;
+        final String cacheKey = getCacheKey(context);
+        try {
+            querySession = (QuerySession<T, M>) getQuerySession(cacheKey, context);
+            LOG.debug("Registering new processor {} to querySession {}", this, querySession);
+            querySession.registerProcessor(this);
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -87,39 +92,34 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
         BlockingDeque<List<T>> outputQueue = querySession.getOutputQueue();
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
-            querySession.registerProcessor(this);
+            // if look at the outputQueue, and if there's something there, we take it,
+            // if there's nothing there, we look at number of completed tasks and number of created tasks
+            // if  number of completed tasks < number of created tasks --> wait
+            // else if finished producing then we exit, otherwise we wait
 
-            while (!querySession.hasStartedProducing() && querySession.isActive()) {
-                // wait until producer has started producing
-                querySession.waitUntilTaskStartProcessing(100, TimeUnit.MILLISECONDS);
-            }
-
-            // querySession.isActive determines whether an error or cancellation of the query occurred
             while (querySession.isActive()) {
-                // Exit if there is no more work to process
-                if (querySession.getRunningTasks() == 0 && outputQueue.isEmpty())
-                    break;
-
-                /* Block until more tasks are requested */
                 List<T> tuples = outputQueue.poll(100, TimeUnit.MILLISECONDS);
-                if (tuples == null) continue;
+                if (tuples != null) {
+                    for (T tuple : tuples) {
+                        writeTuple(serializer, tuple);
+                        recordCount++;
+                    }
+                } else {
+                    int completedTasks = querySession.getCompletedTasks();
+                    int createdTasks = querySession.getCreatedTasks();
+                    boolean hasFinishedProducing = querySession.hasFinishedProducing();
 
-                for (T tuple : tuples) {
-                    writeTuple(serializer, tuple);
-                    recordCount++;
+                    LOG.debug("Created tasks {}, completed tasks {}, hasFinishedProducing {}", createdTasks, completedTasks, hasFinishedProducing);
+
+                    if (hasFinishedProducing && (completedTasks == createdTasks) && outputQueue.isEmpty()) {
+                        LOG.debug("break loop");
+                        break;
+                    }
                 }
             }
 
-//            if (!querySession.isActive()) {
-//                Exception firstException = null;
-//                Deque<Exception> errorQueue = querySession.getErrors();
-//
-//                while (!errorQueue.isEmpty()) {
-//                    Exception
-//                }
-//            }
-
         } catch (ClientAbortException e) {
+            querySession.cancelQuery(e);
             // Occurs whenever client (Greenplum) decides to end the connection
             if (LOG.isDebugEnabled()) {
                 // Stacktrace in debug
@@ -129,6 +129,8 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                         context.getSegmentId(), context.getDataSource());
             }
         } catch (Exception e) {
+            querySession.errorQuery(e);
+            LOG.error(e.getMessage() != null ? e.getMessage() : "ERROR", e);
             throw new IOException(e.getMessage(), e);
         } finally {
             querySession.deregisterSegment(context.getSegmentId());
@@ -136,6 +138,15 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
                     context.getTransactionId(), context.getSegmentId(), recordCount,
                     recordCount == 1 ? "" : "s", querySession);
         }
+
+//            if (!querySession.isActive()) {
+//                Exception firstException = null;
+//                Deque<Exception> errorQueue = querySession.getErrors();
+//
+//                while (!errorQueue.isEmpty()) {
+//                    Exception
+//                }
+//            }
     }
 
     /**
@@ -169,5 +180,42 @@ public abstract class BaseProcessor<T> extends BasePlugin implements Processor<T
      * @param tuple the tuple
      * @return the list of fields for the given tuple
      */
-    protected abstract Iterator<Object> getFields(T tuple);
+    protected abstract Iterator<Object> getFields(T tuple) throws IOException;
+
+    /**
+     * Returns a key for the QuerySession object. TransactionID is not
+     * sufficient to key the cache. For the case where we have multiple
+     * slices (i.e select a, b from c where a = 'part1' union all
+     * select a, b from c where a = 'part2'), the query context will be
+     * different for each slice, but the transactionID will be the same.
+     * For that reason we must include the server name, data source and the
+     * filter string as part of the QuerySession cache.
+     *
+     * @param context the request context
+     * @return the key for the queue cache
+     */
+    private String getCacheKey(RequestContext context) {
+        return String.format("%s:%s:%s:%s",
+                context.getServerName(),
+                context.getTransactionId(),
+                context.getDataSource(),
+                context.getFilterString());
+    }
+
+    /**
+     * Query session holds state for the duration of the query, for all
+     * segments for the same transaction, server name, data source and filter
+     * string combination.
+     *
+     * @param cacheKey the key to the cache
+     * @param context  the request context
+     * @return the QuerySession object for the given key
+     */
+    private QuerySession<?, ?> getQuerySession(final String cacheKey, final RequestContext context) throws ExecutionException {
+        return querySessionCacheFactory.getCache().get(cacheKey, () -> {
+            LOG.debug("Caching QuerySession for transactionId={} from segmentId={} with key={}",
+                    context.getTransactionId(), context.getSegmentId(), cacheKey);
+            return new QuerySession<>(cacheKey, context.getTotalSegments());
+        });
+    }
 }

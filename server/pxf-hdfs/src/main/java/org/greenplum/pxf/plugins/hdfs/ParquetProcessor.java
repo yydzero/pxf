@@ -34,19 +34,14 @@ import org.greenplum.pxf.plugins.hdfs.parquet.SupportedParquetPrimitiveTypePrune
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.parquet.hadoop.api.ReadSupport.PARQUET_READ_SCHEMA;
 import static org.apache.parquet.schema.Type.Repetition.REPEATED;
 
-public class ParquetProcessor extends BaseProcessor<Group> {
+public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -70,7 +65,7 @@ public class ParquetProcessor extends BaseProcessor<Group> {
 
     protected HcfsType hcfsType;
 
-    private volatile MessageType readSchema;
+    private MessageType readSchema;
 
     @Override
     public void initialize(RequestContext context) {
@@ -81,19 +76,7 @@ public class ParquetProcessor extends BaseProcessor<Group> {
 
     @Override
     public Iterator<Group> getTupleIterator(QuerySplit split) throws IOException {
-
-        // should be thread-safe
-        if (readSchema == null) {
-            synchronized (this) {
-                if (readSchema == null) {
-                    readSchema = getReadSchema(split);
-
-                    // add column projection
-                    configuration.set(PARQUET_READ_SCHEMA, readSchema.toString());
-                }
-            }
-        }
-
+        ensureReadSchemaInitialized(split);
         return new TupleItr(split);
     }
 
@@ -112,6 +95,8 @@ public class ParquetProcessor extends BaseProcessor<Group> {
             FragmentMetadata metadata = deserializeFragmentMetadata(split.getMetadata());
             FileSplit fileSplit = new FileSplit(file, metadata.getStart(), metadata.getEnd(), (String[]) null);
 
+            // add column projection
+            configuration.set(PARQUET_READ_SCHEMA, readSchema.toString());
             // Get a map of the column name to Types for the given schema
             Map<String, Type> originalFieldsMap = getOriginalFieldsMap(readSchema);
             // Get the record filter in case of predicate push-down
@@ -173,7 +158,8 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     }
 
     @Override
-    protected Iterator<Object> getFields(Group tuple) {
+    protected Iterator<Object> getFields(Group tuple) throws IOException {
+        ensureReadSchemaInitialized(null);
         return new FieldItr(tuple, context.getTupleDescription());
     }
 
@@ -217,6 +203,26 @@ public class ParquetProcessor extends BaseProcessor<Group> {
     @Override
     public QuerySplitter getQuerySplitter() {
         return new HcfsDataSplitter(context);
+    }
+
+    private void ensureReadSchemaInitialized(QuerySplit split) throws IOException {
+        if (readSchema != null) return;
+
+        MessageType schema = querySession.getMetadata();
+
+        if (schema == null) {
+            if (split == null)
+                /* We retrieve the parquet schema without a split */
+                throw new RuntimeException("Unable to retrieve parquet metadata");
+
+            synchronized (this) {
+                if ((schema = querySession.getMetadata()) == null) {
+                    schema = getReadSchema(split);
+                    querySession.setMetadata(schema);
+                }
+            }
+        }
+        readSchema = schema;
     }
 
     /**
