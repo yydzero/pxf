@@ -7,6 +7,7 @@ import org.greenplum.pxf.api.utilities.SerializerFactory;
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
@@ -92,10 +93,6 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
         BlockingDeque<List<T>> outputQueue = querySession.getOutputQueue();
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
-            // if look at the outputQueue, and if there's something there, we take it,
-            // if there's nothing there, we look at number of completed tasks and number of created tasks
-            // if  number of completed tasks < number of created tasks --> wait
-            // else if finished producing then we exit, otherwise we wait
 
             while (querySession.isActive()) {
                 List<T> tuples = outputQueue.poll(100, TimeUnit.MILLISECONDS);
@@ -105,14 +102,9 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
                         recordCount++;
                     }
                 } else {
-                    int completedTasks = querySession.getCompletedTasks();
-                    int createdTasks = querySession.getCreatedTasks();
-                    boolean hasFinishedProducing = querySession.hasFinishedProducing();
-
-                    LOG.debug("Created tasks {}, completed tasks {}, hasFinishedProducing {}", createdTasks, completedTasks, hasFinishedProducing);
-
-                    if (hasFinishedProducing && (completedTasks == createdTasks) && outputQueue.isEmpty()) {
-                        LOG.debug("break loop");
+                    if (querySession.hasFinishedProducing()
+                            && (querySession.getCompletedTasks() == querySession.getCreatedTasks())
+                            && outputQueue.isEmpty()) {
                         break;
                     }
                 }
@@ -139,14 +131,31 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
                     recordCount == 1 ? "" : "s", querySession);
         }
 
-//            if (!querySession.isActive()) {
-//                Exception firstException = null;
-//                Deque<Exception> errorQueue = querySession.getErrors();
-//
-//                while (!errorQueue.isEmpty()) {
-//                    Exception
-//                }
-//            }
+        if (!querySession.isActive()) {
+            Exception firstException = null;
+
+            for (Exception e : querySession.getErrors()) {
+                LOG.error(e.getMessage() != null ? e.getMessage() : "ERROR", e);
+                if (firstException == null)
+                    firstException = e;
+            }
+
+            if (firstException != null) {
+                if (firstException instanceof IOException) {
+                    if (firstException instanceof ClientAbortException) {
+                        if (LOG.isDebugEnabled())
+                            LOG.debug("Remote connection closed by client", firstException); // Stacktrace in debug
+                        else
+                            LOG.error("{}-{}: {}-- Remote connection closed by client (Enable debug for stacktrace)", context.getTransactionId(),
+                                    context.getSegmentId(), context.getDataSource());
+                    } else {
+                        throw (IOException) firstException;
+                    }
+                } else {
+                    throw new IOException(firstException.getMessage(), firstException);
+                }
+            }
+        }
     }
 
     /**

@@ -43,7 +43,7 @@ public class ProducerTask<T, M> extends Thread {
                         break;
                     } else {
                         // We expect at least one processor, since the query
-                        // session creation is tied to the creation of this
+                        // session creation is tied to the creation of a
                         // producer task
                         continue;
                     }
@@ -54,9 +54,7 @@ public class ProducerTask<T, M> extends Thread {
                 LOG.debug("new QuerySplit iterator fetched");
                 while (iterator.hasNext() && querySession.isActive()) {
                     QuerySplit split = iterator.next();
-
                     LOG.debug("Submitting {} to the pool for query {}", split, querySession);
-
                     executor.submit(new TupleReaderTask<>(processor, split, querySession));
                     // Increase the number of jobs submitted to the executor
                     querySession.registerTask();

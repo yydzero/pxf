@@ -72,9 +72,9 @@ public class ControllerResource extends BaseResource {
     }
 
     /**
-     * Handles read data request. Parses the request, creates a bridge instance
-     * and iterates over its records, printing it out to the outgoing stream.
-     * Outputs GPDBWritable or Text formats.
+     * Handles read data request. Parses the request, creates a processor
+     * instance and iterates over its records, printing it out to the outgoing
+     * stream. Outputs CSV/Text formats.
      * <p>
      * Parameters come via HTTP headers.
      *
