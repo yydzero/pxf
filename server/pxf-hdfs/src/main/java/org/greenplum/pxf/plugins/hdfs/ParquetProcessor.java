@@ -215,7 +215,7 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
                 /* We retrieve the parquet schema without a split */
                 throw new RuntimeException("Unable to retrieve parquet metadata");
 
-            synchronized (this) {
+            synchronized (querySession) {
                 if ((schema = querySession.getMetadata()) == null) {
                     schema = getReadSchema(split);
                     querySession.setMetadata(schema);

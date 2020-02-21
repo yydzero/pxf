@@ -47,7 +47,7 @@ public class QuerySession<T, M> {
 
     private final Deque<Exception> errors;
 
-    private M metadata;
+    private volatile M metadata;
 
     /**
      * Tracks number of active tasks
