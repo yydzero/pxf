@@ -1,5 +1,6 @@
 package org.greenplum.pxf.api.task;
 
+import com.google.common.collect.Lists;
 import org.apache.catalina.connector.ClientAbortException;
 import org.greenplum.pxf.api.model.Processor;
 import org.greenplum.pxf.api.model.QuerySession;
@@ -23,7 +24,7 @@ public class TupleReaderTask<T, M> implements Callable<Void> {
 
     private final Logger LOG = LoggerFactory.getLogger(TupleReaderTask.class);
     private final QuerySplit split;
-    private final BlockingDeque<List<T>> outputQueue;
+    private final BlockingDeque<List<List<Object>>> outputQueue;
     private final QuerySession<T, M> querySession;
     private final String uniqueResourceName;
     private final Processor<T> processor;
@@ -43,12 +44,14 @@ public class TupleReaderTask<T, M> implements Callable<Void> {
     public Void call() {
         Iterator<T> iterator;
         // TODO: control the batch size through query param to see if we get better throughput
-        int batchSize = 500, totalRows = 0;
+        int batchSize = 5000, totalRows = 0;
         try {
             iterator = processor.getTupleIterator(split);
-            List<T> batch = new ArrayList<>(batchSize);
+            List<List<Object>> batch = new ArrayList<>(batchSize);
             while (iterator.hasNext() && querySession.isActive()) {
-                batch.add(iterator.next());
+                T tuple = iterator.next();
+                List<Object> fields = Lists.newArrayList(processor.getFields(tuple));
+                batch.add(fields);
                 if (batch.size() == batchSize) {
                     totalRows += batchSize;
                     outputQueue.put(batch);

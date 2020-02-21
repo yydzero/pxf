@@ -70,7 +70,7 @@ public class DemoProcessor extends BaseProcessor<String, Void> {
      * {@inheritDoc}
      */
     @Override
-    protected Iterator<Object> getFields(String tuple) {
+    public Iterator<Object> getFields(String tuple) {
         return null;
     }
 

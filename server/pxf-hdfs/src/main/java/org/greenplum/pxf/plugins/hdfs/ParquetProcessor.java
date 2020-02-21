@@ -158,7 +158,7 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
     }
 
     @Override
-    protected Iterator<Object> getFields(Group tuple) throws IOException {
+    public Iterator<Object> getFields(Group tuple) throws IOException {
         ensureReadSchemaInitialized(null);
         return new FieldItr(tuple, context.getTupleDescription());
     }

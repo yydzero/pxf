@@ -23,6 +23,14 @@ public interface Processor<T> extends Plugin, StreamingOutput {
     Iterator<T> getTupleIterator(QuerySplit split) throws IOException;
 
     /**
+     * Return a list of fields for the the tuple
+     *
+     * @param tuple the tuple
+     * @return the list of fields for the given tuple
+     */
+    Iterator<Object> getFields(T tuple) throws IOException;
+
+    /**
      * Returns the segment ID for this processor
      *
      * @return the segment ID for this processor

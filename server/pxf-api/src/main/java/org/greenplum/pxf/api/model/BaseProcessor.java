@@ -90,15 +90,15 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
 
         LOG.info("{}-{}-- Starting streaming for {}", context.getTransactionId(), context.getSegmentId(), querySession);
 
-        BlockingDeque<List<T>> outputQueue = querySession.getOutputQueue();
+        BlockingDeque<List<List<Object>>> outputQueue = querySession.getOutputQueue();
         try (Serializer serializer = serializerFactory.getSerializer(context)) {
             serializer.open(output);
 
             while (querySession.isActive()) {
-                List<T> tuples = outputQueue.poll(100, TimeUnit.MILLISECONDS);
-                if (tuples != null) {
-                    for (T tuple : tuples) {
-                        writeTuple(serializer, tuple);
+                List<List<Object>> fieldList = outputQueue.poll(100, TimeUnit.MILLISECONDS);
+                if (fieldList != null) {
+                    for (List<Object> fields : fieldList) {
+                        writeTuple(serializer, fields);
                         recordCount++;
                     }
                 } else {
@@ -164,32 +164,22 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
      * from the column descriptor to determine the type of the field
      *
      * @param serializer the serializer for the output format
-     * @param tuple      the tuple
+     * @param fields     the list of fields
      * @throws IOException when an IOException occurs
      */
-    protected void writeTuple(Serializer serializer, T tuple) throws IOException {
-        int i = 0;
+    protected void writeTuple(Serializer serializer, List<Object> fields) throws IOException {
         List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
-        Iterator<Object> fieldsIterator = getFields(tuple);
-
         serializer.startRow(tupleDescription.size());
-        while (fieldsIterator.hasNext()) {
-            ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
-            Object field = fieldsIterator.next();
+
+        for (int i = 0; i < tupleDescription.size(); i++) {
+            ColumnDescriptor columnDescriptor = tupleDescription.get(i);
+            Object field = fields.get(i);
             serializer.startField();
             serializer.writeField(columnDescriptor.getDataType(), field);
             serializer.endField();
         }
         serializer.endRow();
     }
-
-    /**
-     * Return a list of fields for the the tuple
-     *
-     * @param tuple the tuple
-     * @return the list of fields for the given tuple
-     */
-    protected abstract Iterator<Object> getFields(T tuple) throws IOException;
 
     /**
      * Returns a key for the QuerySession object. TransactionID is not

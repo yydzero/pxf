@@ -13,8 +13,8 @@ public class ExecutorServiceProvider {
             new ThreadFactoryBuilder().setNameFormat("pxf-worker-%d").build();
 
     public static final ExecutorService EXECUTOR_SERVICE =
-            new ThreadPoolExecutor(16, 16, 1,
-                    TimeUnit.SECONDS, new LinkedBlockingDeque<>(10),
+            new ThreadPoolExecutor(3, 3, 1,
+                    TimeUnit.SECONDS, new LinkedBlockingDeque<>(1000),
                     NAMED_THREAD_FACTORY, new ThreadPoolExecutor.CallerRunsPolicy());
 
     public static ExecutorService get() {

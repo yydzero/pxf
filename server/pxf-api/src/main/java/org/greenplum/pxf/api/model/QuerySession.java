@@ -41,7 +41,7 @@ public class QuerySession<T, M> {
 
     private volatile List<QuerySplit> querySplitList;
 
-    private final BlockingDeque<List<T>> outputQueue;
+    private final BlockingDeque<List<List<Object>>> outputQueue;
 
     private final BlockingDeque<Processor<T>> processorQueue;
 
@@ -76,7 +76,7 @@ public class QuerySession<T, M> {
         producer.start();
     }
 
-    public BlockingDeque<List<T>> getOutputQueue() {
+    public BlockingDeque<List<List<Object>>> getOutputQueue() {
         return outputQueue;
     }
 
