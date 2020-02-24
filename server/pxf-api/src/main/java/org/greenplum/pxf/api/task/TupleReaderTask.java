@@ -44,7 +44,7 @@ public class TupleReaderTask<T, M> implements Callable<Void> {
     public Void call() {
         Iterator<T> iterator;
         // TODO: control the batch size through query param to see if we get better throughput
-        int batchSize = 5000, totalRows = 0;
+        int batchSize = 250, totalRows = 0;
         try {
             iterator = processor.getTupleIterator(split);
             List<List<Object>> batch = new ArrayList<>(batchSize);
