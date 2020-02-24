@@ -2,6 +2,7 @@ package org.greenplum.pxf.api;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.util.Comparator;
 import java.util.concurrent.*;
 
 public class ExecutorServiceProvider {
@@ -13,9 +14,13 @@ public class ExecutorServiceProvider {
             new ThreadFactoryBuilder().setNameFormat("pxf-worker-%d").build();
 
     public static final ExecutorService EXECUTOR_SERVICE =
-            new ThreadPoolExecutor(5, 5, 1,
-                    TimeUnit.SECONDS, new LinkedBlockingDeque<>(1000),
-                    NAMED_THREAD_FACTORY, new ThreadPoolExecutor.CallerRunsPolicy());
+            new ThreadPoolExecutor(32, 32, 1,
+                    TimeUnit.SECONDS, new PriorityBlockingQueue<>(1000, new Comparator<Runnable>() {
+                @Override
+                public int compare(Runnable o1, Runnable o2) {
+                    return Integer.compare(o1.hashCode(), o2.hashCode());
+                }
+            }), NAMED_THREAD_FACTORY, new ThreadPoolExecutor.CallerRunsPolicy());
 
     public static ExecutorService get() {
         // TODO: implement executor service per server / read Configuration here as well
