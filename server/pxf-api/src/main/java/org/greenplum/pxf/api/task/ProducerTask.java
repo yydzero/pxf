@@ -55,7 +55,7 @@ public class ProducerTask<T, M> extends Thread {
                 while (iterator.hasNext() && querySession.isActive()) {
                     QuerySplit split = iterator.next();
                     LOG.debug("Submitting {} to the pool for query {}", split, querySession);
-                    executor.submit(new TupleReaderTask<>(processor, split, querySession));
+                    executor.execute(new TupleReaderTask(processor, split, querySession));
                     // Increase the number of jobs submitted to the executor
                     querySession.registerTask();
                 }

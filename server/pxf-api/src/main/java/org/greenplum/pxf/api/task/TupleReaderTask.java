@@ -14,13 +14,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
 
 /**
  * Processes a {@link QuerySplit} and generates 0 or more tuples. Stores
  * tuples in the buffer, until the buffer is full, then it adds the buffer to
  * the outputQueue.
  */
-public class TupleReaderTask<T, M> implements Callable<Void> {
+public class TupleReaderTask<T, M> implements Runnable, Comparable<TupleReaderTask> {
+
+//implements Callable<Void>, Comparable<Runnable> {
 
     private final Logger LOG = LoggerFactory.getLogger(TupleReaderTask.class);
     private final QuerySplit split;
@@ -41,7 +44,8 @@ public class TupleReaderTask<T, M> implements Callable<Void> {
      * {@inheritDoc}
      */
     @Override
-    public Void call() {
+//    public Void call() {
+    public void run() {
         Iterator<T> iterator;
         // TODO: control the batch size through query param to see if we get better throughput
         int batchSize = 250, totalRows = 0;
@@ -77,6 +81,11 @@ public class TupleReaderTask<T, M> implements Callable<Void> {
         // Keep track of the number of records processed by this task
         LOG.debug("completed processing {} row{} {} for query {}",
                 totalRows, totalRows == 1 ? "" : "s", uniqueResourceName, querySession);
-        return null;
+//        return null;
+    }
+
+    @Override
+    public int compareTo(TupleReaderTask o) {
+        return Integer.compare(this.outputQueue.size(), o.outputQueue.size());
     }
 }
