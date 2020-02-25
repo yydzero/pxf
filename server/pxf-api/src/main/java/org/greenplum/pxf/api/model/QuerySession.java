@@ -72,7 +72,7 @@ public class QuerySession<T, M> {
         this.errors = new ConcurrentLinkedDeque<>();
 
         ProducerTask<T, M> producer = new ProducerTask<>(this);
-        producer.setName("task-producer-" + queryId);
+        producer.setName("pxf-producer-" + queryId);
         producer.start();
     }
 

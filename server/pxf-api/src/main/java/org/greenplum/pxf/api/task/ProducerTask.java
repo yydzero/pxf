@@ -2,7 +2,12 @@ package org.greenplum.pxf.api.task;
 
 import com.google.common.collect.Lists;
 import org.greenplum.pxf.api.ExecutorServiceProvider;
-import org.greenplum.pxf.api.model.*;
+import org.greenplum.pxf.api.concurrent.BoundedExecutor;
+import org.greenplum.pxf.api.model.Processor;
+import org.greenplum.pxf.api.model.QuerySession;
+import org.greenplum.pxf.api.model.QuerySplit;
+import org.greenplum.pxf.api.model.QuerySplitSegmentIterator;
+import org.greenplum.pxf.api.model.QuerySplitter;
 import org.greenplum.pxf.api.utilities.Utilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,10 +25,14 @@ public class ProducerTask<T, M> extends Thread {
 
     private final ExecutorService executor = ExecutorServiceProvider.get();
     private final QuerySession<T, M> querySession;
+    private final BoundedExecutor boundedExecutor;
     private int processorCount;
 
     public ProducerTask(QuerySession<T, M> querySession) {
         this.querySession = requireNonNull(querySession, "querySession cannot be null");
+        // TODO: allow the maxThreads to be configurable
+        this.boundedExecutor = new BoundedExecutor(executor,
+                Math.max(1, Runtime.getRuntime().availableProcessors()));
     }
 
     /**
@@ -55,7 +64,7 @@ public class ProducerTask<T, M> extends Thread {
                 while (iterator.hasNext() && querySession.isActive()) {
                     QuerySplit split = iterator.next();
                     LOG.debug("Submitting {} to the pool for query {}", split, querySession);
-                    executor.execute(new TupleReaderTask<>(processor, split, querySession));
+                    boundedExecutor.execute(new TupleReaderTask<>(processor, split, querySession));
                     // Increase the number of jobs submitted to the executor
                     querySession.registerTask();
                 }

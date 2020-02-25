@@ -152,8 +152,8 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
             }
             if (fileReader != null) {
                 fileReader.close();
+                fileReader = null;
             }
-            fileReader = null;
         }
     }
 
