@@ -2,7 +2,6 @@ package org.greenplum.pxf.api;
 
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.greenplum.pxf.api.concurrent.BoundedExecutor;
 import org.greenplum.pxf.api.task.TupleReaderTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +36,7 @@ public class ExecutorServiceProvider {
                         TupleReaderTask t2 = (TupleReaderTask) o2;
                         return Integer.compare(t1.getOutputQueueSize(), t2.getOutputQueueSize());
                     } else {
-                        LOG.error("This should not happen");
+                        LOG.error("This should not happen o1 {} o2 {}", o1.getClass().getName(), o2.getClass().getName());
                     }
                     return 0;
                 }
