@@ -19,7 +19,7 @@ import java.util.concurrent.BlockingDeque;
  * tuples in the buffer, until the buffer is full, then it adds the buffer to
  * the outputQueue.
  */
-public class TupleReaderTask<T, M> implements Runnable, Comparable<TupleReaderTask<T, M>> {
+public class TupleReaderTask<T, M> implements Runnable {
 
     private final Logger LOG = LoggerFactory.getLogger(TupleReaderTask.class);
     private final QuerySplit split;
@@ -27,7 +27,6 @@ public class TupleReaderTask<T, M> implements Runnable, Comparable<TupleReaderTa
     private final QuerySession<T, M> querySession;
     private final String uniqueResourceName;
     private final Processor<T> processor;
-    private Iterator<T> iterator;
 
     public TupleReaderTask(Processor<T> processor, QuerySplit split, QuerySession<T, M> querySession) {
         this.split = split;
@@ -45,7 +44,7 @@ public class TupleReaderTask<T, M> implements Runnable, Comparable<TupleReaderTa
         // TODO: control the batch size through query param to see if we get better throughput
         int batchSize = 250, totalRows = 0;
         try {
-            iterator = processor.getTupleIterator(split);
+            Iterator<T> iterator = processor.getTupleIterator(split);
             List<List<Object>> batch = new ArrayList<>(batchSize);
             while (iterator.hasNext() && querySession.isActive()) {
                 T tuple = iterator.next();
@@ -78,8 +77,7 @@ public class TupleReaderTask<T, M> implements Runnable, Comparable<TupleReaderTa
                 totalRows, totalRows == 1 ? "" : "s", uniqueResourceName, querySession);
     }
 
-    @Override
-    public int compareTo(TupleReaderTask<T, M> o) {
-        return Integer.compare(this.outputQueue.size(), o.outputQueue.size());
+    public int getOutputQueueSize() {
+        return outputQueue.size();
     }
 }

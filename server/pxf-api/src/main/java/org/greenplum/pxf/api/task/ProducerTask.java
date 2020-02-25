@@ -23,16 +23,16 @@ public class ProducerTask<T, M> extends Thread {
 
     protected Logger LOG = LoggerFactory.getLogger(this.getClass());
 
-    private final ExecutorService executor = ExecutorServiceProvider.get();
     private final QuerySession<T, M> querySession;
     private final BoundedExecutor boundedExecutor;
     private int processorCount;
 
     public ProducerTask(QuerySession<T, M> querySession) {
         this.querySession = requireNonNull(querySession, "querySession cannot be null");
+        ExecutorService executor = ExecutorServiceProvider.get();
         // TODO: allow the maxThreads to be configurable
         this.boundedExecutor = new BoundedExecutor(executor,
-                Math.max(1, Runtime.getRuntime().availableProcessors()));
+                Math.max(1, ExecutorServiceProvider.MACHINE_CORES));
     }
 
     /**
