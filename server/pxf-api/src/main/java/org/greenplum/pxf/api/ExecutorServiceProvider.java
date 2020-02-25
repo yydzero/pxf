@@ -15,7 +15,8 @@ public class ExecutorServiceProvider {
 
     public static final ExecutorService EXECUTOR_SERVICE =
             new ThreadPoolExecutor(32, 32, 1,
-                    TimeUnit.SECONDS, new PriorityBlockingQueue<>(1000 ), NAMED_THREAD_FACTORY, new ThreadPoolExecutor.CallerRunsPolicy());
+                    TimeUnit.SECONDS, new PriorityBlockingQueue<>(1000),
+                    NAMED_THREAD_FACTORY, new ThreadPoolExecutor.CallerRunsPolicy());
 
     public static ExecutorService get() {
         // TODO: implement executor service per server / read Configuration here as well
