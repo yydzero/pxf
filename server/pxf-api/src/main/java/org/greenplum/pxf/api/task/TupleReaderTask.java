@@ -114,7 +114,7 @@ public class TupleReaderTask<T, M> implements Runnable, Comparable<TupleReaderTa
         } catch (IllegalStateException e) {
             LOG.debug("Output queue is full", e);
             suspendedBatch = batch;
-            executor.submit(this);
+            executor.execute(this);
         }
         return false;
     }
