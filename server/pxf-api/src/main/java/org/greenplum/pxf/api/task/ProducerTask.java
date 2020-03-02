@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
+import static org.greenplum.pxf.api.ExecutorServiceProvider.MACHINE_CORES;
 
 public class ProducerTask<T, M> extends Thread {
 
@@ -31,8 +32,7 @@ public class ProducerTask<T, M> extends Thread {
         this.querySession = requireNonNull(querySession, "querySession cannot be null");
         ExecutorService executor = ExecutorServiceProvider.get();
         // TODO: allow the maxThreads to be configurable
-        this.boundedExecutor = new BoundedExecutor(executor,
-                Math.max(1, ExecutorServiceProvider.MACHINE_CORES));
+        this.boundedExecutor = new BoundedExecutor(executor, Math.min(10, MACHINE_CORES));
     }
 
     /**

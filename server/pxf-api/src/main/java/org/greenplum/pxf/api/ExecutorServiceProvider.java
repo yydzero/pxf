@@ -21,7 +21,7 @@ public class ExecutorServiceProvider {
 
     public static final int MACHINE_CORES = Runtime.getRuntime().availableProcessors();
 
-    public static final int THREAD_POOL_SIZE = MACHINE_CORES * 4;
+    public static final int THREAD_POOL_SIZE = MACHINE_CORES * 10;
 
     public static final ThreadFactory NAMED_THREAD_FACTORY =
             new ThreadFactoryBuilder().setNameFormat("pxf-worker-%d").build();
