@@ -41,12 +41,17 @@ public class TupleReaderTask<T, M> implements Runnable {
      */
     @Override
     public void run() {
+        if (!querySession.isActive()) {
+            LOG.debug("Query {} is no longer active", querySession);
+            return;
+        }
+
         // TODO: control the batch size through query param to see if we get better throughput
         int batchSize = 250, totalRows = 0;
         try {
             Iterator<T> iterator = processor.getTupleIterator(split);
             List<List<Object>> batch = new ArrayList<>(batchSize);
-            while (iterator.hasNext() && querySession.isActive()) {
+            while (querySession.isActive() && iterator.hasNext()) {
                 T tuple = iterator.next();
                 List<Object> fields = Lists.newArrayList(processor.getFields(tuple));
                 batch.add(fields);

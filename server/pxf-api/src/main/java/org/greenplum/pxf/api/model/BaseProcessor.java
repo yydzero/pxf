@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -132,28 +133,13 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
         }
 
         if (!querySession.isActive()) {
-            Exception firstException = null;
+            Optional<Exception> firstException = querySession.getErrors().stream()
+                    .filter(e -> !(e instanceof ClientAbortException))
+                    .findFirst();
 
-            for (Exception e : querySession.getErrors()) {
-                LOG.error(e.getMessage() != null ? e.getMessage() : "ERROR", e);
-                if (firstException == null)
-                    firstException = e;
-            }
-
-            if (firstException != null) {
-                if (firstException instanceof IOException) {
-                    if (firstException instanceof ClientAbortException) {
-                        if (LOG.isDebugEnabled())
-                            LOG.debug("Remote connection closed by client", firstException); // Stacktrace in debug
-                        else
-                            LOG.error("{}-{}: {}-- Remote connection closed by client (Enable debug for stacktrace)", context.getTransactionId(),
-                                    context.getSegmentId(), context.getDataSource());
-                    } else {
-                        throw (IOException) firstException;
-                    }
-                } else {
-                    throw new IOException(firstException.getMessage(), firstException);
-                }
+            if (firstException.isPresent()) {
+                Exception e = firstException.get();
+                throw new IOException(e.getMessage(), e);
             }
         }
     }

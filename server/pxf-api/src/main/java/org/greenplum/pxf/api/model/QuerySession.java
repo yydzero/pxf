@@ -26,7 +26,7 @@ public class QuerySession<T, M> {
 
     private final AtomicBoolean queryCancelled;
     private final AtomicBoolean queryErrored;
-    //    private final AtomicInteger activeSegments;
+        private final AtomicInteger activeSegments;
     private final AtomicBoolean finishedProducing;
 
     private final String queryId;
@@ -65,7 +65,7 @@ public class QuerySession<T, M> {
         this.queryCancelled = new AtomicBoolean(false);
         this.queryErrored = new AtomicBoolean(false);
         this.finishedProducing = new AtomicBoolean(false);
-//        this.activeSegments = new AtomicInteger(0);
+        this.activeSegments = new AtomicInteger(0);
         this.outputQueue = new LinkedBlockingDeque<>(200);
         this.processorQueue = new LinkedBlockingDeque<>();
         this.totalSegments = totalSegments;
@@ -126,7 +126,7 @@ public class QuerySession<T, M> {
      * @param processor the processor
      */
     public void registerProcessor(Processor<T> processor) throws InterruptedException {
-//        activeSegments.incrementAndGet();
+        activeSegments.incrementAndGet();
         processorQueue.put(processor);
     }
 
@@ -137,10 +137,11 @@ public class QuerySession<T, M> {
      * @param segmentId the segment identifier
      */
     public void deregisterSegment(int segmentId) {
-//        if (activeSegments.decrementAndGet() == 0) {
-//            endTime = Instant.now();
-//            querySplitList = null;
-//        }
+        if (activeSegments.decrementAndGet() == 0) {
+            endTime = Instant.now();
+            outputQueue.clear(); // unblock producers in the case of error
+            querySplitList = null;
+        }
     }
 
     /**
