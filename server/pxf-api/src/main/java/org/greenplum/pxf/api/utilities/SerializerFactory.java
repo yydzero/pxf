@@ -24,10 +24,9 @@ public class SerializerFactory {
 
         if (context.getOutputFormat() == OutputFormat.TEXT) {
             return new CsvSerializer(context.getGreenplumCSV());
+        } else if (context.getOutputFormat() == OutputFormat.Binary) {
+            return new BinarySerializer();
         }
-//        else if (context.getOutputFormat() == OutputFormat.BINARY) {
-//            return new BinarySerializer();
-//        }
 
         throw new UnsupportedOperationException("The output format is not supported");
     }

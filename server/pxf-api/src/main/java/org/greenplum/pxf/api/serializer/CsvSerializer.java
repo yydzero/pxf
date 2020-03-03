@@ -66,10 +66,4 @@ public class CsvSerializer extends BaseSerializer {
     public void endRow() throws IOException {
         stringValueHandler.handle(buffer, greenplumCSV.getNewline());
     }
-
-    @Override
-    public void close() throws IOException {
-        buffer.flush();
-        buffer.close();
-    }
 }
