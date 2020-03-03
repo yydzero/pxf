@@ -12,8 +12,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import static javax.ws.rs.core.MediaType.APPLICATION_OCTET_STREAM;
 
 /**
  * This class handles the subpath /<version>/Controller/ of this
@@ -83,8 +84,7 @@ public class ControllerResource extends BaseResource {
      * @return response object containing stream that will output records
      */
     @GET
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    @SuppressWarnings("unchecked")
+    @Produces(APPLICATION_OCTET_STREAM)
     public Response read(@Context final ServletContext servletContext,
                          @Context HttpHeaders headers) {
 
@@ -94,10 +94,7 @@ public class ControllerResource extends BaseResource {
 //        boolean isThreadSafe = context.isThreadSafe() && processor.isThreadSafe();
 //        LOG.debug("Request for {} will be handled {} synchronization", context.getDataSource(), (isThreadSafe ? "without" : "with"));
 
-        Processor<?> processor = processorFactory.getPlugin(context);
         // TODO: lock when not thread safe
-        return Response
-                .ok(processor, MediaType.APPLICATION_OCTET_STREAM)
-                .build();
+        return Response.ok(processorFactory.getPlugin(context), APPLICATION_OCTET_STREAM).build();
     }
 }

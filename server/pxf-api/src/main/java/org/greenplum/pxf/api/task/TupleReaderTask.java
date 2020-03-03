@@ -42,7 +42,7 @@ public class TupleReaderTask<T, M> implements Runnable {
     @Override
     public void run() {
         if (!querySession.isActive()) {
-            LOG.debug("Query {} is no longer active", querySession);
+            // Query is no longer active because of an error or cancellation
             return;
         }
 
@@ -61,7 +61,7 @@ public class TupleReaderTask<T, M> implements Runnable {
                     batch = new ArrayList<>(batchSize);
                 }
             }
-            if (querySession.isActive() && !batch.isEmpty()) {
+            if (!batch.isEmpty() && querySession.isActive()) {
                 totalRows += batch.size();
                 outputQueue.put(batch);
             }
