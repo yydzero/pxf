@@ -7,7 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 
-public class LocalDateValueHandler extends BaseBinaryValueHandler<LocalDate> {
+public class LocalDateValueHandler extends BaseBinaryValueHandler<String> {
 
     private ValueConverter<LocalDate, Integer> dateConverter;
 
@@ -21,8 +21,8 @@ public class LocalDateValueHandler extends BaseBinaryValueHandler<LocalDate> {
     }
 
     @Override
-    protected void internalHandle(DataOutputStream buffer, final LocalDate value) throws IOException {
+    protected void internalHandle(DataOutputStream buffer, final String value) throws IOException {
         buffer.writeInt(4);
-        buffer.writeInt(dateConverter.convert(value));
+        buffer.writeInt(dateConverter.convert(LocalDate.parse(value)));
     }
 }
