@@ -7,7 +7,7 @@ import java.io.OutputStream;
 
 public interface Serializer extends AutoCloseable {
 
-    void open(final OutputStream out);
+    void open(final OutputStream out) throws IOException;
 
     void startRow(int numColumns) throws IOException;
 

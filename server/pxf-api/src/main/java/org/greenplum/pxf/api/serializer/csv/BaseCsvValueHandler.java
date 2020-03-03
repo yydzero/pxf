@@ -2,16 +2,22 @@ package org.greenplum.pxf.api.serializer.csv;
 
 import org.greenplum.pxf.api.serializer.ValueHandler;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 
 public abstract class BaseCsvValueHandler<T> implements ValueHandler<T> {
 
     @Override
-    public void handle(OutputStreamWriter writer, T value) throws IOException {
-        internalHandle(writer, value);
+    public void handle(DataOutputStream buffer, T value) throws IOException {
+        internalHandle(buffer, value);
     }
 
-    protected abstract void internalHandle(OutputStreamWriter writer, final T value)
+    protected abstract void internalHandle(DataOutputStream buffer, final T value)
             throws IOException;
+
+    protected void writeString(DataOutputStream buffer, String value) throws IOException {
+        buffer.write(value.getBytes(StandardCharsets.UTF_8));
+    }
 }

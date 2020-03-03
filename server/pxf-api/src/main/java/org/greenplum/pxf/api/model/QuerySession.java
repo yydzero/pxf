@@ -4,6 +4,8 @@ import com.google.common.base.Objects;
 import org.apache.catalina.connector.ClientAbortException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.greenplum.pxf.api.task.ProducerTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.Deque;
@@ -24,9 +26,11 @@ import static java.util.Objects.requireNonNull;
  */
 public class QuerySession<T, M> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(QuerySession.class);
+
     private final AtomicBoolean queryCancelled;
     private final AtomicBoolean queryErrored;
-        private final AtomicInteger activeSegments;
+    private final AtomicInteger activeSegments;
     private final AtomicBoolean finishedProducing;
 
     private final String queryId;
@@ -126,6 +130,11 @@ public class QuerySession<T, M> {
      * @param processor the processor
      */
     public void registerProcessor(Processor<T> processor) throws InterruptedException {
+        if (!isActive()) {
+            LOG.debug("Skip registering processor because the query session is no longer active");
+            return;
+        }
+
         activeSegments.incrementAndGet();
         processorQueue.put(processor);
     }
@@ -213,6 +222,10 @@ public class QuerySession<T, M> {
         return metadata;
     }
 
+    public void setMetadata(M metadata) {
+        this.metadata = metadata;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -241,9 +254,5 @@ public class QuerySession<T, M> {
     @Override
     public int hashCode() {
         return Objects.hashCode(queryId);
-    }
-
-    public void setMetadata(M metadata) {
-        this.metadata = metadata;
     }
 }

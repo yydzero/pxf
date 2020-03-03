@@ -5,26 +5,29 @@ import org.greenplum.pxf.api.model.BaseSerializer;
 import org.greenplum.pxf.api.model.GreenplumCSV;
 import org.greenplum.pxf.api.serializer.csv.CsvValueHandlerProvider;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
+
+import static java.util.Objects.requireNonNull;
 
 public class CsvSerializer extends BaseSerializer {
 
+    private final String delimiter;
     private final GreenplumCSV greenplumCSV;
     private final ValueHandlerProvider valueHandlerProvider;
+    private final ValueHandler<String> stringValueHandler;
     private int currentField;
-    private OutputStreamWriter writer;
+
+    private transient DataOutputStream buffer;
+//    private OutputStreamWriter writer;
 
     public CsvSerializer(GreenplumCSV greenplumCSV) {
-        this.greenplumCSV = greenplumCSV;
+        this.greenplumCSV = requireNonNull(greenplumCSV, "greenpplumCSV is null");
         this.valueHandlerProvider = new CsvValueHandlerProvider();
-    }
-
-    @Override
-    public void open(final OutputStream out) {
-        writer = new OutputStreamWriter(out, StandardCharsets.UTF_8);
+        this.stringValueHandler = valueHandlerProvider.resolve(DataType.TEXT);
+        this.delimiter = String.valueOf(greenplumCSV.getDelimiter());
     }
 
     @Override
@@ -34,8 +37,8 @@ public class CsvSerializer extends BaseSerializer {
 
     @Override
     public void startField() throws IOException {
-        if (currentField > 0) {
-            writer.write(greenplumCSV.getDelimiter());
+        if (currentField > 0 && greenplumCSV.getDelimiter() != null) {
+            stringValueHandler.handle(buffer, delimiter);
         }
     }
 
@@ -43,14 +46,14 @@ public class CsvSerializer extends BaseSerializer {
     public <T> void writeField(DataType dataType, T field) throws IOException {
         currentField++;
         if (field == null) {
-            writer.write(greenplumCSV.getValueOfNull());
+            stringValueHandler.handle(buffer, greenplumCSV.getValueOfNull());
         } else {
             // TODO: best effort to resolve the field to the greenplum datatype
             if (DataType.isTextForm(dataType.getOID()) && !DataType.isArrayType(dataType.getOID()) && field instanceof String) {
-                valueHandlerProvider.resolve(DataType.TEXT).handle(writer,
+                stringValueHandler.handle(buffer,
                         greenplumCSV.toCsvField((String) field, true, true, true));
             } else {
-                valueHandlerProvider.resolve(dataType).handle(writer, field);
+                valueHandlerProvider.resolve(dataType).handle(buffer, field);
             }
         }
     }
@@ -61,12 +64,12 @@ public class CsvSerializer extends BaseSerializer {
 
     @Override
     public void endRow() throws IOException {
-        writer.write(greenplumCSV.getNewline());
+        stringValueHandler.handle(buffer, greenplumCSV.getNewline());
     }
 
     @Override
     public void close() throws IOException {
-        writer.flush();
-        writer.close();
+        buffer.flush();
+        buffer.close();
     }
 }

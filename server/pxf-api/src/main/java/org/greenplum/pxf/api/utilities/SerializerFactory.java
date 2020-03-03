@@ -3,6 +3,7 @@ package org.greenplum.pxf.api.utilities;
 import org.greenplum.pxf.api.model.OutputFormat;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.model.Serializer;
+import org.greenplum.pxf.api.serializer.BinarySerializer;
 import org.greenplum.pxf.api.serializer.CsvSerializer;
 
 public class SerializerFactory {
@@ -24,6 +25,9 @@ public class SerializerFactory {
         if (context.getOutputFormat() == OutputFormat.TEXT) {
             return new CsvSerializer(context.getGreenplumCSV());
         }
+//        else if (context.getOutputFormat() == OutputFormat.BINARY) {
+//            return new BinarySerializer();
+//        }
 
         throw new UnsupportedOperationException("The output format is not supported");
     }
