@@ -1,6 +1,5 @@
 package org.greenplum.pxf.service.rest;
 
-import org.greenplum.pxf.api.model.Processor;
 import org.greenplum.pxf.api.model.RequestContext;
 import org.greenplum.pxf.api.utilities.ProcessorFactory;
 import org.greenplum.pxf.service.HttpRequestParser;

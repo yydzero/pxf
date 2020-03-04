@@ -34,7 +34,12 @@ import org.greenplum.pxf.plugins.hdfs.parquet.SupportedParquetPrimitiveTypePrune
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -46,6 +51,8 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final TreeTraverser TRAVERSER = new TreeTraverser();
+
+    private static int ACCESS_COUNT = 0;
 
     public static final EnumSet<Operator> SUPPORTED_OPERATORS = EnumSet.of(
             Operator.NOOP,
@@ -393,7 +400,7 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
     private FragmentMetadata deserializeFragmentMetadata(byte[] bytes) {
         ByteBuffer buffer = ByteBuffer.allocate(2 * Long.BYTES);
         buffer.put(bytes);
-        buffer.flip();//need flip
+        buffer.flip(); // need flip
         return new FragmentMetadata(buffer.getLong(), buffer.getLong(), null);
     }
 }

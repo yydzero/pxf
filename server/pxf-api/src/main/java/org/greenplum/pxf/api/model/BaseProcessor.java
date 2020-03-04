@@ -92,7 +92,8 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
         LOG.info("{}-{}-- Starting streaming for {}", context.getTransactionId(), context.getSegmentId(), querySession);
 
         BlockingDeque<List<List<Object>>> outputQueue = querySession.getOutputQueue();
-        try (Serializer serializer = serializerFactory.getSerializer(context)) {
+        try {
+            Serializer serializer = serializerFactory.getSerializer(context);
             serializer.open(output);
 
             while (querySession.isActive()) {
@@ -111,6 +112,9 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
                 }
             }
 
+            if (querySession.isActive()) {
+                serializer.close();
+            }
         } catch (ClientAbortException e) {
             querySession.cancelQuery(e);
             // Occurs whenever client (Greenplum) decides to end the connection

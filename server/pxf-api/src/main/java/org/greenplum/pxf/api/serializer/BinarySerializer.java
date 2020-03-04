@@ -1,7 +1,6 @@
 package org.greenplum.pxf.api.serializer;
 
 import org.greenplum.pxf.api.io.DataType;
-import org.greenplum.pxf.api.model.BaseSerializer;
 import org.greenplum.pxf.api.serializer.binary.BinaryValueHandlerProvider;
 
 import java.io.IOException;
@@ -27,8 +26,7 @@ public class BinarySerializer extends BaseSerializer {
     }
 
     @Override
-    public void startField() throws IOException {
-
+    public void startField() {
     }
 
     @Override
@@ -37,21 +35,17 @@ public class BinarySerializer extends BaseSerializer {
     }
 
     @Override
-    public void endField() throws IOException {
-
+    public void endField() {
     }
 
     @Override
-    public void endRow() throws IOException {
-
+    public void endRow() {
     }
 
     @Override
     public void close() throws IOException {
         buffer.writeShort(-1);
-
-        buffer.flush();
-        buffer.close();
+        super.close();
     }
 
     private void writeHeader() throws IOException {

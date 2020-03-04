@@ -1,4 +1,6 @@
-package org.greenplum.pxf.api.model;
+package org.greenplum.pxf.api.serializer;
+
+import org.greenplum.pxf.api.model.Serializer;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;

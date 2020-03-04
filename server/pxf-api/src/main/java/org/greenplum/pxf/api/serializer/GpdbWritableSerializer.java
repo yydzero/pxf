@@ -1,7 +1,6 @@
 package org.greenplum.pxf.api.serializer;
 
 import org.greenplum.pxf.api.io.DataType;
-import org.greenplum.pxf.api.model.BaseSerializer;
 
 import java.io.IOException;
 import java.io.OutputStream;
