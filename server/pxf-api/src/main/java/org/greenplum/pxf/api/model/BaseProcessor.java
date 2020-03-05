@@ -111,6 +111,13 @@ public abstract class BaseProcessor<T, M> extends BasePlugin implements Processo
             }
 
             if (querySession.isActive()) {
+                /*
+                 * We only close the serializer when there are no errors in the
+                 * query execution, otherwise, we will flush the buffer to the
+                 * client and close the connection. When an error occurs we need
+                 * to discard the buffer, and replace it with an error page
+                 * and a new error code.
+                 */
                 serializer.close();
             }
         } catch (ClientAbortException e) {
