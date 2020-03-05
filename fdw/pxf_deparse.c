@@ -7,7 +7,7 @@
  * whether they're safe to send to the remote server for execution.
  *
  * IDENTIFICATION
- *		  contrib/pxf_fdw/pxf_deparse.c
+ *		  fdw/pxf_deparse.c
  *
  *-------------------------------------------------------------------------
  */

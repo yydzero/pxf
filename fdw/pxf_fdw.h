@@ -3,7 +3,7 @@
  *		  Foreign-data wrapper for PXF (Platform Extension Framework)
  *
  * IDENTIFICATION
- *		  contrib/pxf_fdw/pxf_fdw.h
+ *		  fdw/pxf_fdw.h
  */
 
 #include "postgres.h"
