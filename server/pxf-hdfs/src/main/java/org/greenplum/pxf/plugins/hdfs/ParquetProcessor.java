@@ -52,8 +52,6 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
 
     private static final TreeTraverser TRAVERSER = new TreeTraverser();
 
-    private static int ACCESS_COUNT = 0;
-
     public static final EnumSet<Operator> SUPPORTED_OPERATORS = EnumSet.of(
             Operator.NOOP,
             Operator.LESS_THAN,

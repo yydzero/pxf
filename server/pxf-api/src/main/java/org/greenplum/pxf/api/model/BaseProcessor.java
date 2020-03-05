@@ -7,8 +7,6 @@ import org.greenplum.pxf.api.utilities.SerializerFactory;
 import javax.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Deque;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.BlockingDeque;
