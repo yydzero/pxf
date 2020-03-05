@@ -34,6 +34,9 @@ Resources for PXF's Continuous Integration pipelines
 ## regression/
 Contains the end-to-end (integration) tests for PXF against the various datasources, utilizing the PostgreSQL testing framework `pg_regress`
 
+## fdw/
+Contains the Greenplum extension implementing a Foreign Data Wrapper (FDW) for PXF.
+
 PXF Development
 =================
 Below are the steps to build and install PXF along with its dependencies including GPDB and Hadoop.
