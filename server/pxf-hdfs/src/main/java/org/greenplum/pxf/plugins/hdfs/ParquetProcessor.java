@@ -17,6 +17,7 @@ import org.apache.parquet.hadoop.metadata.FileMetaData;
 import org.apache.parquet.hadoop.util.HadoopInputFile;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
+import org.greenplum.pxf.api.annotation.Protocol;
 import org.greenplum.pxf.api.filter.FilterParser;
 import org.greenplum.pxf.api.filter.Node;
 import org.greenplum.pxf.api.filter.Operator;
@@ -34,6 +35,8 @@ import org.greenplum.pxf.plugins.hdfs.parquet.SupportedParquetPrimitiveTypePrune
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -46,6 +49,10 @@ import java.util.stream.Collectors;
 import static org.apache.parquet.hadoop.api.ReadSupport.PARQUET_READ_SCHEMA;
 import static org.apache.parquet.schema.Type.Repetition.REPEATED;
 
+/**
+ * A PXF Processor to support Parquet file records
+ */
+@Protocol(name = "hcfs", format = "parquet", protocols = {"hdfs", "s3a", "adl", "gs", "wasbs"})
 public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
 
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -118,35 +125,49 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
         @Override
         public boolean hasNext() {
             if (group == null && fileReader != null) {
-                try {
-                    final long then = System.nanoTime();
-                    group = fileReader.read();
-                    final long nanos = System.nanoTime() - then;
-                    totalReadTimeInNanos += nanos;
-
-                    if (group == null) {
-                        closeForRead();
-                    }
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
+                readNext();
             }
             return group != null;
         }
 
         @Override
         public Group next() {
+            if (group == null) {
+                readNext();
+
+                if (group == null)
+                    throw new NoSuchElementException();
+            }
+
             totalRowsRead++;
             Group result = group;
             group = null;
             return result;
         }
 
+        private void readNext() throws RuntimeException {
+            if (fileReader == null) throw new NoSuchElementException();
+            try {
+                Instant start = Instant.now();
+                group = fileReader.read();
+                totalReadTimeInNanos += Duration.between(start, Instant.now()).toNanos();
+                if (group == null) {
+                    closeForRead();
+                }
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+
         private void closeForRead() throws IOException {
+            if (fileReader != null) {
+                fileReader.close();
+                fileReader = null;
+            }
             if (LOG.isDebugEnabled()) {
                 final long millis = TimeUnit.NANOSECONDS.toMillis(totalReadTimeInNanos);
                 long average = totalRowsRead > 0 ? totalReadTimeInNanos / totalRowsRead : 0;
-                LOG.debug("{}-{}: Read TOTAL of {} rows from file {} on server {} in {} ms. Average speed: {} nanoseconds",
+                LOG.debug("{}-{}: Read TOTAL of {} rows from file {} on server {} in {} ms. Average speed: {} nanoseconds/row",
                         context.getTransactionId(),
                         context.getSegmentId(),
                         totalRowsRead,
@@ -155,15 +176,20 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
                         millis,
                         average);
             }
-            if (fileReader != null) {
-                fileReader.close();
-                fileReader = null;
-            }
         }
     }
 
     @Override
     public Iterator<Object> getFields(Group tuple) throws IOException {
+        /*
+         * In some cases, a thread processes no splits, but the thread still
+         * processes tuples. For example, in the case of a segment with 3 hosts
+         * and a single split. Only 1 host will process the split, but all 3
+         * hosts will process the resulting tuples from the split. For that
+         * reason, we need to ensure the schema has been initialized, otherwise
+         * a NullPointerException will occur when trying to read the type from
+         * the schema.
+         */
         ensureReadSchemaInitialized(null);
         return new FieldItr(tuple, context.getTupleDescription());
     }
@@ -395,7 +421,8 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
         return value;
     }
 
-    private FragmentMetadata deserializeFragmentMetadata(byte[] bytes) {
+    // TODO: deduplicate this code (also found in HcfsSplittableDataProcessor)
+    protected FragmentMetadata deserializeFragmentMetadata(byte[] bytes) {
         ByteBuffer buffer = ByteBuffer.allocate(2 * Long.BYTES);
         buffer.put(bytes);
         buffer.flip(); // need flip

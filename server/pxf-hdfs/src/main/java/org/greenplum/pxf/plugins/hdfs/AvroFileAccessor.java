@@ -81,7 +81,6 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
         super.initialize(context);
 
         schema = avroUtilities.obtainSchema(this.context, configuration, hcfsType);
-
     }
 
     @Override

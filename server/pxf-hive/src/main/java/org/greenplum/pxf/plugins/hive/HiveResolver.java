@@ -139,7 +139,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
+    public OneRow setFields(List<OneField> record) {
         throw new UnsupportedOperationException();
     }
 
