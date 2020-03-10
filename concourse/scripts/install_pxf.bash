@@ -10,17 +10,26 @@ REALM=${REALM:-}
 REALM_2=${REALM_2:-}
 GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-data-gpdb-ud}
 KERBEROS=${KERBEROS:-false}
-if [[ -f terraform_dataproc/name ]]; then
-	HADOOP_HOSTNAME=ccp-$(< terraform_dataproc/name)-m
-	HADOOP_IP=$(getent hosts "${HADOOP_HOSTNAME}.c.${GOOGLE_PROJECT_ID}.internal" | awk '{ print $1 }')
-elif [[ -f dataproc_env_files/name ]]; then
-	HADOOP_HOSTNAME=$(< dataproc_env_files/name)
-	HADOOP_IP=$(getent hosts "${HADOOP_HOSTNAME}.c.${GOOGLE_PROJECT_ID}.internal" | awk '{ print $1 }')
-	REALM=$(< dataproc_env_files/REALM)
-else
-	HADOOP_HOSTNAME=hadoop
-	HADOOP_IP=$(grep < cluster_env_files/etc_hostfile edw0 | awk '{print $1}')
-fi
+function get_hadoop_ip() {
+	if [[ $SKIP_HADOOP_SETUP == true ]]; then
+		HADOOP_IP=''
+		return
+	fi
+	if [[ -f terraform_dataproc/name ]]; then
+		HADOOP_HOSTNAME=ccp-$(< terraform_dataproc/name)-m
+		HADOOP_IP=$(getent hosts "${HADOOP_HOSTNAME}.c.${GOOGLE_PROJECT_ID}.internal" | awk '{ print $1 }')
+	elif [[ -f dataproc_env_files/name ]]; then
+		HADOOP_HOSTNAME=$(< dataproc_env_files/name)
+		HADOOP_IP=$(getent hosts "${HADOOP_HOSTNAME}.c.${GOOGLE_PROJECT_ID}.internal" | awk '{ print $1 }')
+		REALM=$(< dataproc_env_files/REALM)
+	else
+		HADOOP_HOSTNAME=hadoop
+		HADOOP_IP=$(grep < cluster_env_files/etc_hostfile edw0 | awk '{print $1}')
+	fi
+}
+SKIP_HADOOP_SETUP=${SKIP_HADOOP_SETUP:-false}
+get_hadoop_ip
+
 PROXY_USER=${PROXY_USER:-pxfuser}
 PXF_CONF_DIR=~gpadmin/pxf
 INSTALL_GPHDFS=${INSTALL_GPHDFS:-true}

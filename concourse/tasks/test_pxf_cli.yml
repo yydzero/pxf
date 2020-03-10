@@ -1,0 +1,16 @@
+platform: linux
+image_resource:
+  type: docker-image
+inputs:
+  - name: pxf_src
+  - name: cluster_env_files
+  - name: bin_gpdb
+  - name: pxf_tarball
+params:
+  ACCEPTANCE:
+  PXF_JVM_OPTS:
+  TARGET_OS: centos
+  TARGET_OS_VERSION: 6
+run:
+  path: pxf_src/concourse/scripts/test_pxf_cli.bash
+
