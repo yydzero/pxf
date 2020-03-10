@@ -5,7 +5,6 @@ import (
 	"pxf-cli/cmd"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
-	"github.com/greenplum-db/gp-common-go-libs/operating"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,59 +23,35 @@ var (
 	}
 )
 
-var _ = Describe("CountHostsExcludingMaster()", func() {
-	It("calculates the correct number of hosts when run from master", func() {
-		operating.System.Hostname = func() (string, error) {
-			return "mdw", nil
-		}
-		err := clusterData.CountHostsExcludingMaster()
-		Expect(err).To(BeNil())
-		Expect(clusterData.NumHosts).To(Equal(2))
-	})
-})
-
-var _ = Describe("GenerateStatusReport()", func() {
-	BeforeEach(func() {
-		clusterData.NumHosts = 2
-	})
-	It("reports the number of hosts that will be initialized", func() {
-		_ = cmd.GenerateStatusReport(&cmd.InitCommand, clusterData)
-		Expect(testStdout).Should(gbytes.Say("Initializing PXF on master and 2 other hosts..."))
-	})
-
-	It("reports the number of hosts that will be started", func() {
-		_ = cmd.GenerateStatusReport(&cmd.StartCommand, clusterData)
-		Expect(testStdout).Should(gbytes.Say("Starting PXF on 2 segment hosts..."))
-	})
-
-	It("reports the number of hosts that will be stopped", func() {
-		_ = cmd.GenerateStatusReport(&cmd.StopCommand, clusterData)
-		Expect(testStdout).Should(gbytes.Say("Stopping PXF on 2 segment hosts..."))
-	})
-
-	It("reports the number of hosts that will be synced", func() {
-		_ = cmd.GenerateStatusReport(&cmd.SyncCommand, clusterData)
-		Expect(testStdout).Should(gbytes.Say("Syncing PXF configuration files to 2 hosts..."))
-	})
-
-	It("reports the number of hosts that are getting status checked", func() {
-		_ = cmd.GenerateStatusReport(&cmd.StatusCommand, clusterData)
-		Expect(testStdout).Should(gbytes.Say("Checking status of PXF servers on 2 hosts..."))
-	})
-
-	It("reports the number of hosts that are getting reset", func() {
-		_ = cmd.GenerateStatusReport(&cmd.ResetCommand, clusterData)
-		Expect(testStdout).Should(gbytes.Say("Resetting PXF on master and 2 other hosts..."))
-	})
-})
-
 var _ = Describe("GenerateOutput()", func() {
 	BeforeEach(func() {
 		clusterData.Output = &cluster.RemoteOutput{
 			NumErrors: 0,
-			Stderrs:   map[int]string{-1: "", 0: "", 1: ""},
-			Stdouts:   map[int]string{-1: "everything fine", 0: "everything fine", 1: "everything fine"},
-			Errors:    map[int]error{-1: nil, 0: nil, 1: nil},
+			FailedCommands: []*cluster.ShellCommand{
+				nil,
+				nil,
+				nil,
+			},
+			Commands: []cluster.ShellCommand{
+				{
+					Host:   "mdw",
+					Stdout: "everything fine",
+					Stderr: "",
+					Error:  nil,
+				},
+				{
+					Host:   "sdw1",
+					Stdout: "everything fine",
+					Stderr: "",
+					Error:  nil,
+				},
+				{
+					Host:   "sdw2",
+					Stdout: "everything fine",
+					Stderr: "",
+					Error:  nil,
+				},
+			},
 		}
 	})
 	Context("when all hosts are successful", func() {
@@ -113,11 +88,32 @@ var _ = Describe("GenerateOutput()", func() {
 
 	Context("when some hosts fail", func() {
 		BeforeEach(func() {
+			failedCommand := cluster.ShellCommand{
+				Host:   "sdw2",
+				Stdout: "",
+				Stderr: "an error happened on sdw2",
+				Error:  errors.New("some error"),
+			}
 			clusterData.Output = &cluster.RemoteOutput{
 				NumErrors: 1,
-				Stderrs:   map[int]string{-1: "", 0: "", 1: "an error happened on sdw2"},
-				Stdouts:   map[int]string{-1: "everything fine", 0: "everything fine", 1: "something wrong"},
-				Errors:    map[int]error{-1: nil, 0: nil, 1: errors.New("some error")},
+				FailedCommands: []*cluster.ShellCommand{
+					&failedCommand,
+				},
+				Commands: []cluster.ShellCommand{
+					{
+						Host:   "mdw",
+						Stdout: "everything fine",
+						Stderr: "",
+						Error:  nil,
+					},
+					{
+						Host:   "sdw1",
+						Stdout: "everything fine",
+						Stderr: "",
+						Error:  nil,
+					},
+					failedCommand,
+				},
 			}
 		})
 		It("reports the number of hosts that failed to initialize", func() {
@@ -161,9 +157,26 @@ var _ = Describe("GenerateOutput()", func() {
 		It("reports all hosts were successful", func() {
 			clusterData.Output = &cluster.RemoteOutput{
 				NumErrors: 0,
-				Stderrs:   map[int]string{-1: "typical stderr", 0: "typical stderr", 1: "typical stderr"},
-				Stdouts:   map[int]string{-1: "typical stdout", 0: "typical stdout", 1: "typical stdout"},
-				Errors:    map[int]error{-1: nil, 0: nil, 1: nil},
+				Commands: []cluster.ShellCommand{
+					{
+						Host:   "mdw",
+						Stdout: "typical stdout",
+						Stderr: "typical stderr",
+						Error:  nil,
+					},
+					{
+						Host:   "sdw1",
+						Stdout: "typical stdout",
+						Stderr: "typical stderr",
+						Error:  nil,
+					},
+					{
+						Host:   "sdw2",
+						Stdout: "typical stdout",
+						Stderr: "typical stderr",
+						Error:  nil,
+					},
+				},
 			}
 			_ = cmd.GenerateOutput(&cmd.StopCommand, clusterData)
 			Expect(testStdout).To(gbytes.Say("PXF stopped successfully on 3 out of 3 hosts"))
@@ -175,11 +188,32 @@ var _ = Describe("GenerateOutput()", func() {
 			stderr := `stderr line one
 stderr line two
 stderr line three`
+			failedCommand := cluster.ShellCommand{
+				Host:   "sdw2",
+				Stdout: "everything not fine",
+				Stderr: stderr,
+				Error:  errors.New("some error"),
+			}
 			clusterData.Output = &cluster.RemoteOutput{
 				NumErrors: 1,
-				Stderrs:   map[int]string{-1: "", 0: "", 1: stderr},
-				Stdouts:   map[int]string{-1: "everything fine", 0: "everything fine", 1: "everything not fine"},
-				Errors:    map[int]error{-1: nil, 0: nil, 1: errors.New("some error")},
+				FailedCommands: []*cluster.ShellCommand{
+					&failedCommand,
+				},
+				Commands: []cluster.ShellCommand{
+					{
+						Host:   "mdw",
+						Stdout: "everything fine",
+						Stderr: "",
+						Error:  nil,
+					},
+					{
+						Host:   "sdw1",
+						Stdout: "everything fine",
+						Stderr: "",
+						Error:  nil,
+					},
+					failedCommand,
+				},
 			}
 			_ = cmd.GenerateOutput(&cmd.StopCommand, clusterData)
 			Expect(testStdout).Should(gbytes.Say(fmt.Sprintf("PXF failed to stop on 1 out of 3 hosts")))
@@ -189,11 +223,32 @@ stderr line three`
 
 	Context("when NumErrors is non-zero, but Stderr is empty", func() {
 		It("reports Stdout in error message", func() {
+			failedCommand := cluster.ShellCommand{
+				Host:   "sdw2",
+				Stdout: "something wrong on sdw2\nstderr line2\nstderr line3",
+				Stderr: "",
+				Error:  errors.New("some error"),
+			}
 			clusterData.Output = &cluster.RemoteOutput{
 				NumErrors: 1,
-				Stderrs:   map[int]string{-1: "", 0: "", 1: ""},
-				Stdouts:   map[int]string{-1: "everything fine", 0: "everything fine", 1: "something wrong on sdw2\nstderr line2\nstderr line3"},
-				Errors:    map[int]error{-1: nil, 0: nil, 1: errors.New("some error")},
+				FailedCommands: []*cluster.ShellCommand{
+					&failedCommand,
+				},
+				Commands: []cluster.ShellCommand{
+					{
+						Host:   "mdw",
+						Stdout: "everything fine",
+						Stderr: "",
+						Error:  nil,
+					},
+					{
+						Host:   "sdw1",
+						Stdout: "everything fine",
+						Stderr: "",
+						Error:  nil,
+					},
+					failedCommand,
+				},
 			}
 			_ = cmd.GenerateOutput(&cmd.StopCommand, clusterData)
 			Expect(testStdout).Should(gbytes.Say("PXF failed to stop on 1 out of 3 hosts"))
