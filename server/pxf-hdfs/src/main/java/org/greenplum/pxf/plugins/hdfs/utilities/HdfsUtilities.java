@@ -158,7 +158,7 @@ public class HdfsUtilities {
             if (complex.type == DataType.BYTEA.getOID()) {
                 // Serialize byte array as string
                 buff.append(delim);
-                Utilities.byteArrayToOctalString((byte[]) complex.val, buff);
+
             } else {
                 buff.append(delim).append(complex.val);
             }

@@ -109,7 +109,7 @@ public class AvroFileAccessor extends HdfsSplittableDataAccessor {
      */
     @Override
     public OneRow readNextObject() throws IOException {
-        /** Resetting datum to null, to avoid stale bytes to be padded from the previous row's datum */
+        /* Resetting datum to null, to avoid stale bytes to be padded from the previous row's datum */
         avroWrapper.datum(null);
         if (reader.next(avroWrapper, NullWritable.get())) { // There is one more record in the current split.
             rowsRead++;

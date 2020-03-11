@@ -19,7 +19,6 @@ package org.greenplum.pxf.api.examples;
  * under the License.
  */
 
-import com.google.common.collect.Lists;
 import org.greenplum.pxf.api.model.BaseProcessor;
 import org.greenplum.pxf.api.model.QuerySplit;
 import org.greenplum.pxf.api.model.QuerySplitter;

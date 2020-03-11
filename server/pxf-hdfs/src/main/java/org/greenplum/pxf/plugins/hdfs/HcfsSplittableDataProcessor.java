@@ -1,5 +1,7 @@
 package org.greenplum.pxf.plugins.hdfs;
 
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
@@ -32,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  * V: the type of the value that the record reader returns
  * S: the type of the schema used by the Processor
  */
-public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor<V, S> {
+public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor<Pair<K, V>, S> {
 
     protected JobConf jobConf;
     protected final InputFormat<K, V> inputFormat;
@@ -65,7 +67,7 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
      * {@inheritDoc}
      */
     @Override
-    public Iterator<V> getTupleIterator(QuerySplit split) throws IOException {
+    public Iterator<Pair<K, V>> getTupleIterator(QuerySplit split) throws IOException {
         return new RecordTupleItr(split);
     }
 
@@ -90,27 +92,37 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
      */
     abstract protected RecordReader<K, V> getReader(JobConf conf, InputSplit split) throws IOException;
 
-    protected class RecordTupleItr implements Iterator<V> {
+    protected class RecordTupleItr implements Iterator<Pair<K, V>> {
 
-        private final K key;
-        private final V value;
+        protected final K key;
+        protected final V value;
+
+        /**
+         * The next key on the iterator
+         */
+        protected K nextKey;
 
         /**
          * The next value on the iterator
          */
-        private V nextValue;
+        protected V nextValue;
 
         protected RecordReader<K, V> reader;
 
         /**
          * Records the total number of rows read from this iterator
          */
-        private long totalRowsRead;
+        protected long totalRowsRead;
 
         /**
          * Records the total read time in nanoseconds
          */
-        private long totalReadTimeInNanos;
+        protected long totalReadTimeInNanos;
+
+        /**
+         * Wraps the pair result
+         */
+        private final MutablePair<K, V> result;
 
         /**
          * Creates a new tuple iterator for record splits
@@ -118,17 +130,22 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
          * @param split the record split
          */
         public RecordTupleItr(QuerySplit split) {
+            this(split, null, null);
+        }
+
+        public RecordTupleItr(QuerySplit split, K key, V value) {
             Path file = new Path(hcfsType.getDataUri(configuration, context.getDataSource() + split.getResource()));
             FragmentMetadata metadata = deserializeFragmentMetadata(split.getMetadata());
             InputSplit fileSplit = new FileSplit(file, metadata.getStart(), metadata.getEnd(), (String[]) null);
 
             try {
-                reader = getReader(jobConf, fileSplit);
+                this.reader = getReader(jobConf, fileSplit);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            key = reader.createKey();
-            value = reader.createValue();
+            this.key = key != null ? key : reader.createKey();
+            this.value = value != null ? value : reader.createValue();
+            this.result = new MutablePair<>();
         }
 
         /**
@@ -146,7 +163,7 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
          * {@inheritDoc}
          */
         @Override
-        public V next() {
+        public Pair<K, V> next() {
             if (nextValue == null) {
                 readNext();
 
@@ -155,7 +172,9 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
             }
 
             totalRowsRead++;
-            V result = nextValue;
+            result.setLeft(nextKey);
+            result.setRight(nextValue);
+            nextKey = null;
             nextValue = null;
             return result;
         }
@@ -163,18 +182,19 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
         /**
          * Reads the next key/value pair from the reader
          *
-         * @throws NoSuchElementException when the has already been closed
+         * @throws NoSuchElementException when the reader has already been closed
          * @throws RuntimeException       when an IOException occurs, it gets wrapped in a RuntimeException
          */
-        private void readNext() throws RuntimeException {
+        protected void readNext() throws RuntimeException {
             if (reader == null) throw new NoSuchElementException();
             try {
                 Instant start = Instant.now();
-                if (!reader.next(key, value)) {
-                    closeForRead();
-                } else {
+                if (reader.next(key, value)) {
                     totalReadTimeInNanos += Duration.between(start, Instant.now()).toNanos();
+                    nextKey = key;
                     nextValue = value;
+                } else {
+                    closeForRead();
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -204,6 +224,9 @@ public abstract class HcfsSplittableDataProcessor<K, V, S> extends BaseProcessor
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isThreadSafe() {
         return HdfsUtilities.isThreadSafe(

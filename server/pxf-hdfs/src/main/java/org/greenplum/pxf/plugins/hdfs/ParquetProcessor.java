@@ -198,7 +198,7 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
         private final Group row;
         private final List<ColumnDescriptor> tupleDescription;
         private int columnIndex = 0;
-        private int i = 0;
+        private int currentColumn = 0;
         private final int totalColumns;
 
         public FieldItr(Group row, List<ColumnDescriptor> tupleDescription) {
@@ -209,16 +209,16 @@ public class ParquetProcessor extends BaseProcessor<Group, MessageType> {
 
         @Override
         public boolean hasNext() {
-            return i < totalColumns;
+            return currentColumn < totalColumns;
         }
 
         @Override
         public Object next() {
-            if (i >= totalColumns)
+            if (currentColumn >= totalColumns)
                 throw new NoSuchElementException();
 
             Object result;
-            ColumnDescriptor columnDescriptor = tupleDescription.get(i++);
+            ColumnDescriptor columnDescriptor = tupleDescription.get(currentColumn++);
             if (!columnDescriptor.isProjected()) {
                 result = null;
             } else if (readSchema.getType(columnIndex).isPrimitive()) {
