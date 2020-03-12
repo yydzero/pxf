@@ -749,4 +749,13 @@ under the License.
         </plugins>
         <protocol>wasbs</protocol>
     </profile>
+    <profile>
+        <name>demo</name>
+        <description>Test the PXF demo</description>
+        <plugins>
+            <fragmenter>org.greenplum.pxf.api.examples.DemoFragmenter</fragmenter>
+            <accessor>org.greenplum.pxf.api.examples.DemoAccessor</accessor>
+            <resolver>org.greenplum.pxf.api.examples.DemoTextResolver</resolver>
+        </plugins>
+    </profile>
 </profiles>

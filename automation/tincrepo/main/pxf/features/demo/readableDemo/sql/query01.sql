@@ -1,0 +1,1 @@
+SELECT * FROM demo_table ORDER BY a;

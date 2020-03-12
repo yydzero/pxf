@@ -1,0 +1,10 @@
+SELECT * FROM demo_table ORDER BY a;
+a        |   b    |   c
+----------------+--------+--------
+ fragment1 row1 | value1 | value2
+ fragment1 row2 | value1 | value2
+ fragment2 row1 | value1 | value2
+ fragment2 row2 | value1 | value2
+ fragment3 row1 | value1 | value2
+ fragment3 row2 | value1 | value2
+(6 rows)
