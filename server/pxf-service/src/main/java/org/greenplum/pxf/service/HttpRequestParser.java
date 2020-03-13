@@ -14,7 +14,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -235,7 +237,7 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
                     context.setAccessor(handler.getAccessorClassName(context));
                     context.setResolver(handler.getResolverClassName(context));
                 } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
-			 InstantiationException | IllegalAccessException e) {
+                        InstantiationException | IllegalAccessException e) {
                     throw new RuntimeException(String.format("Error when invoking handlerClass '%s' : %s", handlerClassName, e), e);
                 }
             }
@@ -391,22 +393,53 @@ public class HttpRequestParser implements RequestParser<HttpHeaders> {
         private static final String PROP_PREFIX = "X-GP-";
         private static final String USER_PROP_PREFIX = "X-GP-OPTIONS-";
         private static final String USER_PROP_PREFIX_LOWERCASE = "x-gp-options-";
+        private static final String ENCODED_HEADER_VALUES_NAME = PROP_PREFIX + "ENCODED-HEADER-VALUES";
 
         RequestMap(MultivaluedMap<String, String> requestHeaders) {
             super(String.CASE_INSENSITIVE_ORDER);
-            for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
-                List<String> values = entry.getValue();
-                if (values == null) continue;
 
-                String value = values.size() > 1 ? StringUtils.join(values, ",") : values.get(0);
+            boolean decodeHeaderValue = false;
+            for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
+                if (StringUtils.equalsIgnoreCase(ENCODED_HEADER_VALUES_NAME, entry.getKey())) {
+                    String value = getValue(entry.getValue());
+                    decodeHeaderValue = StringUtils.equalsIgnoreCase("true", value);
+                    break;
+                }
+            }
+
+            for (Map.Entry<String, List<String>> entry : requestHeaders.entrySet()) {
+                String value = getValue(entry.getValue());
                 if (value == null) continue;
 
-                // Converting to value UTF-8 encoding
                 String key = entry.getKey();
-                value = new String(value.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+                if (decodeHeaderValue && StringUtils.startsWithIgnoreCase(key, PROP_PREFIX)) {
+                    try {
+                        value = URLDecoder.decode(value, StandardCharsets.UTF_8.name());
+                    } catch (UnsupportedEncodingException e) {
+                        throw new RuntimeException(String.format("Error while URL decoding value '%s'", value), e);
+                    }
+                }
                 LOG.trace("Key: {} Value: {}", key, value);
                 put(key, value.replace("\\\"", "\""));
             }
+        }
+
+        /**
+         * Returns the value from the list of values. If the list has 1 element,
+         * it returns the element. If the list has more than one element, it
+         * returns a flattened string joined with a comma.
+         *
+         * @param values the list of values
+         * @return the value
+         */
+        private String getValue(List<String> values) {
+            if (values == null) return null;
+
+            String value = values.size() > 1 ? StringUtils.join(values, ",") : values.get(0);
+            if (value == null) return null;
+
+            // Converting to value UTF-8 encoding
+            return new String(value.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
         }
 
         /**

@@ -39,6 +39,8 @@ import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import javax.ws.rs.core.MultivaluedMap;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -562,6 +564,38 @@ public class HttpRequestParserTest {
     public void testReadPath() {
         RequestContext context = parser.parseRequest(mockRequestHeaders, RequestType.READ_BRIDGE);
         assertEquals(RequestType.READ_BRIDGE, context.getRequestType());
+    }
+
+    @Test
+    public void testEncodedHeaderValuesIsFalse() throws UnsupportedEncodingException {
+        parameters.remove("X-GP-DATA-DIR");
+        parameters.putSingle("X-GP-DATA-DIR", URLEncoder.encode("\u0001", "UTF-8"));
+        parameters.putSingle("X-GP-ENCODED-HEADER-VALUES", "false");
+
+        RequestContext context = parser.parseRequest(mockRequestHeaders, RequestType.READ_BRIDGE);
+        assertEquals("%01", context.getDataSource());
+
+        // non encoded fields shouldn't be affected
+        assertEquals(context.getAccessor(), "are");
+        assertEquals(context.getResolver(), "packed");
+        assertEquals(context.getOption("i'm-standing-here"), "outside-your-door");
+        assertEquals(context.getUser(), "alex");
+    }
+
+    @Test
+    public void testEncodedHeaderValuesIsTrue() throws UnsupportedEncodingException {
+        parameters.remove("X-GP-DATA-DIR");
+        parameters.putSingle("X-GP-DATA-DIR", URLEncoder.encode("\u0001", "UTF-8"));
+        parameters.putSingle("X-GP-ENCODED-HEADER-VALUES", "trUe");
+
+        RequestContext context = parser.parseRequest(mockRequestHeaders, RequestType.READ_BRIDGE);
+        assertEquals("\u0001", context.getDataSource());
+
+        // non encoded fields shouldn't be affected
+        assertEquals(context.getAccessor(), "are");
+        assertEquals(context.getResolver(), "packed");
+        assertEquals(context.getOption("i'm-standing-here"), "outside-your-door");
+        assertEquals(context.getUser(), "alex");
     }
 
     static class TestHandler implements ProtocolHandler {
