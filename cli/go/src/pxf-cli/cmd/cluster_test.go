@@ -12,16 +12,88 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	configMaster = cluster.SegConfig{ContentID: -1, Hostname: "mdw", DataDir: "/data/gpseg-1"}
-	configSegOne = cluster.SegConfig{ContentID: 0, Hostname: "sdw1", DataDir: "/data/gpseg0"}
-	configSegTwo = cluster.SegConfig{ContentID: 1, Hostname: "sdw2", DataDir: "/data/gpseg1"}
-	clusterData  = &cmd.ClusterData{
-		Cluster:  cluster.NewCluster([]cluster.SegConfig{configMaster, configSegOne, configSegTwo}),
-		NumHosts: 0,
+func createClusterData(numHosts int, cluster *cluster.Cluster) *cmd.ClusterData {
+	return &cmd.ClusterData{
+		Cluster:  cluster,
+		NumHosts: numHosts,
 		Output:   nil,
 	}
+}
+
+var (
+	configMaster                 = cluster.SegConfig{ContentID: -1, Hostname: "mdw", DataDir: "/data/gpseg-1", Role: "p"}
+	configStandbyMaster          = cluster.SegConfig{ContentID: -1, Hostname: "smdw", DataDir: "/data/gpseg-1", Role: "m"}
+	configStandbyMasterOnSegHost = cluster.SegConfig{ContentID: -1, Hostname: "sdw1", DataDir: "/data/gpseg-1", Role: "m"}
+	configSegOne                 = cluster.SegConfig{ContentID: 0, Hostname: "sdw1", DataDir: "/data/gpseg0", Role: "p"}
+	configSegTwo                 = cluster.SegConfig{ContentID: 1, Hostname: "sdw2", DataDir: "/data/gpseg1", Role: "p"}
+	clusterWithoutStandby        = cluster.NewCluster([]cluster.SegConfig{configMaster, configSegOne, configSegTwo})
+	clusterWithStandby           = cluster.NewCluster([]cluster.SegConfig{configMaster, configSegOne, configSegTwo, configStandbyMaster})
+	clusterWithStandbyOnSegHost  = cluster.NewCluster([]cluster.SegConfig{configMaster, configSegOne, configSegTwo, configStandbyMasterOnSegHost})
+	clusterData                  = createClusterData(3, clusterWithoutStandby)
 )
+
+var _ = Describe("GenerateStatusReport()", func() {
+	Context("When there is no standby master", func() {
+		It("reports master host and segment hosts are initializing, resetting, and syncing", func() {
+			cmd.GenerateStatusReport(&cmd.InitCommand, createClusterData(3, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Initializing PXF on master host and 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.ResetCommand, createClusterData(3, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Resetting PXF on master host and 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.SyncCommand, createClusterData(3, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Syncing PXF configuration files from master host to 2 segment hosts"))
+		})
+		It("reports segment hosts are starting, stopping, restarting and statusing", func() {
+			cmd.GenerateStatusReport(&cmd.StartCommand, createClusterData(2, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Starting PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.StopCommand, createClusterData(2, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Stopping PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.RestartCommand, createClusterData(2, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Restarting PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.StatusCommand, createClusterData(2, clusterWithoutStandby))
+			Expect(testStdout).To(gbytes.Say("Checking status of PXF servers on 2 segment hosts"))
+		})
+	})
+	Context("When there is a standby master on its own host", func() {
+		It("reports master host, standby master host and segment hosts are initializing, resetting, and syncing", func() {
+			cmd.GenerateStatusReport(&cmd.InitCommand, createClusterData(4, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Initializing PXF on master host, standby master host, and 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.ResetCommand, createClusterData(4, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Resetting PXF on master host, standby master host, and 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.SyncCommand, createClusterData(4, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Syncing PXF configuration files from master host to standby master host and 2 segment hosts"))
+		})
+		It("reports segment hosts are starting, stopping, restarting and statusing", func() {
+			cmd.GenerateStatusReport(&cmd.StartCommand, createClusterData(2, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Starting PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.StopCommand, createClusterData(2, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Stopping PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.RestartCommand, createClusterData(2, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Restarting PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.StatusCommand, createClusterData(2, clusterWithStandby))
+			Expect(testStdout).To(gbytes.Say("Checking status of PXF servers on 2 segment hosts"))
+		})
+	})
+	Context("When there is a standby master on a segment host", func() {
+		It("reports master host and segment hosts are initializing, resetting, and syncing", func() {
+			cmd.GenerateStatusReport(&cmd.InitCommand, createClusterData(3, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Initializing PXF on master host and 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.ResetCommand, createClusterData(3, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Resetting PXF on master host and 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.SyncCommand, createClusterData(3, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Syncing PXF configuration files from master host to 2 segment hosts"))
+		})
+		It("reports segment hosts are starting, stopping, restarting and statusing", func() {
+			cmd.GenerateStatusReport(&cmd.StartCommand, createClusterData(2, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Starting PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.StopCommand, createClusterData(2, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Stopping PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.RestartCommand, createClusterData(2, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Restarting PXF on 2 segment hosts"))
+			cmd.GenerateStatusReport(&cmd.StatusCommand, createClusterData(2, clusterWithStandbyOnSegHost))
+			Expect(testStdout).To(gbytes.Say("Checking status of PXF servers on 2 segment hosts"))
+		})
+	})
+})
 
 var _ = Describe("GenerateOutput()", func() {
 	BeforeEach(func() {

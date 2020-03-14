@@ -26,6 +26,7 @@ const (
 	status
 	err
 	warning
+	standby
 )
 
 type command struct {
@@ -108,7 +109,8 @@ var (
 		name: pxfInit,
 		messages: map[messageType]string{
 			success: "PXF initialized successfully on %d out of %d hosts\n",
-			status:  "Initializing PXF on %d hosts including master...\n",
+			status:  "Initializing PXF on master host%s and %d segment hosts...\n",
+			standby: ", standby master host,",
 			err:     "PXF failed to initialize on %d out of %d hosts\n",
 		},
 		warn:       false,
@@ -141,7 +143,8 @@ var (
 		name: sync,
 		messages: map[messageType]string{
 			success: "PXF configs synced successfully on %d out of %d hosts\n",
-			status:  "Syncing PXF configuration files from master to %d hosts...\n",
+			status:  "Syncing PXF configuration files from master host to%s %d segment hosts...\n",
+			standby: " standby master host and",
 			err:     "PXF configs failed to sync on %d out of %d hosts\n",
 		},
 		warn:    false,
@@ -154,7 +157,7 @@ var (
 		name: statuses,
 		messages: map[messageType]string{
 			success: "PXF is running on %d out of %d hosts\n",
-			status:  "Checking status of PXF servers on %d hosts...\n",
+			status:  "Checking status of PXF servers on %d segment hosts...\n",
 			err:     "PXF is not running on %d out of %d hosts\n",
 		},
 		warn:       false,
@@ -165,7 +168,8 @@ var (
 		name: reset,
 		messages: map[messageType]string{
 			success: "PXF has been reset on %d out of %d hosts\n",
-			status:  "Resetting PXF on %d hosts including master...\n",
+			status:  "Resetting PXF on master host%s and %d segment hosts...\n",
+			standby: ", standby master host,",
 			err:     "Failed to reset PXF on %d out of %d hosts\n",
 			warning: "Ensure your PXF cluster is stopped before continuing. " +
 				"This is a destructive action. Press y to continue:\n",

@@ -69,18 +69,26 @@ func exitWithReturnCode(err error) {
 	os.Exit(0)
 }
 
-func generateStatusReport(cmd *command, clusterData *ClusterData) string {
-	cmdMsg := fmt.Sprintf(cmd.messages[status], clusterData.NumHosts)
-	gplog.Info(cmdMsg)
-	return cmdMsg
+// GenerateStatusReport exported for testing
+func GenerateStatusReport(cmd *command, clusterData *ClusterData) {
+	if _, ok := cmd.messages[standby]; !ok {
+		gplog.Info(fmt.Sprintf(cmd.messages[status], clusterData.NumHosts))
+		return
+	}
+	standbyMsg := ""
+	numHosts := clusterData.NumHosts - 1
+	if isStandbyAloneOnHost(clusterData) {
+		standbyMsg = cmd.messages[standby]
+		numHosts--
+	}
+	gplog.Info(fmt.Sprintf(cmd.messages[status], standbyMsg, numHosts))
 }
 
 // GenerateOutput is exported for testing
 func GenerateOutput(cmd *command, clusterData *ClusterData) error {
-	numHosts := len(clusterData.Output.Commands)
 	numErrors := clusterData.Output.NumErrors
 	if numErrors == 0 {
-		gplog.Info(cmd.messages[success], numHosts-numErrors, numHosts)
+		gplog.Info(cmd.messages[success], clusterData.NumHosts-numErrors, clusterData.NumHosts)
 		return nil
 	}
 	response := ""
@@ -103,7 +111,7 @@ func GenerateOutput(cmd *command, clusterData *ClusterData) error {
 		}
 		response += fmt.Sprintf("%s ==> %s\n", host, errorMessage)
 	}
-	gplog.Info("ERROR: "+cmd.messages[err], numErrors, numHosts)
+	gplog.Info("ERROR: "+cmd.messages[err], numErrors, clusterData.NumHosts)
 	gplog.Error("%s", response)
 	return errors.New(response)
 }
@@ -143,7 +151,15 @@ func clusterRun(cmd *command, clusterData *ClusterData) error {
 
 	commandList := clusterData.Cluster.GenerateSSHCommandList(cmd.whereToRun, functionToExecute)
 	clusterData.NumHosts = len(commandList)
-	generateStatusReport(cmd, clusterData)
+	GenerateStatusReport(cmd, clusterData)
 	clusterData.Output = clusterData.Cluster.ExecuteClusterCommand(cmd.whereToRun, commandList)
 	return GenerateOutput(cmd, clusterData)
+}
+
+func isStandbyAloneOnHost(clusterData *ClusterData) bool {
+	standbyHost := clusterData.Cluster.GetHostForContent(-1, "m")
+	if standbyHost == "" {
+		return false // there is no standby master
+	}
+	return len(clusterData.Cluster.GetContentsForHost(standbyHost)) == 1
 }
